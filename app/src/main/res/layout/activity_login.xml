@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context="com.softrangers.sonarcloudmobile.MainActivity">
+
+    <ImageView
+        android:layout_width="200dp"
+        android:layout_height="150dp"
+        android:padding="40dp"
+        android:src="@drawable/ic_login_logo"
+        android:scaleType="centerInside"
+        android:id="@+id/imageView"
+        android:layout_alignParentTop="true"
+        android:layout_alignRight="@+id/email_layout"
+        android:layout_alignEnd="@+id/email_layout"
+        android:layout_alignLeft="@+id/email_layout"
+        android:layout_alignStart="@+id/email_layout"
+        android:layout_above="@+id/email_layout"
+        android:contentDescription="@string/sonar_cloud_logo" />
+
+    <FrameLayout
+        android:id="@+id/email_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="5dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginRight="20dp"
+        android:layout_marginLeft="20dp"
+        android:layout_above="@+id/password_layout"
+        android:layout_centerHorizontal="true">
+        <EditText
+            android:id="@+id/email_label"
+            android:layout_width="match_parent"
+            android:background="@drawable/edit_text_bg"
+            android:layout_height="50dp"
+            android:hint="@string/email"
+            android:ems="10"
+            android:inputType="textEmailAddress"
+            android:paddingLeft="60dp"
+            android:paddingStart="60dp"
+            android:textSize="20sp"/>
+        <ImageView
+            android:layout_width="25dp"
+            android:layout_height="25dp"
+            android:layout_gravity="center_vertical"
+            android:layout_marginLeft="20dp"
+            android:src="@mipmap/ic_person_login"
+            android:contentDescription="@string/enter_your_email" />
+    </FrameLayout>
+
+    <FrameLayout
+        android:id="@+id/password_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginRight="20dp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginBottom="10dp"
+        android:layout_marginTop="5dp"
+        android:layout_centerVertical="true"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true">
+        <EditText
+            android:id="@+id/password_label"
+            android:layout_width="match_parent"
+            android:background="@drawable/edit_text_bg"
+            android:layout_height="50dp"
+            android:hint="@string/password"
+            android:ems="10"
+            android:inputType="textPassword"
+            android:paddingLeft="60dp"
+            android:paddingStart="60dp"
+            android:textSize="20sp"/>
+        <ImageView
+            android:layout_width="25dp"
+            android:layout_height="25dp"
+            android:layout_gravity="center_vertical"
+            android:layout_marginLeft="20dp"
+            android:src="@mipmap/ic_lock_login"
+            android:contentDescription="@string/enter_your_password" />
+    </FrameLayout>
+
+    <Button
+        android:id="@+id/signin_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@android:color/white"
+        android:background="@drawable/button_blue"
+        android:layout_margin="20dp"
+        android:onClick="sigIn"
+        android:text="@string/sign_in"
+        android:layout_below="@+id/password_layout"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true" />
+
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:src="@drawable/bg_login_bottom_bg_img"
+        android:scaleType="centerCrop"
+        android:id="@+id/imageView2"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@+id/signin_button"
+        android:contentDescription="@null" />
+
+    <ProgressBar
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:id="@+id/login_progressBar"
+        android:layout_below="@+id/signin_button"
+        android:layout_centerHorizontal="true" />
+</RelativeLayout>
+
