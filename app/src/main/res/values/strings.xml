@@ -6,4 +6,13 @@
     <string name="enter_your_password">Please enter your password</string>
     <string name="enter_your_email">Please enter your email</string>
     <string name="sonar_cloud_logo">Sonar Cloud logo</string>
+    <string name="select_pa_system">Select PA system</string>
+    <string name="make_announcement">Make an announcement</string>
+    <string name="schedule_announcement">Schedule an announcement</string>
+    <string name="settings">Settings</string>
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="receivers">Receivers</string>
+    <string name="groups">Groups</string>
 </resources>

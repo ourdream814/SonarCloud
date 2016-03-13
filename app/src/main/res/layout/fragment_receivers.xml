@@ -1,0 +1,60 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ui.fragments.ReceiversFragment">
+
+    <RadioGroup
+        android:id="@+id/pa_list_selector"
+        android:layout_width="match_parent"
+        android:layout_height="?actionBarSize"
+        android:elevation="4dp"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:background="@color/colorPrimary"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true">
+
+        <RadioButton
+            android:layout_width="100dp"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:padding="5dp"
+            android:button="@null"
+            android:layout_marginRight="15dp"
+            android:text="@string/receivers"
+            android:textColor="@android:color/white"
+            android:background="@drawable/button_blue_borders"
+            android:id="@+id/receivers_button" />
+
+        <RadioButton
+            android:layout_width="100dp"
+            android:gravity="center"
+            android:layout_height="wrap_content"
+            android:padding="5dp"
+            android:button="@null"
+            android:layout_marginLeft="15dp"
+            android:text="@string/groups"
+            android:textColor="@android:color/white"
+            android:background="@drawable/button_blue_borders"
+            android:id="@+id/groups_button" />
+    </RadioGroup>
+
+    <android.support.v4.widget.SwipeRefreshLayout
+        android:layout_below="@id/pa_list_selector"
+        android:id="@+id/accountSummary_swipeRefresh"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <com.softrangers.sonarcloudmobile.utils.widgets.AnimatedExpandableListView
+            android:id="@+id/receivers_expandableListView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:childDivider="@color/colorSecondary"
+            android:childIndicator="@null"
+            android:groupIndicator="@null"/>
+    </android.support.v4.widget.SwipeRefreshLayout>
+</RelativeLayout>
