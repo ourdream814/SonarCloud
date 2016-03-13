@@ -25,24 +25,47 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
 /**
- * Created by eduard on 3/12/16.
+ * Created by eduard on 3/13/16.
+ *
  */
 public class SonarcloudRequest extends AsyncTask<JSONObject, String, String> {
 
     private static final String TAG = SonarcloudRequest.class.getSimpleName();
     private static SecureRandom secureRandom;
-    private SSLSocket mSSLSocket;
+    private static SSLSocket mSSLSocket;
     private OnResponseListener mOnResponseListener;
+    private static SonarcloudRequest instance;
 
-    public SonarcloudRequest(@NonNull OnResponseListener onResponseListener) {
+    public static synchronized SonarcloudRequest getInstance() {
+        if (instance == null) instance = new SonarcloudRequest();
+        return instance;
+    }
+
+    public void setOnResponseListener(@NonNull OnResponseListener listener) {
+        mOnResponseListener = listener;
+    }
+
+    private SonarcloudRequest() {
         secureRandom = new SecureRandom();
-        mOnResponseListener = onResponseListener;
+    }
+
+    public void closeConnection() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    mSSLSocket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
     }
 
     @Override
-    protected void onPostExecute(String s) {
+    protected void onProgressUpdate(String... values) {
         try {
-            JSONObject response = new JSONObject(s);
+            JSONObject response = new JSONObject(values[0]);
             boolean success = response.getBoolean("success");
 
             if (success) {
@@ -59,6 +82,11 @@ public class SonarcloudRequest extends AsyncTask<JSONObject, String, String> {
     }
 
     @Override
+    protected void onPostExecute(String s) {
+
+    }
+
+    @Override
     protected String doInBackground(JSONObject... params) {
         StringBuilder response = new StringBuilder();
         try {
@@ -68,11 +96,13 @@ public class SonarcloudRequest extends AsyncTask<JSONObject, String, String> {
             // Create an ssl socket factory with our all trusting manager
             final SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
             // Create a socket and connect to the server
-            mSSLSocket = (SSLSocket) sslSocketFactory.createSocket(
-                    new Socket(Api.URL, Api.PORT), Api.URL, Api.PORT, true
-            );
-            mSSLSocket.startHandshake();
-            mSSLSocket.setSoTimeout(2000);
+            if (mSSLSocket == null) {
+                mSSLSocket = (SSLSocket) sslSocketFactory.createSocket(
+                        new Socket(Api.URL, Api.PORT), Api.URL, Api.PORT, true
+                );
+                mSSLSocket.startHandshake();
+                mSSLSocket.setSoTimeout(2000);
+            }
             Log.i(TAG, String.valueOf(mSSLSocket.isConnected()));
 
             // Create in and out writers to send request and read responses
@@ -87,11 +117,9 @@ public class SonarcloudRequest extends AsyncTask<JSONObject, String, String> {
             out.flush();
             out.close();
 
-            // TODO: 3/13/16 figure out why it does not exit the loop
-            char[] chars = new char[1024];
-            int read;
-            while ((read = in.read(chars)) != -1) {
-                response.append(new String(chars, 0, read));
+            String line;
+            while ((line = in.readLine()) != null) {
+                publishProgress(line);
             }
 
             in.close();

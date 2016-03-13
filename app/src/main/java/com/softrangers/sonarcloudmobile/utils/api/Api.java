@@ -12,6 +12,10 @@ public class Api {
     public static final String DEVICE = "device";
     public static final String METHOD = "method";
 
+    public static final String REQUEST_MESSAGE = "json_request";
+    public static final String RESPONSE_BROADCAST = "response_broadcast";
+    public static final String RESPONSE_MESSAGE = "json_response";
+
     public static final String EMAIL = "email";
     public static final String PASSWORD = "password";
 
@@ -34,5 +38,9 @@ public class Api {
     public static class Action {
         public static final String NEW = "new";
         public static final String RENEW = "renew";
+
+        public static final String ACTION_CONNECT = "connect";
+        public static final String ACTION_SEND = "send_request";
+        public static final String ACTION_DISCONECT = "disconnect";
     }
 }

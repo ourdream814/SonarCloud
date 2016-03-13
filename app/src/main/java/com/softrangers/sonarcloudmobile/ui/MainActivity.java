@@ -60,7 +60,9 @@ public class MainActivity extends AppCompatActivity implements OnResponseListene
             } catch (JSONException e) {
                 e.printStackTrace();
             }
-            new SonarcloudRequest(this).execute(identify);
+            SonarcloudRequest request = SonarcloudRequest.getInstance();
+            request.setOnResponseListener(this);
+            request.execute(identify);
         }
     }
 

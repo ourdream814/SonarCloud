@@ -14,6 +14,8 @@ import com.softrangers.sonarcloudmobile.models.User;
 import com.softrangers.sonarcloudmobile.utils.OnResponseListener;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
+import com.softrangers.sonarcloudmobile.utils.api.ConnectionManager;
+import com.softrangers.sonarcloudmobile.utils.api.ResponseReceiver;
 import com.softrangers.sonarcloudmobile.utils.api.SonarcloudRequest;
 
 import org.json.JSONException;
@@ -34,6 +36,12 @@ public class LoginActivity extends AppCompatActivity implements OnResponseListen
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
+
+        // Register a response listener and enstablish server conection
+//        ResponseReceiver.addOnResponseListener(this);
+//        Intent intent = new Intent(this, ConnectionManager.class);
+//        intent.setAction(Api.Action.ACTION_CONNECT);
+//        startService(intent);
 
         // Instantiate email input field
         mEmail = (EditText) findViewById(R.id.email_label);
@@ -88,7 +96,16 @@ public class LoginActivity extends AppCompatActivity implements OnResponseListen
         } catch (JSONException e) {
             e.printStackTrace();
         }
-        new SonarcloudRequest(this).execute(request);
+
+        SonarcloudRequest req = SonarcloudRequest.getInstance();
+        req.setOnResponseListener(this);
+        req.execute(request);
+
+        // Send message to server
+        Intent intent = new Intent(this, ConnectionManager.class);
+        intent.setAction(Api.Action.ACTION_SEND);
+        intent.putExtra(Api.REQUEST_MESSAGE, request.toString());
+        startService(intent);
     }
 
     @Override
@@ -97,6 +114,7 @@ public class LoginActivity extends AppCompatActivity implements OnResponseListen
             String id = response.getString("userID");
             SonarCloudApp.getInstance().saveUserLoginStatus(true, id);
             Intent intent = new Intent(this, MainActivity.class);
+            SonarcloudRequest.getInstance().cancel(true);
             startActivity(intent);
             finish();
         } catch (JSONException e) {
