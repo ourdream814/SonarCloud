@@ -6,24 +6,26 @@ import android.support.annotation.NonNull;
 import android.support.design.widget.TabLayout;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AlertDialog;
-import android.support.v7.app.AppCompatActivity;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.softrangers.sonarcloudmobile.R;
 import com.softrangers.sonarcloudmobile.adapters.MainViewPagerAdapter;
+import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.ui.fragments.ReceiversFragment;
 import com.softrangers.sonarcloudmobile.ui.fragments.RecordFragment;
 import com.softrangers.sonarcloudmobile.ui.fragments.ScheduleFragment;
 import com.softrangers.sonarcloudmobile.ui.fragments.SettingsFragment;
+import com.softrangers.sonarcloudmobile.utils.BaseActivity;
 import com.softrangers.sonarcloudmobile.utils.OnResponseListener;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
-import com.softrangers.sonarcloudmobile.utils.api.SonarcloudRequest;
+import com.softrangers.sonarcloudmobile.utils.api.ResponseReceiver;
+import com.softrangers.sonarcloudmobile.utils.api.SocketService;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
-public class MainActivity extends AppCompatActivity implements OnResponseListener {
+public class MainActivity extends BaseActivity implements OnResponseListener {
 
     private TextView mToolbarTitle;
     private TabLayout mTabLayout;
@@ -42,27 +44,12 @@ public class MainActivity extends AppCompatActivity implements OnResponseListene
         mToolbarTitle.setTypeface(SonarCloudApp.avenirMedium);
         setUpTabs();
 
+        ResponseReceiver.getInstance().addOnResponseListener(this);
+
         if (!SonarCloudApp.getInstance().isLoggedIn()) {
             Intent intent = new Intent(this, LoginActivity.class);
             startActivity(intent);
             finish();
-        } else {
-            String identifier = SonarCloudApp.getInstance().getIdentifier();
-            JSONObject identify = new JSONObject();
-            try {
-                identify.put(Api.COMMAND, Api.Command.IDENTIFIER);
-                if (SonarCloudApp.NO_IDENTIFIER.equals(identifier)) {
-                    identify.put(Api.ACTION, Api.Action.NEW);
-                } else {
-                    identify.put(Api.ACTION, Api.Action.RENEW);
-                    identify.put(Api.IDENTIFIER, identifier);
-                }
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-            SonarcloudRequest request = SonarcloudRequest.getInstance();
-            request.setOnResponseListener(this);
-            request.execute(identify);
         }
     }
 
@@ -119,16 +106,48 @@ public class MainActivity extends AppCompatActivity implements OnResponseListene
 
     @Override
     public void onCommandFailure(String message) {
-        AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle("Sorry")
-                .setMessage(message)
-                .setPositiveButton("Ok", null)
-                .create();
-        dialog.show();
+        alertUserAboutError(message);
     }
 
     @Override
     public void onError() {
+        alertUserAboutError("Something went wrong, please try again");
+    }
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        this.unbindService();
+    }
+
+    OnResponseListener authListener = new OnResponseListener() {
+        @Override
+        public void onResponse(JSONObject response) {
+            Request.Builder requestBuilder = new Request.Builder();
+            requestBuilder.command(Api.Command.RECEIVERS);
+            requestBuilder.userId(SonarCloudApp.getInstance().userId());
+            socketService.sendRequest(requestBuilder.build().toJSON());
+        }
+
+        @Override
+        public void onCommandFailure(String message) {
+            alertUserAboutError(message);
+        }
+
+        @Override
+        public void onError() {
+            alertUserAboutError("Something went wrong, please try again");
+        }
+    };
+
+    @Override
+    public void onServiceBound(SocketService socketService) {
+        if (socketService != null && SonarCloudApp.getInstance().isLoggedIn()) {
+            Request.Builder builder = new Request.Builder();
+            builder.command(Api.Command.AUTHENTICATE);
+            builder.device(Api.Device.CLIENT).method(Api.Method.USER).identifier(SonarCloudApp.getInstance().getIdentifier())
+                    .secret(SonarCloudApp.getInstance().getSavedData());
+            socketService.sendRequest(builder.build().toJSON());
+        }
     }
 }

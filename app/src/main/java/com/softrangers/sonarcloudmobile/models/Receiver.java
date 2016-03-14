@@ -4,7 +4,10 @@ import android.os.Parcel;
 import android.os.Parcelable;
 
 /**
- * Created by eduard on 3/12/16.
+ * Created by Eduard Albu on 12 03 2016
+ * project SonarCloud
+ *
+ * @author eduard.albu@gmail.com
  */
 public class Receiver implements Parcelable {
 

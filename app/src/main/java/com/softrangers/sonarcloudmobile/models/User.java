@@ -1,13 +1,18 @@
 package com.softrangers.sonarcloudmobile.models;
 
 /**
- * Created by eduard on 3/12/16.
+ * Created by Eduard Albu on 12 03 2016
+ * project SonarCloud
+ *
+ * @author eduard.albu@gmail.com
  */
 public class User {
 
     private String mEmail;
     private String mPassword;
-    private int mId;
+    private String mId;
+    private String mIdentifier;
+    private String mSecret;
 
     public String getEmail() {
         return mEmail;
@@ -25,11 +30,27 @@ public class User {
         this.mPassword = mPassword;
     }
 
-    public int getId() {
+    public String getId() {
         return mId;
     }
 
-    public void setId(int id) {
+    public void setId(String id) {
         mId = id;
+    }
+
+    public String getIdentifier() {
+        return mIdentifier;
+    }
+
+    public void setIdentifier(String identifier) {
+        mIdentifier = identifier;
+    }
+
+    public String getSecret() {
+        return mSecret;
+    }
+
+    public void setSecret(String secret) {
+        mSecret = secret;
     }
 }

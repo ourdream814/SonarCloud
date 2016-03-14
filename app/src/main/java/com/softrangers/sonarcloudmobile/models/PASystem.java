@@ -6,7 +6,10 @@ import android.os.Parcelable;
 import java.util.ArrayList;
 
 /**
- * Created by eduard on 3/12/16.
+ * Created by Eduard Albu on 12 03 2016
+ * project SonarCloud
+ *
+ * @author eduard.albu@gmail.com
  */
 public class PASystem implements Parcelable {
 
