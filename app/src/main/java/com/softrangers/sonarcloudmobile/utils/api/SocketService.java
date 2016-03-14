@@ -114,6 +114,7 @@ public class SocketService extends Service implements HandshakeCompletedListener
         @Override
         public void run() {
             try {
+                Log.d(TAG, "Start connecting with server");
                 // create a new instance of socket and connect it to server
                 mSocket = (SSLSocket) sslSocketFactory.createSocket(
                         new Socket(Api.URL, Api.PORT), Api.URL, Api.PORT, true
