@@ -36,6 +36,7 @@ public class SonarCloudApp extends Application {
     public static User user;
     public static SocketService socketService;
 
+
     @Override
     public void onCreate() {
         super.onCreate();

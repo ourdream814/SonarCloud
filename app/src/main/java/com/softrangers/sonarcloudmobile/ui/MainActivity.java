@@ -6,11 +6,14 @@ import android.support.annotation.NonNull;
 import android.support.design.widget.TabLayout;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AlertDialog;
+import android.view.View;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.softrangers.sonarcloudmobile.R;
 import com.softrangers.sonarcloudmobile.adapters.MainViewPagerAdapter;
+import com.softrangers.sonarcloudmobile.models.Receiver;
 import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.ui.fragments.ReceiversFragment;
 import com.softrangers.sonarcloudmobile.ui.fragments.RecordFragment;
@@ -20,17 +23,23 @@ import com.softrangers.sonarcloudmobile.utils.BaseActivity;
 import com.softrangers.sonarcloudmobile.utils.OnResponseListener;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
+import com.softrangers.sonarcloudmobile.utils.api.ConnectionReceiver;
 import com.softrangers.sonarcloudmobile.utils.api.ResponseReceiver;
 import com.softrangers.sonarcloudmobile.utils.api.SocketService;
 
 import org.json.JSONObject;
 
-public class MainActivity extends BaseActivity implements OnResponseListener {
+import java.util.ArrayList;
+
+public class MainActivity extends BaseActivity implements OnResponseListener,
+        ConnectionReceiver.OnConnected {
 
     private TextView mToolbarTitle;
     private TabLayout mTabLayout;
     private ViewPager mViewPager;
     private MainViewPagerAdapter mPagerAdapter;
+    private RelativeLayout mLoadingLayout;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,15 +51,23 @@ public class MainActivity extends BaseActivity implements OnResponseListener {
         mToolbarTitle = (TextView) findViewById(R.id.main_activity_toolbarTitle);
         assert mToolbarTitle != null;
         mToolbarTitle.setTypeface(SonarCloudApp.avenirMedium);
-        setUpTabs();
 
+        ConnectionReceiver.getInstance().addOnConnectedListener(this);
         ResponseReceiver.getInstance().addOnResponseListener(this);
-
         if (!SonarCloudApp.getInstance().isLoggedIn()) {
             Intent intent = new Intent(this, LoginActivity.class);
             startActivity(intent);
             finish();
+        } else {
+            if (SonarCloudApp.socketService != null && SonarCloudApp.getInstance().isLoggedIn()) {
+                Request.Builder builder = new Request.Builder();
+                builder.command(Api.Command.AUTHENTICATE);
+                builder.device(Api.Device.CLIENT).method(Api.Method.IDENTIFIER).identifier(SonarCloudApp.getInstance().getIdentifier())
+                        .secret(SonarCloudApp.getInstance().getSavedData());
+                SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
+            }
         }
+
     }
 
     private void setUpTabs() {
@@ -101,6 +118,18 @@ public class MainActivity extends BaseActivity implements OnResponseListener {
 
     @Override
     public void onResponse(JSONObject response) {
+        Request.Builder requestBuilder = new Request.Builder();
+        requestBuilder.command(Api.Command.RECEIVERS);
+        requestBuilder.userId(SonarCloudApp.getInstance().userId());
+        SonarCloudApp.socketService.sendRequest(requestBuilder.build().toJSON());
+        ResponseReceiver.getInstance().removeOnResponseListener(this);
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                setUpTabs();
+                mLoadingLayout.setVisibility(View.GONE);
+            }
+        });
 
     }
 
@@ -117,7 +146,8 @@ public class MainActivity extends BaseActivity implements OnResponseListener {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        this.unbindService();
+        ResponseReceiver.getInstance().removeOnResponseListener(this);
+        ConnectionReceiver.getInstance().removeOnResponseListener(this);
     }
 
     OnResponseListener authListener = new OnResponseListener() {
@@ -126,7 +156,7 @@ public class MainActivity extends BaseActivity implements OnResponseListener {
             Request.Builder requestBuilder = new Request.Builder();
             requestBuilder.command(Api.Command.RECEIVERS);
             requestBuilder.userId(SonarCloudApp.getInstance().userId());
-            socketService.sendRequest(requestBuilder.build().toJSON());
+            SonarCloudApp.socketService.sendRequest(requestBuilder.build().toJSON());
         }
 
         @Override
@@ -141,13 +171,13 @@ public class MainActivity extends BaseActivity implements OnResponseListener {
     };
 
     @Override
-    public void onServiceBound(SocketService socketService) {
-        if (socketService != null && SonarCloudApp.getInstance().isLoggedIn()) {
+    public void onSocketConnected() {
+        if (SonarCloudApp.socketService != null && SonarCloudApp.getInstance().isLoggedIn()) {
             Request.Builder builder = new Request.Builder();
             builder.command(Api.Command.AUTHENTICATE);
-            builder.device(Api.Device.CLIENT).method(Api.Method.USER).identifier(SonarCloudApp.getInstance().getIdentifier())
+            builder.device(Api.Device.CLIENT).method(Api.Method.IDENTIFIER).identifier(SonarCloudApp.getInstance().getIdentifier())
                     .secret(SonarCloudApp.getInstance().getSavedData());
-            socketService.sendRequest(builder.build().toJSON());
+            SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
         }
     }
 }

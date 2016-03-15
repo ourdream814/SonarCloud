@@ -32,6 +32,14 @@
                 <action android:name="com.softrangers.sonarcloudmobile.RESPONSE_BROADCAST"/>
             </intent-filter>
         </receiver>
+
+        <receiver
+            android:name=".utils.api.ConnectionReceiver"
+            android:enabled="true" >
+            <intent-filter>
+                <action android:name="com.softrangers.sonarcloudmobile.CONNECTED"/>
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

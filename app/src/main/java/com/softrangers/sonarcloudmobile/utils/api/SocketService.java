@@ -39,6 +39,7 @@ public class SocketService extends Service implements HandshakeCompletedListener
     private static SSLSocketFactory sslSocketFactory;
     public BufferedReader readIn;
     public BufferedWriter writeOut;
+    public boolean isConnected;
 
     // Bind this service to application
     @Nullable
@@ -59,6 +60,7 @@ public class SocketService extends Service implements HandshakeCompletedListener
     /**
      * Send a request to server if the connection is ok and send back the response through
      * ResponseReceiver broadcast
+     *
      * @param request to send
      */
     public void sendRequest(final JSONObject request) {
@@ -103,6 +105,7 @@ public class SocketService extends Service implements HandshakeCompletedListener
      */
     class Connect implements Runnable {
         SSLSocket mSocket;
+
         public Connect(SSLSocket sslSocket) {
             // Give the socket object to current thread
             mSocket = sslSocket;
@@ -116,15 +119,20 @@ public class SocketService extends Service implements HandshakeCompletedListener
             try {
                 Log.d(TAG, "Start connecting with server");
                 // create a new instance of socket and connect it to server
-                mSocket = (SSLSocket) sslSocketFactory.createSocket(
-                        new Socket(Api.URL, Api.PORT), Api.URL, Api.PORT, true
+                sslSocket = (SSLSocket) sslSocketFactory.createSocket(
+                        new Socket(Api.M_URL, Api.PORT), Api.M_URL, Api.PORT, true
                 );
 
-                // set the timeout for the connection
-                mSocket.setSoTimeout(2000);
-                Log.d(TAG, "Socket connected: " + String.valueOf(mSocket.isConnected()));
+                Intent intent = new Intent(SocketService.this, ConnectionReceiver.class);
+                intent.setAction(Api.CONNECTION_BROADCAST);
+                sendBroadcast(intent);
+
+                isConnected = true;
+
+                Log.d(TAG, "Socket connected: " + String.valueOf(sslSocket.isConnected()));
             } catch (Exception e) {
                 e.printStackTrace();
+                isConnected = false;
             }
         }
     }
@@ -138,7 +146,8 @@ public class SocketService extends Service implements HandshakeCompletedListener
 
         /**
          * Constructor
-         * @param message for server
+         *
+         * @param message   for server
          * @param sslSocket through which to send the request
          */
         public SendRequest(JSONObject message, SSLSocket sslSocket) {
@@ -159,28 +168,30 @@ public class SocketService extends Service implements HandshakeCompletedListener
             // create a StringBuilder to append each line from response
             StringBuilder builder = new StringBuilder();
             try {
-                // Start socket handshake
-                mSocket.startHandshake();
+                if (sslSocket == null || !sslSocket.isConnected()) {
+                    new Connect(sslSocket);
+                }
 
-                // Create a reader and writer from socket output and input streams
-                writeOut = new BufferedWriter(new OutputStreamWriter(mSocket.getOutputStream()));
-                readIn = new BufferedReader(new InputStreamReader(mSocket.getInputStream()));
+                if (sslSocket != null && sslSocket.isConnected()) {
+                    // Start socket handshake
+                    sslSocket.startHandshake();
 
-                // send the request to server through writer object
-                writeOut.write(message.toString() + "\n");
-                writeOut.flush();
+                    // set the timeout for the connection
 
-                // Start reading each response line
-                String response;
-                while ((response = readIn.readLine()) != null) {
-                    // append each line to builder
-                    builder.append(response);
+                    // Create a reader and writer from socket output and input streams
+                    writeOut = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream()));
+                    readIn = new BufferedReader(new InputStreamReader(sslSocket.getInputStream()));
+
+                    // send the request to server through writer object
+                    writeOut.write(message.toString() + "\n");
+                    writeOut.flush();
+
+                    // Start reading each response line
+                    intent.putExtra(Api.RESPONSE_MESSAGE, readIn.readLine());
+                    sendBroadcast(intent);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
-            } finally {
-                // Send the broadcast to receiver with either response or null
-                // if it's null all listeners will be informed about an unknown error
                 intent.putExtra(Api.RESPONSE_MESSAGE, builder.toString());
                 sendBroadcast(intent);
             }
@@ -195,6 +206,7 @@ public class SocketService extends Service implements HandshakeCompletedListener
         super.onDestroy();
         try {
             sslSocket.close();
+            isConnected = false;
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -203,6 +215,7 @@ public class SocketService extends Service implements HandshakeCompletedListener
 
     /**
      * Create a TrustManager which will trust all certificates
+     *
      * @return TrustManager[] with a trust-all certificates TrustManager object inside
      */
     private TrustManager[] getTrustManagers() {

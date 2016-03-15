@@ -1,6 +1,7 @@
 package com.softrangers.sonarcloudmobile.ui.fragments;
 
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -12,7 +13,11 @@ import com.softrangers.sonarcloudmobile.R;
 import com.softrangers.sonarcloudmobile.adapters.ReceiverListAdapter;
 import com.softrangers.sonarcloudmobile.models.PASystem;
 import com.softrangers.sonarcloudmobile.models.Receiver;
+import com.softrangers.sonarcloudmobile.utils.OnResponseListener;
+import com.softrangers.sonarcloudmobile.utils.api.ResponseReceiver;
 import com.softrangers.sonarcloudmobile.utils.widgets.AnimatedExpandableListView;
+
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 
@@ -20,11 +25,13 @@ import java.util.ArrayList;
 /**
  * A simple {@link Fragment} subclass.
  */
-public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedChangeListener {
+public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedChangeListener, OnResponseListener {
 
+    private static final String RECEIVERS_ARG = "receivers_args";
     private AnimatedExpandableListView mListView;
     private RadioButton mReceivers;
     private RadioButton mGroups;
+    private ArrayList<Receiver> mReceiversArray;
 
     public ReceiversFragment() {
         // Required empty public constructor
@@ -42,7 +49,7 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
         mReceivers.setTextColor(getResources().getColor(R.color.colorPrimary));
         mGroups = (RadioButton) view.findViewById(R.id.groups_button);
         radioGroup.setOnCheckedChangeListener(this);
-        setUpListView(getTestPASystems());
+        ResponseReceiver.getInstance().addOnResponseListener(this);
         return view;
     }
 
@@ -51,23 +58,12 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
         mListView.setAdapter(adapter);
     }
 
-    private ArrayList<Receiver> getTestReceivers() {
-        ArrayList<Receiver> receivers = new ArrayList<>();
-        for (int i = 1; i < 6; i++) {
-            Receiver receiver = new Receiver();
-            receiver.setName("Receiver " + i);
-            receiver.setIsSelected(false);
-            receivers.add(receiver);
-        }
-        return receivers;
-    }
-
     private ArrayList<PASystem> getTestPASystems() {
         ArrayList<PASystem> paSystems = new ArrayList<>();
-        for (int i = 1; i < 6; i++) {
+        for (int i = 1; i < mReceiversArray.size(); i++) {
             PASystem paSystem = new PASystem();
             paSystem.setName("PA System " + i);
-            paSystem.setReceivers(getTestReceivers());
+            paSystem.setReceivers(mReceiversArray);
             paSystems.add(paSystem);
         }
         return paSystems;
@@ -85,5 +81,21 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
                 mGroups.setTextColor(getResources().getColor(R.color.colorPrimary));
                 break;
         }
+    }
+
+    @Override
+    public void onResponse(JSONObject response) {
+        mReceiversArray = Receiver.build(response);
+        setUpListView(getTestPASystems());
+    }
+
+    @Override
+    public void onCommandFailure(String message) {
+
+    }
+
+    @Override
+    public void onError() {
+
     }
 }

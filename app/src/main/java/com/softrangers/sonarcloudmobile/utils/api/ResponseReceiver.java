@@ -11,7 +11,10 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 
 /**
- * Created by eduard on 3/13/16.
+ * Created by Eduard Albu on 13 03 2016
+ * project SonarCloud
+ *
+ * @author eduard.albu@gmail.com
  */
 public class ResponseReceiver extends BroadcastReceiver {
 

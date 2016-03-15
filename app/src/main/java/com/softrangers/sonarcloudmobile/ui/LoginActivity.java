@@ -15,7 +15,6 @@ import com.softrangers.sonarcloudmobile.utils.OnResponseListener;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
 import com.softrangers.sonarcloudmobile.utils.api.ResponseReceiver;
-import com.softrangers.sonarcloudmobile.utils.api.SocketService;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -34,7 +33,7 @@ public class LoginActivity extends BaseActivity implements OnResponseListener {
         setContentView(R.layout.activity_login);
 
         // Register current activity as a response handler
-        ResponseReceiver.getInstance().addOnResponseListener(this);
+//        ResponseReceiver.getInstance().addOnResponseListener(this);
 
         // Instantiate email input field
         mEmail = (EditText) findViewById(R.id.email_label);
@@ -94,8 +93,10 @@ public class LoginActivity extends BaseActivity implements OnResponseListener {
                 .password(mUser.getPassword())
                 .build().toJSON();
 
+        ResponseReceiver.getInstance().removeOnResponseListener(identifierListener);
+        ResponseReceiver.getInstance().addOnResponseListener(this);
         // Send the request
-        socketService.sendRequest(req);
+        SonarCloudApp.socketService.sendRequest(req);
     }
 
 
@@ -131,7 +132,7 @@ public class LoginActivity extends BaseActivity implements OnResponseListener {
             ResponseReceiver.getInstance().addOnResponseListener(identifierListener);
 
             // Send the created request to server
-            socketService.sendRequest(requestBuilder.build().toJSON());
+            SonarCloudApp.socketService.sendRequest(requestBuilder.build().toJSON());
         } catch (JSONException e) {
             e.printStackTrace();
         }

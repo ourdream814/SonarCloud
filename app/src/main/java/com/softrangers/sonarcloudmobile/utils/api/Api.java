@@ -10,6 +10,7 @@ public class Api {
 
     // Server port and url
     public static final String URL = "woodward.parentglue.com";
+    public static final String M_URL = "maestro.parentglue.com";
     public static final int PORT = 6523;
 
     //---------- Components used to build server requests ------------//
@@ -21,6 +22,7 @@ public class Api {
     public static final String METHOD = "method";
 
     public static final String REQUEST_MESSAGE = "json_request";
+    public static final String CONNECTION_BROADCAST = "com.softrangers.sonarcloudmobile.CONNECTED";
     public static final String RESPONSE_BROADCAST = "com.softrangers.sonarcloudmobile.RESPONSE_BROADCAST";
     public static final String RESPONSE_MESSAGE = "json_response";
 
@@ -46,6 +48,8 @@ public class Api {
      */
     public static class Method {
         public static final String USER = "user";
+        public static final String IDENTIFIER = "identifier";
+        public static final String GROUP_ID = "groupID";
     }
 
     /**
