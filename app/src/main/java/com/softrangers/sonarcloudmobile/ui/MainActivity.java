@@ -69,6 +69,7 @@ public class MainActivity extends BaseActivity implements OnResponseListener,
         mPagerAdapter.addFragment(new ScheduleFragment(), getString(R.string.schedule_announcement));
         mPagerAdapter.addFragment(new SettingsFragment(), getString(R.string.settings));
         mViewPager.setAdapter(mPagerAdapter);
+        mViewPager.setOffscreenPageLimit(5);
         setToolbarTitle(mPagerAdapter.getTitle(0));
         mViewPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
             @Override
