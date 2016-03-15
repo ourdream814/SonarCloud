@@ -1,58 +1,59 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context=".ui.fragments.ReceiversFragment">
+                xmlns:tools="http://schemas.android.com/tools"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                tools:context=".ui.fragments.ReceiversFragment">
 
     <RadioGroup
         android:id="@+id/pa_list_selector"
         android:layout_width="match_parent"
         android:layout_height="?actionBarSize"
-        android:elevation="4dp"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:background="@color/colorPrimary"
-        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
         android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true"
         android:layout_alignParentRight="true"
-        android:layout_alignParentEnd="true">
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:background="@color/colorPrimary"
+        android:elevation="4dp"
+        android:gravity="center"
+        android:orientation="horizontal">
 
         <RadioButton
+            android:id="@+id/receivers_button"
             android:layout_width="100dp"
             android:layout_height="wrap_content"
-            android:gravity="center"
-            android:padding="5dp"
-            android:button="@null"
             android:layout_marginRight="15dp"
-            android:text="@string/receivers"
-            android:textColor="@android:color/white"
             android:background="@drawable/button_blue_borders"
-            android:id="@+id/receivers_button" />
+            android:button="@null"
+            android:gravity="center"
+            android:padding="5dp"
+            android:text="@string/receivers"
+            android:textColor="@android:color/white"/>
 
         <RadioButton
+            android:id="@+id/groups_button"
             android:layout_width="100dp"
-            android:gravity="center"
             android:layout_height="wrap_content"
-            android:padding="5dp"
-            android:button="@null"
             android:layout_marginLeft="15dp"
-            android:text="@string/groups"
-            android:textColor="@android:color/white"
             android:background="@drawable/button_blue_borders"
-            android:id="@+id/groups_button" />
+            android:button="@null"
+            android:gravity="center"
+            android:padding="5dp"
+            android:text="@string/groups"
+            android:textColor="@android:color/white"/>
     </RadioGroup>
 
     <android.support.v4.widget.SwipeRefreshLayout
-        android:layout_below="@id/pa_list_selector"
         android:id="@+id/pa_list_swipeRefresh"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:layout_below="@id/pa_list_selector">
 
         <com.softrangers.sonarcloudmobile.utils.widgets.AnimatedExpandableListView
             android:id="@+id/receivers_expandableListView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:background="@color/colorSecondary"
             android:childDivider="@color/colorSecondary"
             android:childIndicator="@null"
             android:groupIndicator="@null"/>
