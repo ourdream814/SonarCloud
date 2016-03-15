@@ -13,6 +13,8 @@ public class Api {
     public static final String M_URL = "maestro.parentglue.com";
     public static final int PORT = 6523;
 
+    public static int SEQ_VALUE = 0;
+
     //---------- Components used to build server requests ------------//
     public static final int ERROR = 0;
     public static final int RESPONSE = 1;
@@ -41,6 +43,7 @@ public class Api {
         public static final String AUTHENTICATE = "authenticate";
         public static final String IDENTIFIER = "identifier";
         public static final String RECEIVERS = "receivers";
+        public static final String ORGANISATIONS = "organizations";
     }
 
     /**
@@ -65,9 +68,11 @@ public class Api {
     public static class Action {
         public static final String NEW = "new";
         public static final String RENEW = "renew";
+    }
 
-        public static final String ACTION_CONNECT = "connect";
-        public static final String ACTION_SEND = "send_request";
-        public static final String ACTION_DISCONECT = "disconnect";
+    public static class Options {
+        public static final String USER_ID = "userID";
+        public static final String ORGANISATION_ID = "organisationID";
+        public static final String SEQ_FIELD = "seq";
     }
 }

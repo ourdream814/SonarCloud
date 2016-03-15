@@ -55,7 +55,7 @@ public class ResponseReceiver extends BroadcastReceiver {
                     JSONObject object = new JSONObject(response);
                     // get the request status from response
                     boolean success = object.getBoolean("success");
-
+                    Api.SEQ_VALUE = object.getInt("seq") + 1;
                     // check status and inform listeners about either response or error
                     if (success) {
                         for (OnResponseListener l : listeners) {

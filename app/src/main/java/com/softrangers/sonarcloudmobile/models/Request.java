@@ -3,6 +3,8 @@ package com.softrangers.sonarcloudmobile.models;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import com.softrangers.sonarcloudmobile.utils.api.Api;
+
 import org.json.JSONObject;
 
 import java.lang.reflect.Field;
@@ -24,12 +26,12 @@ public class Request implements Parcelable {
     private String identifier;
     private String secret;
     private String groupId;
-    private int pin;
+//    private int pin;
     private String action;
     private String userId;
     private String organisationId;
     private String receiverId;
-    private int seq = 0;
+    private int seq;
 //    private boolean playImmediately;
 
     private Request() {
@@ -45,7 +47,7 @@ public class Request implements Parcelable {
         identifier = in.readString();
         secret = in.readString();
         groupId = in.readString();
-        pin = in.readInt();
+//        pin = in.readInt();
         action = in.readString();
         userId = in.readString();
         organisationId = in.readString();
@@ -80,7 +82,7 @@ public class Request implements Parcelable {
         dest.writeString(identifier);
         dest.writeString(secret);
         dest.writeString(groupId);
-        dest.writeInt(pin);
+//        dest.writeInt(pin);
         dest.writeString(action);
         dest.writeString(userId);
         dest.writeString(organisationId);
@@ -104,6 +106,7 @@ public class Request implements Parcelable {
                     request.put(set.getKey(), set.getValue().get(this));
                 }
             }
+            request.put(Api.Options.SEQ_FIELD, Api.SEQ_VALUE);
             return request;
         } catch (Exception e) {
             e.printStackTrace();
@@ -126,6 +129,7 @@ public class Request implements Parcelable {
         private String mOrganisationId;
         private String mReceiverId;
         private boolean mPlayImmediately;
+        private int mSeq;
 
         public Builder command(String command) {
             mCommand = command;
@@ -197,6 +201,11 @@ public class Request implements Parcelable {
             return this;
         }
 
+        public Builder seq(int seq) {
+            mSeq = seq;
+            return this;
+        }
+
 
         public Request build() {
             Request request = new Request();
@@ -212,8 +221,9 @@ public class Request implements Parcelable {
 //            request.playImmediately = mPlayImmediately;
             request.receiverId = mReceiverId;
             request.secret = mSecret;
-            request.pin = mPin;
+//            request.pin = mPin;
             request.userId = mUserId;
+            request.seq = mSeq;
             return request;
         }
     }

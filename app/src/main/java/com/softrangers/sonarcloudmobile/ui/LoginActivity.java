@@ -145,8 +145,8 @@ public class LoginActivity extends BaseActivity implements OnResponseListener {
     @Override
     public void onCommandFailure(final String message) {
         // show an alert dialog to user with server message
-        alertUserAboutError(message);
-
+        alertUserAboutError(getString(R.string.login_error), message);
+        SonarCloudApp.socketService.restartConnection();
         // hide loading ui
         runOnUiThread(new Runnable() {
             @Override
@@ -164,7 +164,7 @@ public class LoginActivity extends BaseActivity implements OnResponseListener {
     @Override
     public void onError() {
         // show an alert dialog to user that something went wrong
-        alertUserAboutError("Something went wrong, please try again.");
+        alertUserAboutError(getString(R.string.error), getString(R.string.unknown_error));
         // hide loading progress
         runOnUiThread(new Runnable() {
             @Override
@@ -210,7 +210,7 @@ public class LoginActivity extends BaseActivity implements OnResponseListener {
                 finish();
             } catch (Exception e) {
                 e.printStackTrace();
-                alertUserAboutError("Something went wrong, please try again.");
+                alertUserAboutError(getString(R.string.error), getString(R.string.unknown_error));
             }
 
         }
@@ -222,7 +222,7 @@ public class LoginActivity extends BaseActivity implements OnResponseListener {
         @Override
         public void onCommandFailure(final String message) {
             // show an alert dialog to user with server message
-            alertUserAboutError(message);
+            alertUserAboutError(getString(R.string.error), message);
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -238,7 +238,7 @@ public class LoginActivity extends BaseActivity implements OnResponseListener {
         @Override
         public void onError() {
             // show an alert dialog to user that something went wrong
-            alertUserAboutError("Something went wrong, please try again.");
+            alertUserAboutError(getString(R.string.error), getString(R.string.unknown_error));
             // hide loading progress
             runOnUiThread(new Runnable() {
                 @Override

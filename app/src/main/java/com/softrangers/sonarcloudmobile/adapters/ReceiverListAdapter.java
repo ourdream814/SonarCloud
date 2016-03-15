@@ -21,16 +21,35 @@ public class ReceiverListAdapter extends AnimatedExpandableListView.AnimatedExpa
 
     private Context mContext;
     private ArrayList<PASystem> mPASystems;
+    private OnItemClickListener mOnItemClickListener;
 
     public ReceiverListAdapter(@NonNull Context context, @NonNull ArrayList<PASystem> paSystems) {
         mContext = context;
         mPASystems = paSystems;
     }
 
+    public void setOnItemClickListener(OnItemClickListener onItemClickListener) {
+        mOnItemClickListener = onItemClickListener;
+    }
+
+    public void addItems(ArrayList<PASystem> systems) {
+        for (PASystem system : systems) {
+            mPASystems.add(system);
+        }
+        notifyDataSetChanged();
+    }
+
+    public void refreshList(ArrayList<PASystem> systems) {
+        mPASystems.clear();
+        for (PASystem system : systems) {
+            mPASystems.add(system);
+        }
+        notifyDataSetChanged();
+    }
+
     @Override
-    public View getRealChildView(int groupPosition, int childPosition, boolean isLastChild,
-                                 View convertView, ViewGroup parent)
-    {
+    public View getRealChildView(int groupPosition, final int childPosition, boolean isLastChild,
+                                 View convertView, ViewGroup parent) {
         View row = convertView;
         ChildViewHolder holder;
 
@@ -48,9 +67,19 @@ public class ReceiverListAdapter extends AnimatedExpandableListView.AnimatedExpa
             holder = (ChildViewHolder) row.getTag();
         }
 
-        Receiver receiver = mPASystems.get(groupPosition).getReceivers().get(childPosition);
+        final Receiver receiver = mPASystems.get(groupPosition).getReceivers().get(childPosition);
         holder.mCheckBox.setImageResource(receiver.isSelected() ? R.mipmap.ic_circle_checked : R.mipmap.ic_circle);
         holder.mChildeTitle.setText(receiver.getName());
+
+        row.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mOnItemClickListener != null) {
+                    mOnItemClickListener.onChildClick(receiver, childPosition);
+                }
+            }
+        });
+
         return row;
     }
 
@@ -71,7 +100,9 @@ public class ReceiverListAdapter extends AnimatedExpandableListView.AnimatedExpa
 
     @Override
     public Object getChild(int groupPosition, int childPosition) {
-        return mPASystems.get(groupPosition).getReceivers().get(childPosition);
+        ArrayList<Receiver> receivers = mPASystems.get(groupPosition).getReceivers();
+        if (receivers == null) receivers = new ArrayList<>();
+        return receivers.get(childPosition);
     }
 
     @Override
@@ -90,9 +121,8 @@ public class ReceiverListAdapter extends AnimatedExpandableListView.AnimatedExpa
     }
 
     @Override
-    public View getGroupView(int groupPosition, boolean isExpanded,
-                             View convertView, ViewGroup parent)
-    {
+    public View getGroupView(final int groupPosition, boolean isExpanded,
+                             View convertView, ViewGroup parent) {
         View row = convertView;
         HeaderViewHolder holder;
 
@@ -110,16 +140,21 @@ public class ReceiverListAdapter extends AnimatedExpandableListView.AnimatedExpa
             holder = (HeaderViewHolder) row.getTag();
         }
 
-        PASystem system = mPASystems.get(groupPosition);
+        final PASystem system = mPASystems.get(groupPosition);
 
         holder.mHeaderTitle.setText(system.getName());
         holder.mIndicator.setImageResource(isExpanded ? R.mipmap.ic_indicator_up : R.mipmap.ic_indicator_down);
+
         return row;
     }
 
     @Override
     public boolean isChildSelectable(int groupPosition, int childPosition) {
         return true;
+    }
+
+    public interface OnItemClickListener {
+        void onChildClick(Receiver receiver, int position);
     }
 
     private class ChildViewHolder {

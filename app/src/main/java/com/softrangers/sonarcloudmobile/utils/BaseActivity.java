@@ -1,16 +1,16 @@
 package com.softrangers.sonarcloudmobile.utils;
 
-import android.content.ComponentName;
-import android.content.Context;
-import android.content.Intent;
-import android.content.ServiceConnection;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
-import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.TextView;
 
-import com.softrangers.sonarcloudmobile.utils.api.SocketService;
+import com.softrangers.sonarcloudmobile.R;
 
 /**
  * Created by Eduard Albu on 14 03 2016
@@ -20,51 +20,19 @@ import com.softrangers.sonarcloudmobile.utils.api.SocketService;
  */
 public class BaseActivity extends AppCompatActivity {
 
-    protected static SocketService socketService;
-    protected boolean isBound;
+    private AlertDialog mLoadingDialog;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
     }
 
-    protected ServiceConnection mServiceConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            socketService = ((SocketService.LocalBinder) service).getService();
-            onServiceBound(socketService);
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            socketService = null;
-        }
-    };
-
-    protected void bindService(Context context) {
-        bindService(new Intent(context, SocketService.class), mServiceConnection, Context.BIND_AUTO_CREATE);
-        isBound = true;
-    }
-
-    protected void unbindService() {
-        if (isBound) {
-            unbindService(mServiceConnection);
-            isBound = false;
-        }
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        unbindService();
-    }
-
-    public void alertUserAboutError(final String message) {
+    public void alertUserAboutError(final String title, final String message) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 AlertDialog dialog = new AlertDialog.Builder(BaseActivity.this)
-                        .setTitle("Sorry")
+                        .setTitle(title)
                         .setMessage(message)
                         .setPositiveButton("ok", null)
                         .create();
@@ -73,5 +41,21 @@ public class BaseActivity extends AppCompatActivity {
         });
     }
 
-    public void onServiceBound(SocketService socketService){}
+    public void showLoading() {
+        View view = LayoutInflater.from(this).inflate(R.layout.loading_dialog, null);
+        TextView loadingText = (TextView) view.findViewById(R.id.loading_dialog_textView);
+        loadingText.setTypeface(SonarCloudApp.avenirMedium);
+        mLoadingDialog = new AlertDialog.Builder(this)
+                .setView(view)
+                .setCancelable(false)
+                .create();
+        mLoadingDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        mLoadingDialog.show();
+    }
+
+    public void dismissLoading() {
+        if (mLoadingDialog != null) {
+            mLoadingDialog.dismiss();
+        }
+    }
 }

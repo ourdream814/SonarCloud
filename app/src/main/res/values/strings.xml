@@ -10,9 +10,11 @@
     <string name="make_announcement">Make an announcement</string>
     <string name="schedule_announcement">Schedule an announcement</string>
     <string name="settings">Settings</string>
-
-    <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="login_error">Log-in error</string>
+    <string name="unknown_error">Something went wrong, please try again</string>
+    <string name="error">Error</string>
+    <string name="loading">Loading…</string>
     <string name="receivers">Receivers</string>
     <string name="groups">Groups</string>
+
 </resources>

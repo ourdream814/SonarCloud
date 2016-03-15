@@ -45,7 +45,7 @@
 
     <android.support.v4.widget.SwipeRefreshLayout
         android:layout_below="@id/pa_list_selector"
-        android:id="@+id/accountSummary_swipeRefresh"
+        android:id="@+id/pa_list_swipeRefresh"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 

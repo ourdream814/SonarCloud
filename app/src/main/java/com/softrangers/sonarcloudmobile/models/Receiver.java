@@ -98,7 +98,10 @@ public class Receiver implements Parcelable {
                 receiver.setName(o.optString("name", ""));
                 receiver.setCreated(o.optString("created", ""));
                 receiver.setModified(o.optString("modified", ""));
-                receivers.add(receiver);
+
+                if (!receiver.getName().equals("null")) {
+                    receivers.add(receiver);
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();

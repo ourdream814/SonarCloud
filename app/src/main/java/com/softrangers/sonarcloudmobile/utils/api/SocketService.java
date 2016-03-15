@@ -64,7 +64,7 @@ public class SocketService extends Service implements HandshakeCompletedListener
      * @param request to send
      */
     public void sendRequest(final JSONObject request) {
-        new SendRequest(request, sslSocket);
+        new SendRequest(request);
     }
 
 
@@ -96,20 +96,16 @@ public class SocketService extends Service implements HandshakeCompletedListener
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         // Connect socket to server through TLS protocol
-        new Connect(sslSocket);
+        new Connection();
         return START_NOT_STICKY;
     }
 
     /**
      * Runnable which will establish server connection in a new thread
      */
-    class Connect implements Runnable {
-        SSLSocket mSocket;
+    class Connection implements Runnable {
 
-        public Connect(SSLSocket sslSocket) {
-            // Give the socket object to current thread
-            mSocket = sslSocket;
-
+        public Connection() {
             // start the thread
             new Thread(this, this.getClass().getSimpleName()).start();
         }
@@ -137,23 +133,43 @@ public class SocketService extends Service implements HandshakeCompletedListener
         }
     }
 
+    public void restartConnection() {
+        new Reconnect();
+    }
+
+    class Reconnect implements Runnable {
+
+        public Reconnect() {
+            new Thread(this, this.getClass().getSimpleName()).start();
+        }
+
+        @Override
+        public void run() {
+            try {
+                if (sslSocket != null && sslSocket.isConnected()) {
+                    sslSocket.close();
+                    new Connection();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     /**
      * Runnable which will send requests in a new thread
      */
     class SendRequest implements Runnable {
         JSONObject message;
-        SSLSocket mSocket;
 
         /**
          * Constructor
          *
          * @param message   for server
-         * @param sslSocket through which to send the request
          */
-        public SendRequest(JSONObject message, SSLSocket sslSocket) {
+        public SendRequest(JSONObject message) {
             // give the message for server and socket object to current thread
             this.message = message;
-            mSocket = sslSocket;
 
             // send message to server
             new Thread(this, this.getClass().getSimpleName()).start();
@@ -169,7 +185,7 @@ public class SocketService extends Service implements HandshakeCompletedListener
             StringBuilder builder = new StringBuilder();
             try {
                 if (sslSocket == null || !sslSocket.isConnected()) {
-                    new Connect(sslSocket);
+                    new Connection();
                 }
 
                 if (sslSocket != null && sslSocket.isConnected()) {
