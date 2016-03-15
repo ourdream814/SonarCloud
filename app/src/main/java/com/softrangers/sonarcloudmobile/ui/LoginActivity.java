@@ -249,12 +249,4 @@ public class LoginActivity extends BaseActivity implements OnResponseListener {
             });
         }
     };
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        // Remove all listeners from this activity
-        ResponseReceiver.getInstance().removeOnResponseListener(this);
-        ResponseReceiver.getInstance().removeOnResponseListener(identifierListener);
-    }
 }

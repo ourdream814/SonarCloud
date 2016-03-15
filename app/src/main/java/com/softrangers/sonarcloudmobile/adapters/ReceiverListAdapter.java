@@ -32,6 +32,15 @@ public class ReceiverListAdapter extends AnimatedExpandableListView.AnimatedExpa
         mOnItemClickListener = onItemClickListener;
     }
 
+    public ArrayList<PASystem> getList() {
+        return mPASystems;
+    }
+
+    public void addItem(PASystem system) {
+        mPASystems.add(system);
+        notifyDataSetChanged();
+    }
+
     public void addItems(ArrayList<PASystem> systems) {
         for (PASystem system : systems) {
             mPASystems.add(system);
@@ -58,8 +67,8 @@ public class ReceiverListAdapter extends AnimatedExpandableListView.AnimatedExpa
             row = inflater.inflate(R.layout.receivers_list_item, null);
             holder = new ChildViewHolder();
 
-            holder.mChildeTitle = (TextView) row.findViewById(R.id.child_title);
-            holder.mChildeTitle.setTypeface(SonarCloudApp.avenirBook);
+            holder.mChildTitle = (TextView) row.findViewById(R.id.child_title);
+            holder.mChildTitle.setTypeface(SonarCloudApp.avenirBook);
             holder.mCheckBox = (ImageView) row.findViewById(R.id.check_box_image);
 
             row.setTag(holder);
@@ -69,7 +78,7 @@ public class ReceiverListAdapter extends AnimatedExpandableListView.AnimatedExpa
 
         final Receiver receiver = mPASystems.get(groupPosition).getReceivers().get(childPosition);
         holder.mCheckBox.setImageResource(receiver.isSelected() ? R.mipmap.ic_circle_checked : R.mipmap.ic_circle);
-        holder.mChildeTitle.setText(receiver.getName());
+        holder.mChildTitle.setText(receiver.getName());
 
         row.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -79,13 +88,14 @@ public class ReceiverListAdapter extends AnimatedExpandableListView.AnimatedExpa
                 }
             }
         });
-
         return row;
     }
 
     @Override
     public int getRealChildrenCount(int groupPosition) {
-        return mPASystems.get(groupPosition).getReceivers().size();
+        ArrayList<Receiver> receivers = mPASystems.get(groupPosition).getReceivers();
+        if (receivers == null) receivers = new ArrayList<>();
+        return receivers.size();
     }
 
     @Override
@@ -159,7 +169,7 @@ public class ReceiverListAdapter extends AnimatedExpandableListView.AnimatedExpa
 
     private class ChildViewHolder {
         public ImageView mCheckBox;
-        public TextView mChildeTitle;
+        public TextView mChildTitle;
     }
 
     private class HeaderViewHolder {

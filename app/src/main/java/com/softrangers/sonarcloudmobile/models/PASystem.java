@@ -3,6 +3,13 @@ package com.softrangers.sonarcloudmobile.models;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import com.softrangers.sonarcloudmobile.utils.OnResponseListener;
+import com.softrangers.sonarcloudmobile.utils.ReceiverObserver;
+import com.softrangers.sonarcloudmobile.utils.ReceiversObservable;
+import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
+import com.softrangers.sonarcloudmobile.utils.api.Api;
+import com.softrangers.sonarcloudmobile.utils.api.ResponseReceiver;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -14,20 +21,24 @@ import java.util.ArrayList;
  *
  * @author eduard.albu@gmail.com
  */
-public class PASystem implements Parcelable {
+public class PASystem implements Parcelable, ReceiversObservable {
 
     private String mName;
     private String mCreated;
     private String mModified;
-    private String mOrganisationId;
+    private int mOrganisationId;
     private ArrayList<Receiver> mReceivers;
+    private static ArrayList<ReceiverObserver> observers;
 
     public PASystem() {
-
+        observers = new ArrayList<>();
     }
 
     protected PASystem(Parcel in) {
         mName = in.readString();
+        mCreated = in.readString();
+        mModified = in.readString();
+        mOrganisationId = in.readInt();
         mReceivers = in.createTypedArrayList(Receiver.CREATOR);
     }
 
@@ -57,13 +68,14 @@ public class PASystem implements Parcelable {
 
     public void setReceivers(ArrayList<Receiver> receivers) {
         mReceivers = receivers;
+        notifyObservers();
     }
 
-    public String getOrganisationId() {
+    public int getOrganisationId() {
         return mOrganisationId;
     }
 
-    public void setOrganisationId(String organisationId) {
+    public void setOrganisationId(int organisationId) {
         mOrganisationId = organisationId;
     }
 
@@ -84,7 +96,7 @@ public class PASystem implements Parcelable {
     }
 
     public static ArrayList<PASystem> build(JSONObject response) {
-        ArrayList<PASystem> systems = new ArrayList<>();
+        final ArrayList<PASystem> systems = new ArrayList<>();
         try {
             JSONArray array = response.getJSONArray("organizations");
             for (int i = 0; i < array.length(); i++) {
@@ -92,7 +104,7 @@ public class PASystem implements Parcelable {
                 JSONObject o = array.getJSONObject(i);
                 system.setCreated(o.getString("created"));
                 system.setModified(o.getString("modified"));
-                system.setOrganisationId("organizationID");
+                system.setOrganisationId(o.getInt("organizationID"));
                 system.setName(o.getString("name"));
                 systems.add(system);
             }
@@ -102,7 +114,6 @@ public class PASystem implements Parcelable {
         return systems;
     }
 
-
     @Override
     public int describeContents() {
         return 0;
@@ -111,6 +122,49 @@ public class PASystem implements Parcelable {
     @Override
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeString(mName);
+        dest.writeString(mCreated);
+        dest.writeString(mModified);
+        dest.writeInt(mOrganisationId);
         dest.writeTypedList(mReceivers);
+    }
+
+    public void loadReceivers() {
+        Request request = new Request.Builder().command(Api.Command.RECEIVERS).organisationId(this.getOrganisationId()).build();
+        SonarCloudApp.socketService.sendRequest(request.toJSON());
+        ResponseReceiver.getInstance().addOnResponseListener(new OnResponseListener() {
+            @Override
+            public void onResponse(JSONObject response) {
+                PASystem.this.setReceivers(Receiver.build(response));
+            }
+
+            @Override
+            public void onCommandFailure(String message) {
+
+            }
+
+            @Override
+            public void onError() {
+
+            }
+        });
+    }
+
+    @Override
+    public void addObserver(ReceiverObserver observer) {
+        observers.add(observer);
+    }
+
+    @Override
+    public void removeObserver(ReceiverObserver observer) {
+        observers.remove(observer);
+    }
+
+    @Override
+    public void notifyObservers() {
+        for (ReceiverObserver o : observers) {
+            if (o != null) {
+                o.update(this, this.getReceivers());
+            }
+        }
     }
 }

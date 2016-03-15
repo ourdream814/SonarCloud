@@ -1,13 +1,12 @@
 package com.softrangers.sonarcloudmobile.ui.fragments;
 
 import android.os.Bundle;
-import android.support.annotation.NonNull;
+import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 
@@ -18,6 +17,7 @@ import com.softrangers.sonarcloudmobile.models.Receiver;
 import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.ui.MainActivity;
 import com.softrangers.sonarcloudmobile.utils.OnResponseListener;
+import com.softrangers.sonarcloudmobile.utils.ReceiverObserver;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
 import com.softrangers.sonarcloudmobile.utils.api.ResponseReceiver;
@@ -32,14 +32,12 @@ import java.util.ArrayList;
  * A simple {@link Fragment} subclass.
  */
 public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedChangeListener,
-        OnResponseListener, SwipeRefreshLayout.OnRefreshListener, ReceiverListAdapter.OnItemClickListener {
+        OnResponseListener, SwipeRefreshLayout.OnRefreshListener,
+        ReceiverListAdapter.OnItemClickListener, ReceiverObserver {
 
-    private static final String RECEIVERS_ARG = "receivers_args";
     private AnimatedExpandableListView mListView;
     private RadioButton mReceivers;
     private RadioButton mGroups;
-    private ArrayList<Receiver> mReceiversArray;
-    private ArrayList<PASystem> mPASystems;
     private MainActivity mActivity;
     private SwipeRefreshLayout mRefreshLayout;
     private ReceiverListAdapter mReceiverListAdapter;
@@ -63,33 +61,27 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
         mReceivers.setTextColor(getResources().getColor(R.color.colorPrimary));
         mGroups = (RadioButton) view.findViewById(R.id.groups_button);
         radioGroup.setOnCheckedChangeListener(this);
-        ResponseReceiver.getInstance().addOnResponseListener(this);
+        ArrayList<PASystem> PASystems = new ArrayList<>();
+        setUpListView(PASystems);
+        return view;
+    }
 
+    @Override
+    public void onResume() {
+        super.onResume();
         // build a request
         Request.Builder requestBuilder = new Request.Builder();
         requestBuilder.command(Api.Command.ORGANISATIONS);
         requestBuilder.userId(SonarCloudApp.getInstance().userId());
-
+        ResponseReceiver.getInstance().addOnResponseListener(this);
         // send request to server
         SonarCloudApp.socketService.sendRequest(requestBuilder.build().toJSON());
-        return view;
     }
 
     private void setUpListView(ArrayList<PASystem> paSystems) {
         mReceiverListAdapter = new ReceiverListAdapter(getActivity(), paSystems);
         mReceiverListAdapter.setOnItemClickListener(this);
         mListView.setAdapter(mReceiverListAdapter);
-    }
-
-    private ArrayList<PASystem> getTestPASystems() {
-        ArrayList<PASystem> paSystems = new ArrayList<>();
-        for (int i = 1; i < mReceiversArray.size(); i++) {
-            PASystem paSystem = new PASystem();
-            paSystem.setName("PA System " + i);
-            paSystem.setReceivers(mReceiversArray);
-            paSystems.add(paSystem);
-        }
-        return paSystems;
     }
 
     @Override
@@ -108,46 +100,31 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
 
     @Override
     public void onResponse(JSONObject response) {
-        mPASystems = PASystem.build(response);
+
         ResponseReceiver.getInstance().removeOnResponseListener(this);
+        ArrayList<PASystem> paSystems = PASystem.build(response);
 
-        for (final PASystem system : mPASystems) {
-            Request.Builder requestBuilder = new Request.Builder();
-            requestBuilder.command(Api.Command.RECEIVERS);
-            requestBuilder.userId(SonarCloudApp.getInstance().userId());
-            requestBuilder.organisationId(system.getOrganisationId());
+        mReceiverListAdapter.refreshList(paSystems);
 
-            // send request to server
-            SonarCloudApp.socketService.sendRequest(requestBuilder.build().toJSON());
-            ResponseReceiver.getInstance().addOnResponseListener(new OnResponseListener() {
-                @Override
-                public void onResponse(JSONObject response) {
-                    system.setReceivers(Receiver.build(response));
-                }
-
-                @Override
-                public void onCommandFailure(String message) {
-
-                }
-
-                @Override
-                public void onError() {
-
-                }
-            });
+        for (PASystem system : paSystems) {
+            system.addObserver(this);
+            if (system.getReceivers() == null)
+                system.loadReceivers();
         }
-        setUpListView(mPASystems);
+
         mActivity.dismissLoading();
     }
 
     @Override
     public void onCommandFailure(String message) {
-
+        mActivity.alertUserAboutError(mActivity.getString(R.string.error), message);
+        mActivity.dismissLoading();
     }
 
     @Override
     public void onError() {
-
+        mActivity.alertUserAboutError(mActivity.getString(R.string.error), mActivity.getString(R.string.unknown_error));
+        mActivity.dismissLoading();
     }
 
     @Override
@@ -157,8 +134,20 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
 
     @Override
     public void onChildClick(Receiver receiver, int position) {
-        if (receiver.isSelected()) receiver.setIsSelected(false);
-        else receiver.setIsSelected(true);
+        if (receiver.isSelected()) {
+            receiver.setIsSelected(false);
+            Snackbar.make(mListView, receiver.getName() + " deselected, Id = " + receiver.getReceiverId(), Snackbar.LENGTH_SHORT).show();
+        } else {
+            receiver.setIsSelected(true);
+            Snackbar.make(mListView, receiver.getName() + " selected, Id = " + receiver.getReceiverId(), Snackbar.LENGTH_SHORT).show();
+        }
+
+        mReceiverListAdapter.notifyDataSetChanged();
+    }
+
+    @Override
+    public void update(PASystem paSystem, ArrayList<Receiver> receivers) {
+//        mReceiverListAdapter.addItem(paSystem);
         mReceiverListAdapter.notifyDataSetChanged();
     }
 }

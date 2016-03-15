@@ -59,17 +59,23 @@ public class ResponseReceiver extends BroadcastReceiver {
                     // check status and inform listeners about either response or error
                     if (success) {
                         for (OnResponseListener l : listeners) {
-                            l.onResponse(object);
+                            if (l != null) {
+                                l.onResponse(object);
+                            }
                         }
                     } else {
                         for (OnResponseListener l : listeners) {
-                            l.onCommandFailure(object.getString("message"));
+                            if (l != null) {
+                                l.onCommandFailure(object.getString("message"));
+                            }
                         }
                     }
                 } catch (Exception e) {
                     // Inform listeners about error in case of exception
                     for (OnResponseListener l : listeners) {
-                        l.onError();
+                        if (l != null) {
+                            l.onError();
+                        }
                     }
                     e.printStackTrace();
                 }

@@ -114,14 +114,7 @@ public class MainActivity extends BaseActivity implements OnResponseListener,
     public void onResponse(JSONObject response) {
         SonarCloudApp.user = User.build(response);
         ResponseReceiver.getInstance().removeOnResponseListener(this);
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                setUpTabs();
-            }
-        });
-
-
+        setUpTabs();
     }
 
     @Override
@@ -139,29 +132,10 @@ public class MainActivity extends BaseActivity implements OnResponseListener,
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        if (isLoading()) dismissLoading();
         ResponseReceiver.getInstance().removeOnResponseListener(this);
         ConnectionReceiver.getInstance().removeOnResponseListener(this);
     }
-
-    OnResponseListener authListener = new OnResponseListener() {
-        @Override
-        public void onResponse(JSONObject response) {
-            Request.Builder requestBuilder = new Request.Builder();
-            requestBuilder.command(Api.Command.RECEIVERS);
-            requestBuilder.userId(SonarCloudApp.getInstance().userId());
-            SonarCloudApp.socketService.sendRequest(requestBuilder.build().toJSON());
-        }
-
-        @Override
-        public void onCommandFailure(String message) {
-            alertUserAboutError(getString(R.string.login_error), getString(R.string.unknown_error));
-        }
-
-        @Override
-        public void onError() {
-            alertUserAboutError(getString(R.string.error), getString(R.string.unknown_error));
-        }
-    };
 
     @Override
     public void onSocketConnected() {
@@ -172,6 +146,15 @@ public class MainActivity extends BaseActivity implements OnResponseListener,
                     .secret(SonarCloudApp.getInstance().getSavedData());
             SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
             showLoading();
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (isLoading()) {
+            dismissLoading();
+        } else {
+            super.onBackPressed();
         }
     }
 }

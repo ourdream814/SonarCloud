@@ -25,12 +25,12 @@ public class Request implements Parcelable {
     private String password;
     private String identifier;
     private String secret;
-    private String groupId;
+    private String groupID;
 //    private int pin;
     private String action;
-    private String userId;
-    private String organisationId;
-    private String receiverId;
+    private String userID;
+    private int organizationID;
+    private String receiverID;
     private int seq;
 //    private boolean playImmediately;
 
@@ -46,12 +46,12 @@ public class Request implements Parcelable {
         password = in.readString();
         identifier = in.readString();
         secret = in.readString();
-        groupId = in.readString();
+        groupID = in.readString();
 //        pin = in.readInt();
         action = in.readString();
-        userId = in.readString();
-        organisationId = in.readString();
-        receiverId = in.readString();
+        userID = in.readString();
+        organizationID = in.readInt();
+        receiverID = in.readString();
 //        playImmediately = in.readByte() != 0;
     }
 
@@ -81,12 +81,12 @@ public class Request implements Parcelable {
         dest.writeString(password);
         dest.writeString(identifier);
         dest.writeString(secret);
-        dest.writeString(groupId);
+        dest.writeString(groupID);
 //        dest.writeInt(pin);
         dest.writeString(action);
-        dest.writeString(userId);
-        dest.writeString(organisationId);
-        dest.writeString(receiverId);
+        dest.writeString(userID);
+        dest.writeInt(organizationID);
+        dest.writeString(receiverID);
 //        dest.writeByte((byte) (playImmediately ? 1 : 0));
     }
 
@@ -126,7 +126,7 @@ public class Request implements Parcelable {
         private int mPin;
         private String mAction;
         private String mUserId;
-        private String mOrganisationId;
+        private int mOrganisationId;
         private String mReceiverId;
         private boolean mPlayImmediately;
         private int mSeq;
@@ -186,7 +186,7 @@ public class Request implements Parcelable {
             return this;
         }
 
-        public Builder organisationId(String organistaionId) {
+        public Builder organisationId(int organistaionId) {
             mOrganisationId = organistaionId;
             return this;
         }
@@ -213,16 +213,16 @@ public class Request implements Parcelable {
             request.command = mCommand;
             request.device = mDevice;
             request.email = mEmail;
-            request.groupId = mGroupId;
+            request.groupID = mGroupId;
             request.identifier = mIdentifier;
             request.method = mMethod;
-            request.organisationId = mOrganisationId;
+            request.organizationID = mOrganisationId;
             request.password = mPassword;
 //            request.playImmediately = mPlayImmediately;
-            request.receiverId = mReceiverId;
+            request.receiverID = mReceiverId;
             request.secret = mSecret;
 //            request.pin = mPin;
-            request.userId = mUserId;
+            request.userID = mUserId;
             request.seq = mSeq;
             return request;
         }

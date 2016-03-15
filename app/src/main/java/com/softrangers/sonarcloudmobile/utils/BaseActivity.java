@@ -41,6 +41,10 @@ public class BaseActivity extends AppCompatActivity {
         });
     }
 
+    public boolean isLoading() {
+        return mLoadingDialog != null && mLoadingDialog.isShowing();
+    }
+
     public void showLoading() {
         View view = LayoutInflater.from(this).inflate(R.layout.loading_dialog, null);
         TextView loadingText = (TextView) view.findViewById(R.id.loading_dialog_textView);
