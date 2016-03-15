@@ -14,7 +14,7 @@
     <string name="unknown_error">Something went wrong, please try again</string>
     <string name="error">Error</string>
     <string name="loading">Loading…</string>
-    <string name="receivers">Receivers</string>
+    <string name="receivers">PAs</string>
     <string name="groups">Groups</string>
 
 </resources>

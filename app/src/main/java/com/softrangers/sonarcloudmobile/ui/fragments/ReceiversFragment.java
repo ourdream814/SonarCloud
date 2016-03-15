@@ -26,6 +26,13 @@ import com.softrangers.sonarcloudmobile.utils.widgets.AnimatedExpandableListView
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -41,6 +48,8 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
     private MainActivity mActivity;
     private SwipeRefreshLayout mRefreshLayout;
     private ReceiverListAdapter mReceiverListAdapter;
+    private ArrayList<PASystem> mPASystems;
+    private static boolean sent;
 
     public ReceiversFragment() {
         // Required empty public constructor
@@ -61,8 +70,9 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
         mReceivers.setTextColor(getResources().getColor(R.color.colorPrimary));
         mGroups = (RadioButton) view.findViewById(R.id.groups_button);
         radioGroup.setOnCheckedChangeListener(this);
-        ArrayList<PASystem> PASystems = new ArrayList<>();
-        setUpListView(PASystems);
+        mPASystems = new ArrayList<>();
+        PASystem.addObserverToList(this);
+        setUpListView(mPASystems);
         return view;
     }
 
@@ -102,17 +112,80 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
     public void onResponse(JSONObject response) {
 
         ResponseReceiver.getInstance().removeOnResponseListener(this);
-        ArrayList<PASystem> paSystems = PASystem.build(response);
+        mPASystems = PASystem.build(response);
 
-        mReceiverListAdapter.refreshList(paSystems);
+        SynchronousQueue<PASystem> queue = new SynchronousQueue<>();
 
-        for (PASystem system : paSystems) {
-            system.addObserver(this);
-            if (system.getReceivers() == null)
-                system.loadReceivers();
+        for (PASystem system : mPASystems) {
+            new Thread(new ReceiverRunnable(system, queue)).start();
         }
 
+
         mActivity.dismissLoading();
+    }
+
+    class ReceiverRunnable implements Runnable {
+
+        PASystem mPASystem;
+        SynchronousQueue<PASystem> mQueue;
+
+        public ReceiverRunnable(PASystem system, SynchronousQueue<PASystem> queue) {
+            mPASystem = system;
+            mQueue = queue;
+        }
+
+        @Override
+        public void run() {
+            try {
+                while (sent) {
+                }
+                Request request = new Request.Builder().command(Api.Command.RECEIVERS)
+                        .organisationId(mPASystem.getOrganisationId()).build();
+
+                ResponseReceiver.getInstance().addOnResponseListener(
+                        new ReceiversGet(mQueue));
+
+                SonarCloudApp.socketService.sendRequest(request.toJSON());
+                sent = true;
+                mQueue.put(mPASystem);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    class ReceiversGet implements OnResponseListener {
+
+        SynchronousQueue<PASystem> mQueue;
+
+        public ReceiversGet(SynchronousQueue<PASystem> queue) {
+            mQueue = queue;
+        }
+
+        @Override
+        public void onResponse(JSONObject response) {
+            try {
+                PASystem system = mQueue.take();
+                if (system.getReceivers() == null) {
+                    ArrayList<Receiver> receivers = Receiver.build(response);
+                    system.setReceivers(receivers);
+                    mReceiverListAdapter.refreshList(mPASystems);
+                    sent = false;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        @Override
+        public void onCommandFailure(String message) {
+            mActivity.dismissLoading();
+        }
+
+        @Override
+        public void onError() {
+            mActivity.dismissLoading();
+        }
     }
 
     @Override
@@ -147,7 +220,6 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
 
     @Override
     public void update(PASystem paSystem, ArrayList<Receiver> receivers) {
-//        mReceiverListAdapter.addItem(paSystem);
-        mReceiverListAdapter.notifyDataSetChanged();
+//        mReceiverListAdapter.notifyDataSetChanged();
     }
 }

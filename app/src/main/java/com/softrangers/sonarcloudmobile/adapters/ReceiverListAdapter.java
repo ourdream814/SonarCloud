@@ -48,6 +48,11 @@ public class ReceiverListAdapter extends AnimatedExpandableListView.AnimatedExpa
         notifyDataSetChanged();
     }
 
+    public void clearList() {
+        mPASystems.clear();
+        notifyDataSetChanged();
+    }
+
     public void refreshList(ArrayList<PASystem> systems) {
         mPASystems.clear();
         for (PASystem system : systems) {

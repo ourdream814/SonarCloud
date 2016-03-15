@@ -6,4 +6,5 @@
     <color name="colorMain">#1899d3</color>
     <color name="colorMainLight">#56c9ff</color>
     <color name="colorSecondary">#edefef</color>
+    <color name="colorSecodaryDark">#959595</color>
 </resources>

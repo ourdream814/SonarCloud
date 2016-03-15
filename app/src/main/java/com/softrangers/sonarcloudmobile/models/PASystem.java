@@ -28,10 +28,9 @@ public class PASystem implements Parcelable, ReceiversObservable {
     private String mModified;
     private int mOrganisationId;
     private ArrayList<Receiver> mReceivers;
-    private static ArrayList<ReceiverObserver> observers;
+    private static ArrayList<ReceiverObserver> observers = new ArrayList<>();
 
     public PASystem() {
-        observers = new ArrayList<>();
     }
 
     protected PASystem(Parcel in) {
@@ -128,25 +127,9 @@ public class PASystem implements Parcelable, ReceiversObservable {
         dest.writeTypedList(mReceivers);
     }
 
-    public void loadReceivers() {
-        Request request = new Request.Builder().command(Api.Command.RECEIVERS).organisationId(this.getOrganisationId()).build();
-        SonarCloudApp.socketService.sendRequest(request.toJSON());
-        ResponseReceiver.getInstance().addOnResponseListener(new OnResponseListener() {
-            @Override
-            public void onResponse(JSONObject response) {
-                PASystem.this.setReceivers(Receiver.build(response));
-            }
-
-            @Override
-            public void onCommandFailure(String message) {
-
-            }
-
-            @Override
-            public void onError() {
-
-            }
-        });
+    public static void addObserverToList(ReceiverObserver observer) {
+        if (observers != null)
+            observers.add(observer);
     }
 
     @Override

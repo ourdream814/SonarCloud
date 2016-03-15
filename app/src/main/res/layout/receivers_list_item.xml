@@ -3,12 +3,12 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="10dp"
-    android:background="?selectableItemBackground">
+    android:background="@drawable/list_item_grey">
 
     <ImageView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:padding="10dp"
         android:id="@+id/check_box_image"
         android:src="@mipmap/ic_circle"
         android:layout_centerVertical="true"
@@ -18,10 +18,17 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:padding="10dp"
         android:textSize="18sp"
         android:text="New Text"
         android:id="@+id/child_title"
         android:layout_centerVertical="true"
         android:layout_toRightOf="@+id/check_box_image"
         android:layout_toEndOf="@+id/check_box_image" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_alignParentBottom="true"
+        android:background="#c9c9c9"/>
 </RelativeLayout>

@@ -29,18 +29,22 @@ public class ResponseReceiver extends BroadcastReceiver {
 
     /**
      * Add a new listener
+     *
      * @param listener to add to the list
      */
     public void addOnResponseListener(OnResponseListener listener) {
-        listeners.add(listener);
+        if (listeners != null)
+            listeners.add(listener);
     }
 
     /**
      * Remove the given listener
+     *
      * @param listener to remove from list
      */
     public void removeOnResponseListener(OnResponseListener listener) {
-        listeners.remove(listener);
+        if (listeners != null)
+            listeners.remove(listener);
     }
 
     @Override
