@@ -44,6 +44,8 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
         OnResponseListener, SwipeRefreshLayout.OnRefreshListener,
         ReceiverListAdapter.OnItemClickListener, ReceiverObserver {
 
+    private static final String PA_LIST_STATE = "pa_list_state";
+
     private AnimatedExpandableListView mListView;
     private RadioButton mReceivers;
     private RadioButton mGroups;
@@ -85,25 +87,29 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
         mPASystems = new ArrayList<>();
         PASystem.addObserverToList(this);
         setUpListView(mPASystems);
+
+        if (savedInstanceState != null) {
+            mPASystems = savedInstanceState.getParcelableArrayList(PA_LIST_STATE);
+            setUpListView(mPASystems);
+        } else {
+            // build a request
+            Request.Builder requestBuilder = new Request.Builder();
+            requestBuilder.command(Api.Command.ORGANISATIONS);
+            requestBuilder.userId(SonarCloudApp.getInstance().userId());
+            requestBuilder.seq(SonarCloudApp.SEQ_VALUE);
+            ResponseReceiver.getInstance().addOnResponseListener(this);
+            // send request to server
+            SonarCloudApp.socketService.sendRequest(requestBuilder.build().toJSON());
+            mActivity.showLoading();
+        }
+
         return view;
     }
 
-
-    /**
-     * Send a request for organisations in on resume to be sure that all listeners are ready
-     */
     @Override
-    public void onResume() {
-        super.onResume();
-        // build a request
-        Request.Builder requestBuilder = new Request.Builder();
-        requestBuilder.command(Api.Command.ORGANISATIONS);
-        requestBuilder.userId(SonarCloudApp.getInstance().userId());
-        requestBuilder.seq(SonarCloudApp.SEQ_VALUE);
-        ResponseReceiver.getInstance().addOnResponseListener(this);
-        // send request to server
-        SonarCloudApp.socketService.sendRequest(requestBuilder.build().toJSON());
-        mActivity.showLoading();
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putParcelableArrayList(PA_LIST_STATE, mPASystems);
     }
 
     /**
@@ -211,7 +217,7 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
 
         @Override
         public void onError() {
-            mActivity.alertUserAboutError(mActivity.getString(R.string.error), mActivity.getString(R.string.unknown_error));
+            Snackbar.make(mRefreshLayout, mActivity.getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
             mActivity.dismissLoading();
         }
     }
@@ -224,7 +230,7 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
 
     @Override
     public void onError() {
-        mActivity.alertUserAboutError(mActivity.getString(R.string.error), mActivity.getString(R.string.unknown_error));
+        Snackbar.make(mRefreshLayout, mActivity.getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
         mActivity.dismissLoading();
     }
 

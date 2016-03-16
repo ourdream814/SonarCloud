@@ -1,5 +1,8 @@
 package com.softrangers.sonarcloudmobile.models;
 
+import android.os.Parcel;
+import android.os.Parcelable;
+
 import org.json.JSONObject;
 
 /**
@@ -8,7 +11,7 @@ import org.json.JSONObject;
  *
  * @author eduard.albu@gmail.com
  */
-public class User {
+public class User implements Parcelable {
 
     private String mName;
     private String mEmail;
@@ -19,6 +22,32 @@ public class User {
     private boolean isActive;
     private String mCreated;
     private String mModified;
+
+    public User() {}
+
+    protected User(Parcel in) {
+        mName = in.readString();
+        mEmail = in.readString();
+        mPassword = in.readString();
+        mId = in.readString();
+        mIdentifier = in.readString();
+        mSecret = in.readString();
+        isActive = in.readByte() != 0;
+        mCreated = in.readString();
+        mModified = in.readString();
+    }
+
+    public static final Creator<User> CREATOR = new Creator<User>() {
+        @Override
+        public User createFromParcel(Parcel in) {
+            return new User(in);
+        }
+
+        @Override
+        public User[] newArray(int size) {
+            return new User[size];
+        }
+    };
 
     public String getName() {
         return mName;
@@ -105,5 +134,23 @@ public class User {
             e.printStackTrace();
         }
         return user;
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeString(mName);
+        dest.writeString(mEmail);
+        dest.writeString(mPassword);
+        dest.writeString(mId);
+        dest.writeString(mIdentifier);
+        dest.writeString(mSecret);
+        dest.writeByte((byte) (isActive ? 1 : 0));
+        dest.writeString(mCreated);
+        dest.writeString(mModified);
     }
 }

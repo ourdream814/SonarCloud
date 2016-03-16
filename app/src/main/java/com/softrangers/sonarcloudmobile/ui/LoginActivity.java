@@ -2,6 +2,7 @@ package com.softrangers.sonarcloudmobile.ui;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.support.design.widget.Snackbar;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -166,7 +167,7 @@ public class LoginActivity extends BaseActivity implements OnResponseListener {
     @Override
     public void onError() {
         // show an alert dialog to user that something went wrong
-        alertUserAboutError(getString(R.string.error), getString(R.string.unknown_error));
+        Snackbar.make(mSignIn, getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
         // hide loading progress
         runOnUiThread(new Runnable() {
             @Override
@@ -212,7 +213,7 @@ public class LoginActivity extends BaseActivity implements OnResponseListener {
                 finish();
             } catch (Exception e) {
                 e.printStackTrace();
-                alertUserAboutError(getString(R.string.error), getString(R.string.unknown_error));
+                Snackbar.make(mSignIn, getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
             }
 
         }
@@ -240,7 +241,7 @@ public class LoginActivity extends BaseActivity implements OnResponseListener {
         @Override
         public void onError() {
             // show an alert dialog to user that something went wrong
-            alertUserAboutError(getString(R.string.error), getString(R.string.unknown_error));
+            Snackbar.make(mSignIn, getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
             // hide loading progress
             runOnUiThread(new Runnable() {
                 @Override

@@ -3,6 +3,7 @@ package com.softrangers.sonarcloudmobile.ui;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.design.widget.Snackbar;
 import android.support.design.widget.TabLayout;
 import android.support.v4.view.ViewPager;
 import android.view.View;
@@ -29,10 +30,13 @@ import org.json.JSONObject;
 public class MainActivity extends BaseActivity implements OnResponseListener,
         ConnectionReceiver.OnConnected {
 
+    private static final String USER_STATE = "user_state";
+
     private TextView mToolbarTitle;
     private TabLayout mTabLayout;
     private ViewPager mViewPager;
     private MainViewPagerAdapter mPagerAdapter;
+    private Bundle mBundle;
 
 
     @Override
@@ -53,7 +57,10 @@ public class MainActivity extends BaseActivity implements OnResponseListener,
             startActivity(intent);
             finish();
         } else {
-            if (SonarCloudApp.socketService != null && SonarCloudApp.getInstance().isLoggedIn()) {
+            if (savedInstanceState != null) {
+                mBundle = savedInstanceState;
+                SonarCloudApp.user = savedInstanceState.getParcelable(USER_STATE);
+            } else if (SonarCloudApp.socketService != null && SonarCloudApp.getInstance().isLoggedIn()) {
                 showLoading();
                 Request.Builder builder = new Request.Builder();
                 builder.command(Api.Command.AUTHENTICATE);
@@ -62,6 +69,12 @@ public class MainActivity extends BaseActivity implements OnResponseListener,
                 SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
             }
         }
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putParcelable(USER_STATE, SonarCloudApp.user);
     }
 
     private void setUpTabs() {
@@ -129,7 +142,7 @@ public class MainActivity extends BaseActivity implements OnResponseListener,
     @Override
     public void onError() {
         dismissLoading();
-        alertUserAboutError(getString(R.string.error), getString(R.string.unknown_error));
+        Snackbar.make(mViewPager, getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
     }
 
     public void logout(View view) {
@@ -149,13 +162,15 @@ public class MainActivity extends BaseActivity implements OnResponseListener,
 
     @Override
     public void onSocketConnected() {
-        if (SonarCloudApp.socketService != null && SonarCloudApp.getInstance().isLoggedIn()) {
-            Request.Builder builder = new Request.Builder();
-            builder.command(Api.Command.AUTHENTICATE);
-            builder.device(Api.Device.CLIENT).method(Api.Method.IDENTIFIER).identifier(SonarCloudApp.getInstance().getIdentifier())
-                    .secret(SonarCloudApp.getInstance().getSavedData()).seq(SonarCloudApp.SEQ_VALUE);
-            SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
-            showLoading();
+        if (mBundle == null) {
+            if (SonarCloudApp.socketService != null && SonarCloudApp.getInstance().isLoggedIn()) {
+                Request.Builder builder = new Request.Builder();
+                builder.command(Api.Command.AUTHENTICATE);
+                builder.device(Api.Device.CLIENT).method(Api.Method.IDENTIFIER).identifier(SonarCloudApp.getInstance().getIdentifier())
+                        .secret(SonarCloudApp.getInstance().getSavedData()).seq(SonarCloudApp.SEQ_VALUE);
+                SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
+                showLoading();
+            }
         }
     }
 

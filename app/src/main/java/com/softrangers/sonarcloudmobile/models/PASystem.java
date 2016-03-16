@@ -106,7 +106,8 @@ public class PASystem implements Parcelable, ReceiversObservable {
     public static ArrayList<PASystem> build(JSONObject response) {
         final ArrayList<PASystem> systems = new ArrayList<>();
         try {
-            JSONArray array = response.getJSONArray("organizations");
+            JSONArray array = response.optJSONArray("organizations");
+            if (array == null) return systems;
             for (int i = 0; i < array.length(); i++) {
                 PASystem system = new PASystem();
                 JSONObject o = array.getJSONObject(i);

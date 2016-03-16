@@ -57,6 +57,14 @@ public class ResponseReceiver extends BroadcastReceiver {
             case Api.RESPONSE_BROADCAST:
                 String response = intent.getExtras().getString(Api.RESPONSE_MESSAGE);
                 try {
+                    if (response == null) {
+                        for (OnResponseListener l : listeners) {
+                            if (l != null) {
+                                l.onError();
+                            }
+                        }
+                        return;
+                    }
                     JSONObject object = new JSONObject(response);
                     // get the request status from response
                     boolean success = object.getBoolean("success");
