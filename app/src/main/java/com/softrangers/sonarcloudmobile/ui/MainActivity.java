@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.TabLayout;
 import android.support.v4.view.ViewPager;
+import android.view.View;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
@@ -57,7 +58,7 @@ public class MainActivity extends BaseActivity implements OnResponseListener,
                 Request.Builder builder = new Request.Builder();
                 builder.command(Api.Command.AUTHENTICATE);
                 builder.device(Api.Device.CLIENT).method(Api.Method.IDENTIFIER).identifier(SonarCloudApp.getInstance().getIdentifier())
-                        .secret(SonarCloudApp.getInstance().getSavedData());
+                        .secret(SonarCloudApp.getInstance().getSavedData()).seq(SonarCloudApp.SEQ_VALUE);
                 SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
             }
         }
@@ -129,6 +130,13 @@ public class MainActivity extends BaseActivity implements OnResponseListener,
         alertUserAboutError(getString(R.string.error), getString(R.string.unknown_error));
     }
 
+    public void logout(View view) {
+        SonarCloudApp.getInstance().clearUserSession();
+        Intent intent = new Intent(this, LoginActivity.class);
+        startActivity(intent);
+        finish();
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -143,7 +151,7 @@ public class MainActivity extends BaseActivity implements OnResponseListener,
             Request.Builder builder = new Request.Builder();
             builder.command(Api.Command.AUTHENTICATE);
             builder.device(Api.Device.CLIENT).method(Api.Method.IDENTIFIER).identifier(SonarCloudApp.getInstance().getIdentifier())
-                    .secret(SonarCloudApp.getInstance().getSavedData());
+                    .secret(SonarCloudApp.getInstance().getSavedData()).seq(SonarCloudApp.SEQ_VALUE);
             SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
             showLoading();
         }

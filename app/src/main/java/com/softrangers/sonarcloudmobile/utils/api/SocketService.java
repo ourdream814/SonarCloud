@@ -7,6 +7,8 @@ import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
+import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
+
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -197,7 +199,6 @@ public class SocketService extends Service implements HandshakeCompletedListener
                     // Create a reader and writer from socket output and input streams
                     writeOut = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream()));
                     readIn = new BufferedReader(new InputStreamReader(sslSocket.getInputStream()));
-
                     // send the request to server through writer object
                     writeOut.write(message.toString() + "\n");
                     writeOut.flush();

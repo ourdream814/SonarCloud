@@ -27,6 +27,7 @@ public class PASystem implements Parcelable, ReceiversObservable {
     private String mCreated;
     private String mModified;
     private int mOrganisationId;
+    private int mSeqValue;
     private ArrayList<Receiver> mReceivers;
     private static ArrayList<ReceiverObserver> observers = new ArrayList<>();
 
@@ -92,6 +93,14 @@ public class PASystem implements Parcelable, ReceiversObservable {
 
     public void setModified(String modified) {
         mModified = modified;
+    }
+
+    public int getSeqValue() {
+        return mSeqValue;
+    }
+
+    public void setSeqValue(int seqValue) {
+        mSeqValue = seqValue;
     }
 
     public static ArrayList<PASystem> build(JSONObject response) {

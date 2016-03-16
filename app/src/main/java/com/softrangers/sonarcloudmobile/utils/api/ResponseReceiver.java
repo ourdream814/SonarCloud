@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 
 import com.softrangers.sonarcloudmobile.utils.OnResponseListener;
+import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 
 import org.json.JSONObject;
 
@@ -59,7 +60,7 @@ public class ResponseReceiver extends BroadcastReceiver {
                     JSONObject object = new JSONObject(response);
                     // get the request status from response
                     boolean success = object.getBoolean("success");
-                    Api.SEQ_VALUE = object.getInt("seq") + 1;
+                    int seq = object.getInt("seq");
                     // check status and inform listeners about either response or error
                     if (success) {
                         for (OnResponseListener l : listeners) {
@@ -74,6 +75,7 @@ public class ResponseReceiver extends BroadcastReceiver {
                             }
                         }
                     }
+                    SonarCloudApp.SEQ_VALUE += 1;
                 } catch (Exception e) {
                     // Inform listeners about error in case of exception
                     for (OnResponseListener l : listeners) {

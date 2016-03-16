@@ -13,8 +13,6 @@ public class Api {
     public static final String M_URL = "maestro.parentglue.com";
     public static final int PORT = 6523;
 
-    public static int SEQ_VALUE = 0;
-
     //---------- Components used to build server requests ------------//
     public static final int ERROR = 0;
     public static final int RESPONSE = 1;

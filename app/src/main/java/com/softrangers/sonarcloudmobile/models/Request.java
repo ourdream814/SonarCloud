@@ -3,6 +3,7 @@ package com.softrangers.sonarcloudmobile.models;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
 
 import org.json.JSONObject;
@@ -26,7 +27,7 @@ public class Request implements Parcelable {
     private String identifier;
     private String secret;
     private String groupID;
-//    private int pin;
+    //    private int pin;
     private String action;
     private String userID;
     private int organizationID;
@@ -100,13 +101,14 @@ public class Request implements Parcelable {
                 fieldHashMap.put(field.getName(), field);
             }
 
-            for (Map.Entry<String ,Field> set :fieldHashMap.entrySet()) {
+            for (Map.Entry<String, Field> set : fieldHashMap.entrySet()) {
                 if (set.getValue().get(this) != null &&
                         !set.getValue().getName().equalsIgnoreCase("creator")) {
                     request.put(set.getKey(), set.getValue().get(this));
                 }
             }
-            request.put(Api.Options.SEQ_FIELD, Api.SEQ_VALUE);
+            if (request.getInt("organizationID") <= 0) request.remove("organizationID");
+            request.put(Api.Options.SEQ_FIELD, seq);
             return request;
         } catch (Exception e) {
             e.printStackTrace();

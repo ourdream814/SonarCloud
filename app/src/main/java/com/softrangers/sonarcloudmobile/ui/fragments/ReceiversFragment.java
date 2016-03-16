@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
 import android.support.v4.widget.SwipeRefreshLayout;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -27,6 +28,7 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -83,6 +85,7 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
         Request.Builder requestBuilder = new Request.Builder();
         requestBuilder.command(Api.Command.ORGANISATIONS);
         requestBuilder.userId(SonarCloudApp.getInstance().userId());
+        requestBuilder.seq(SonarCloudApp.SEQ_VALUE);
         ResponseReceiver.getInstance().addOnResponseListener(this);
         // send request to server
         SonarCloudApp.socketService.sendRequest(requestBuilder.build().toJSON());
@@ -116,12 +119,17 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
 
         SynchronousQueue<PASystem> queue = new SynchronousQueue<>();
 
+        Executor executor = Executors.newFixedThreadPool(mPASystems.size());
+
+        Log.e(this.getClass().getSimpleName(), "Started getting receivers");
         for (PASystem system : mPASystems) {
-            new Thread(new ReceiverRunnable(system, queue)).start();
+            SonarCloudApp.SEQ_VALUE += 1;
+            system.setSeqValue(SonarCloudApp.SEQ_VALUE);
+            executor.execute(new ReceiverRunnable(system, queue));
+            Log.e(this.getClass().getSimpleName(), "Started a new thread for " + system.getName());
         }
 
-
-        mActivity.dismissLoading();
+        Log.e(this.getClass().getSimpleName(), "Done getReceivers loop");
     }
 
     class ReceiverRunnable implements Runnable {
@@ -138,14 +146,19 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
         public void run() {
             try {
                 while (sent) {
+//                    Log.e(this.getClass().getSimpleName(), "waiting");
                 }
+
+                Log.e(this.getClass().getSimpleName(), "Building request");
                 Request request = new Request.Builder().command(Api.Command.RECEIVERS)
-                        .organisationId(mPASystem.getOrganisationId()).build();
+                        .organisationId(mPASystem.getOrganisationId()).seq(mPASystem.getSeqValue()).build();
 
                 ResponseReceiver.getInstance().addOnResponseListener(
                         new ReceiversGet(mQueue));
 
+                Log.e(this.getClass().getSimpleName(), "Send request");
                 SonarCloudApp.socketService.sendRequest(request.toJSON());
+                Log.e(this.getClass().getSimpleName(), "Request sent");
                 sent = true;
                 mQueue.put(mPASystem);
             } catch (Exception e) {
@@ -165,13 +178,24 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
         @Override
         public void onResponse(JSONObject response) {
             try {
+                Log.e(this.getClass().getSimpleName(), "Started onResponse");
                 PASystem system = mQueue.take();
-                if (system.getReceivers() == null) {
-                    ArrayList<Receiver> receivers = Receiver.build(response);
-                    system.setReceivers(receivers);
-                    mReceiverListAdapter.refreshList(mPASystems);
-                    sent = false;
+                ArrayList<Receiver> receivers = Receiver.build(response);
+                for (Receiver receiver : receivers) {
+                    for (PASystem sys : mPASystems) {
+                        if (receiver.getSeqValue() == sys.getSeqValue()) {
+                            sys.setReceivers(receivers);
+                            Log.e(this.getClass().getSimpleName(), "Added receivers to " + sys.getName());
+                            sent = false;
+                            mActivity.dismissLoading();
+                            return;
+                        }
+                        Log.e(this.getClass().getSimpleName(), "if condition ignored for " + sys.getName());
+                    }
                 }
+                Log.e(this.getClass().getSimpleName(), "Loop finished");
+                sent = false;
+                mActivity.dismissLoading();
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -220,6 +244,7 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
 
     @Override
     public void update(PASystem paSystem, ArrayList<Receiver> receivers) {
-//        mReceiverListAdapter.notifyDataSetChanged();
+        Log.e(this.getClass().getSimpleName(), paSystem.getName() + ": " + receivers.size());
+        mReceiverListAdapter.addItem(paSystem);
     }
 }

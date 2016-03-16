@@ -29,6 +29,8 @@ public class SonarCloudApp extends Application {
     public static final String NO_IDENTIFIER = "no identifier";
     public static final String NO_DATA = "no_user_server_data";
 
+    public static int SEQ_VALUE;
+
     private static SonarCloudApp instance;
     public static Typeface avenirBook;
     public static Typeface avenirMedium;
@@ -136,6 +138,15 @@ public class SonarCloudApp extends Application {
         SharedPreferences.Editor editor = preferences.edit();
         editor.putBoolean(LOGIN_STATUS, status);
         editor.putString(USER_ID, id);
+        editor.apply();
+    }
+
+    public void clearUserSession() {
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.remove(LOGIN_STATUS);
+        editor.remove(USER_ID);
+        editor.remove(USER_DATA);
+        editor.remove(USER_IDENTIFIER);
         editor.apply();
     }
 }

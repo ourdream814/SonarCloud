@@ -16,5 +16,6 @@
     <string name="loading">Loading…</string>
     <string name="receivers">PAs</string>
     <string name="groups">Groups</string>
+    <string name="sign_out">Sign Out</string>
 
 </resources>

@@ -21,6 +21,7 @@ public class Receiver implements Parcelable {
     private String mCreated;
     private String mModified;
     private String mReceiverId;
+    private int mSeqValue;
 
     public Receiver() {
 
@@ -86,6 +87,13 @@ public class Receiver implements Parcelable {
         this.isSelected = isSelected;
     }
 
+    public int getSeqValue() {
+        return mSeqValue;
+    }
+
+    public void setSeqValue(int seqValue) {
+        mSeqValue = seqValue;
+    }
 
     public static ArrayList<Receiver> build(JSONObject response) {
         ArrayList<Receiver> receivers = new ArrayList<>();
@@ -98,7 +106,7 @@ public class Receiver implements Parcelable {
                 receiver.setName(o.optString("name", ""));
                 receiver.setCreated(o.optString("created", ""));
                 receiver.setModified(o.optString("modified", ""));
-
+                receiver.setSeqValue(response.getInt("seq"));
                 if (!receiver.getName().equals("null")) {
                     receivers.add(receiver);
                 }

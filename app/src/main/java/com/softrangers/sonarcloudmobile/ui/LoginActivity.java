@@ -91,6 +91,7 @@ public class LoginActivity extends BaseActivity implements OnResponseListener {
                 .device(Api.Device.CLIENT)
                 .email(mUser.getEmail())
                 .password(mUser.getPassword())
+                .seq(SonarCloudApp.SEQ_VALUE)
                 .build().toJSON();
 
         ResponseReceiver.getInstance().removeOnResponseListener(identifierListener);
@@ -120,6 +121,7 @@ public class LoginActivity extends BaseActivity implements OnResponseListener {
             // Start building a request to either create a new or renew existing identifier
             Request.Builder requestBuilder = new Request.Builder();
             requestBuilder.command(Api.Command.IDENTIFIER);
+            requestBuilder.seq(SonarCloudApp.SEQ_VALUE);
             if (SonarCloudApp.NO_IDENTIFIER.equals(identifier)) {
                 requestBuilder.action(Api.Action.NEW);
             } else {
