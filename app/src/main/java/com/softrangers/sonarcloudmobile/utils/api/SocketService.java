@@ -179,12 +179,6 @@ public class SocketService extends Service implements HandshakeCompletedListener
 
         @Override
         public void run() {
-            // create an intent for the ResponseReceiver
-            Intent intent = new Intent(SocketService.this, ResponseReceiver.class);
-            // set the action to RESPONSE_BROADCAST object from Api class
-            intent.setAction(Api.RESPONSE_BROADCAST);
-            // create a StringBuilder to append each line from response
-            StringBuilder builder = new StringBuilder();
             try {
                 if (sslSocket == null || !sslSocket.isConnected()) {
                     new Connection();
@@ -202,50 +196,72 @@ public class SocketService extends Service implements HandshakeCompletedListener
                     // send the request to server through writer object
                     writeOut.write(message.toString() + "\n");
                     writeOut.flush();
+                    new Thread(new ReceiveMessage(readIn)).start();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
 
-                    // Start reading each response line\
-                    String stringResponse = readIn.readLine();
+    class ReceiveMessage implements Runnable {
 
-                    // check if the response it's not null
-                    if (stringResponse != null) {
-                        try {
-                            // get response status
-                            JSONObject response = new JSONObject(stringResponse);
-                            boolean success = response.getBoolean("success");
-                            // check if response is successful
-                            if (!success) {
-                                // close current connection if not and open a new one
-                                if (sslSocket != null) {
-                                    sslSocket.close();
-                                }
-                                sslSocket = null;
-                                new Connection();
-                            }
-                        } catch (Exception e) {
-                            // close connection and open new if an Exception occurs
+        BufferedReader mReader;
+
+        public ReceiveMessage(BufferedReader reader) {
+            mReader = reader;
+        }
+
+        @Override
+        public void run() {
+            // create an intent for the ResponseReceiver
+            Intent intent = new Intent(SocketService.this, ResponseReceiver.class);
+            // set the action to RESPONSE_BROADCAST object from Api class
+            intent.setAction(Api.RESPONSE_BROADCAST);
+
+            try {
+                // Start reading each response line\
+                String stringResponse = mReader.readLine();
+
+                // check if the response it's not null
+                if (stringResponse != null) {
+                    try {
+                        // get response status
+                        JSONObject response = new JSONObject(stringResponse);
+                        boolean success = response.getBoolean("success");
+                        // check if response is successful
+                        if (!success) {
+                            // close current connection if not and open a new one
                             if (sslSocket != null) {
                                 sslSocket.close();
                             }
                             sslSocket = null;
                             new Connection();
                         }
-                    } else {
-                        // close connection and open a new one if the response is null
+                    } catch (Exception e) {
+                        // close connection and open new if an Exception occurs
                         if (sslSocket != null) {
                             sslSocket.close();
                         }
                         sslSocket = null;
                         new Connection();
                     }
-
-                    // send the response to ui
-                    intent.putExtra(Api.RESPONSE_MESSAGE, stringResponse);
-                    sendBroadcast(intent);
+                } else {
+                    // close connection and open a new one if the response is null
+                    if (sslSocket != null) {
+                        sslSocket.close();
+                    }
+                    sslSocket = null;
+                    new Connection();
                 }
+
+                // send the response to ui
+                intent.putExtra(Api.RESPONSE_MESSAGE, stringResponse);
+                sendBroadcast(intent);
             } catch (Exception e) {
                 e.printStackTrace();
                 // send a null object to ui in case an exception occurs
-                intent.putExtra(Api.RESPONSE_MESSAGE, builder.toString());
+                intent.putExtra(Api.RESPONSE_MESSAGE, "");
                 sendBroadcast(intent);
             }
         }
