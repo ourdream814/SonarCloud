@@ -115,7 +115,9 @@ public class MainActivity extends BaseActivity implements OnResponseListener,
     public void onResponse(JSONObject response) {
         SonarCloudApp.user = User.build(response);
         ResponseReceiver.getInstance().removeOnResponseListener(this);
+        dismissLoading();
         setUpTabs();
+
     }
 
     @Override
@@ -159,10 +161,9 @@ public class MainActivity extends BaseActivity implements OnResponseListener,
 
     @Override
     public void onBackPressed() {
-        if (isLoading()) {
+        if (isLoading())
             dismissLoading();
-        } else {
-            super.onBackPressed();
-        }
+
+        super.onBackPressed();
     }
 }

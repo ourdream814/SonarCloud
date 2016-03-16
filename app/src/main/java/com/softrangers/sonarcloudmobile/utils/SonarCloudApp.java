@@ -57,6 +57,8 @@ public class SonarCloudApp extends Application {
         bindService(new Intent(this, SocketService.class), mServiceConnection, Context.BIND_AUTO_CREATE);
     }
 
+
+
     // needed to bind SocketService to current class
     protected ServiceConnection mServiceConnection = new ServiceConnection() {
         @Override

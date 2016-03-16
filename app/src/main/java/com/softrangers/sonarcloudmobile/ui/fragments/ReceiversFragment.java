@@ -103,6 +103,7 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
         ResponseReceiver.getInstance().addOnResponseListener(this);
         // send request to server
         SonarCloudApp.socketService.sendRequest(requestBuilder.build().toJSON());
+        mActivity.showLoading();
     }
 
     /**
