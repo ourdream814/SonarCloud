@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.softrangers.sonarcloudmobile.ui.AddGroupActivity"
+    android:background="#d4d4d4">
+
+    <RelativeLayout
+        android:id="@+id/add_group_toolbar_layout"
+        android:layout_width="match_parent"
+        android:layout_height="?actionBarSize"
+        android:background="@color/colorPrimary">
+
+        <android.support.v7.widget.Toolbar
+            android:id="@+id/add_edit_groupToolbar"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/new_group"
+            android:textSize="20sp"
+            android:textColor="@android:color/white"
+            android:id="@+id/add_edit_group_toolbarTitle"
+            android:layout_centerVertical="true"
+            android:layout_centerHorizontal="true"/>
+
+        <ImageButton
+            style="@style/Base.Widget.AppCompat.ActionButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/select_pa_cancelButton"
+            android:src="@mipmap/ic_close_new_group"
+            android:layout_centerVertical="true"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentStart="true"/>
+
+        <ImageButton
+            style="@style/Base.Widget.AppCompat.ActionButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/select_pa_saveButton"
+            android:src="@mipmap/ic_save_group"
+            android:layout_centerVertical="true"
+            android:layout_alignParentRight="true"
+            android:layout_alignParentEnd="true"/>
+    </RelativeLayout>
+
+    <EditText
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="30dp"
+        android:layout_marginBottom="5dp"
+        android:padding="20dp"
+        android:background="@drawable/white_rectangle"
+        android:inputType="textPersonName"
+        android:hint="@string/group_name"
+        android:ems="10"
+        android:id="@+id/add_edit_group_nameEditText"
+        android:layout_below="@+id/add_group_toolbar_layout"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"/>
+
+    <EditText
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="5dp"
+        android:maxLength="4"
+        android:padding="20dp"
+        android:background="@drawable/white_rectangle"
+        android:inputType="numberPassword"
+        android:hint="@string/phone_pin_number"
+        android:ems="10"
+        android:id="@+id/add_edit_group_pinEditText"
+        android:layout_below="@+id/add_edit_group_nameEditText"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"/>
+
+    <EditText
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:maxLength="4"
+        android:layout_marginBottom="5dp"
+        android:hint="@string/confirm_pin_number"
+        android:padding="20dp"
+        android:background="@drawable/white_rectangle"
+        android:inputType="numberPassword"
+        android:ems="10"
+        android:id="@+id/add_edit_group_pin_confirmEditText"
+        android:layout_below="@+id/add_edit_group_pinEditText"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"/>
+
+    <Button
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="40dp"
+        android:layout_marginRight="30dp"
+        android:layout_marginEnd="30dp"
+        android:layout_marginLeft="30dp"
+        android:layout_marginStart="30dp"
+        android:background="@drawable/button_blue"
+        android:textColor="@android:color/white"
+        android:text="@string/pa_systems"
+        android:id="@+id/add_edit_group_selectPAButton"
+        android:layout_below="@+id/add_edit_group_pin_confirmEditText"
+        android:layout_centerHorizontal="true"/>
+</RelativeLayout>

@@ -21,6 +21,9 @@ public class Api {
     public static final String DEVICE = "device";
     public static final String METHOD = "method";
 
+    public static final String ACTION_ADD_GROUP = "com.softrangers.sonarcloudmobile.ADD_NEW_GROUP";
+    public static final String ACTION_EDIT_GROUP = "com.softrangers.sonarcloudmobile.EDIT_GROUP";
+
     public static final String REQUEST_MESSAGE = "json_request";
     public static final String CONNECTION_BROADCAST = "com.softrangers.sonarcloudmobile.CONNECTED";
     public static final String RESPONSE_BROADCAST = "com.softrangers.sonarcloudmobile.RESPONSE_BROADCAST";
@@ -42,6 +45,8 @@ public class Api {
         public static final String IDENTIFIER = "identifier";
         public static final String RECEIVERS = "receivers";
         public static final String ORGANISATIONS = "organizations";
+        public static final String RECEIVER_GROUPS = "receiverGroups";
+        public static final String CREATE_GROUP = "createReceiverGroup";
     }
 
     /**

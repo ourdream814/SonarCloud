@@ -2,6 +2,7 @@
                 xmlns:tools="http://schemas.android.com/tools"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
+                android:animateLayoutChanges="true"
                 tools:context=".ui.fragments.ReceiversFragment">
 
     <RadioGroup
@@ -43,19 +44,15 @@
             android:textColor="@android:color/white"/>
     </RadioGroup>
 
-    <android.support.v4.widget.SwipeRefreshLayout
-        android:id="@+id/pa_list_swipeRefresh"
+    <include
+        layout="@layout/pa_systems_list"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/pa_list_selector">
+        android:layout_height="match_parent"
+        android:layout_below="@+id/pa_list_selector"/>
 
-        <com.softrangers.sonarcloudmobile.utils.widgets.AnimatedExpandableListView
-            android:id="@+id/receivers_expandableListView"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@color/colorSecondary"
-            android:childDivider="@color/colorSecondary"
-            android:childIndicator="@null"
-            android:groupIndicator="@null"/>
-    </android.support.v4.widget.SwipeRefreshLayout>
+    <include
+        layout="@layout/group_list_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@+id/pa_list_selector"/>
 </RelativeLayout>

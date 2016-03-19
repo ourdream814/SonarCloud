@@ -1,0 +1,16 @@
+<android.support.v4.widget.SwipeRefreshLayout
+    android:id="@+id/pa_list_swipeRefresh"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_below="@id/pa_list_selector"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <com.softrangers.sonarcloudmobile.utils.widgets.AnimatedExpandableListView
+        android:id="@+id/receivers_expandableListView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/colorSecondary"
+        android:childDivider="@color/colorSecondary"
+        android:childIndicator="@null"
+        android:groupIndicator="@null"/>
+</android.support.v4.widget.SwipeRefreshLayout>

@@ -20,7 +20,7 @@ public class Receiver implements Parcelable {
     private boolean isSelected;
     private String mCreated;
     private String mModified;
-    private String mReceiverId;
+    private int mReceiverId;
     private int mSeqValue;
 
     public Receiver() {
@@ -32,7 +32,7 @@ public class Receiver implements Parcelable {
         isSelected = in.readByte() != 0;
         mCreated = in.readString();
         mModified = in.readString();
-        mReceiverId = in.readString();
+        mReceiverId = in.readInt();
     }
 
     public static final Creator<Receiver> CREATOR = new Creator<Receiver>() {
@@ -63,11 +63,11 @@ public class Receiver implements Parcelable {
         mModified = modified;
     }
 
-    public String getReceiverId() {
+    public int getReceiverId() {
         return mReceiverId;
     }
 
-    public void setReceiverId(String receiverId) {
+    public void setReceiverId(int receiverId) {
         mReceiverId = receiverId;
     }
 
@@ -102,11 +102,11 @@ public class Receiver implements Parcelable {
             for (int i = 0; i < receiversArray.length(); i++) {
                 JSONObject o = receiversArray.getJSONObject(i);
                 Receiver receiver = new Receiver();
-                receiver.setReceiverId(o.optString("receiverID", ""));
+                receiver.setReceiverId(o.optInt("receiverID"));
                 receiver.setName(o.optString("name", ""));
                 receiver.setCreated(o.optString("created", ""));
                 receiver.setModified(o.optString("modified", ""));
-                receiver.setSeqValue(response.getInt("seq"));
+                receiver.setSeqValue(response.optInt("seq"));
                 if (!receiver.getName().equals("null")) {
                     receivers.add(receiver);
                 }
@@ -128,6 +128,6 @@ public class Receiver implements Parcelable {
         dest.writeByte((byte) (isSelected ? 1 : 0));
         dest.writeString(mCreated);
         dest.writeString(mModified);
-        dest.writeString(mReceiverId);
+        dest.writeInt(mReceiverId);
     }
 }

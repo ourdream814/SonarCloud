@@ -1,22 +1,31 @@
 package com.softrangers.sonarcloudmobile.ui.fragments;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
 import android.support.v4.widget.SwipeRefreshLayout;
-import android.util.Log;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
+import android.widget.RelativeLayout;
+import android.widget.Toast;
 
 import com.softrangers.sonarcloudmobile.R;
+import com.softrangers.sonarcloudmobile.adapters.GroupsListAdapter;
 import com.softrangers.sonarcloudmobile.adapters.ReceiverListAdapter;
+import com.softrangers.sonarcloudmobile.models.Group;
 import com.softrangers.sonarcloudmobile.models.PASystem;
 import com.softrangers.sonarcloudmobile.models.Receiver;
 import com.softrangers.sonarcloudmobile.models.Request;
+import com.softrangers.sonarcloudmobile.ui.AddGroupActivity;
 import com.softrangers.sonarcloudmobile.ui.MainActivity;
+import com.softrangers.sonarcloudmobile.utils.GroupObserver;
 import com.softrangers.sonarcloudmobile.utils.OnResponseListener;
 import com.softrangers.sonarcloudmobile.utils.ReceiverObserver;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
@@ -27,14 +36,6 @@ import com.softrangers.sonarcloudmobile.utils.widgets.AnimatedExpandableListView
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -42,18 +43,25 @@ import java.util.concurrent.TimeUnit;
  */
 public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedChangeListener,
         OnResponseListener, SwipeRefreshLayout.OnRefreshListener,
-        ReceiverListAdapter.OnItemClickListener, ReceiverObserver {
+        ReceiverListAdapter.OnItemClickListener, ReceiverObserver,
+        GroupsListAdapter.OnGroupClickListener, GroupObserver {
 
     private static final String PA_LIST_STATE = "pa_list_state";
+    private static final String GROUPS_LIST_STATE = "groups_list_state";
+    public static final int GROUP_REQUEST_CODE = 1331;
 
     private AnimatedExpandableListView mListView;
     private RadioButton mReceivers;
-    private RadioButton mGroups;
+    private RadioButton mGroupsButton;
     private MainActivity mActivity;
     private SwipeRefreshLayout mRefreshLayout;
+    private RelativeLayout mGroupsLayout;
     private ReceiverListAdapter mReceiverListAdapter;
+    private GroupsListAdapter mGroupsListAdapter;
+    private RecyclerView mGroupsRecyclerView;
+    private LinearLayout mAddGroupButton;
     private ArrayList<PASystem> mPASystems;
-    private static boolean sent;
+    private ArrayList<Group> mGroups;
 
     public ReceiversFragment() {
         // Required empty public constructor
@@ -65,10 +73,15 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
         // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.fragment_receivers, container, false);
         mActivity = (MainActivity) getActivity();
+        mActivity.addObserver(this);
 
-        // Obtain a link to the list view from layout
+        // Obtain a link to the lists from layout
         mListView = (AnimatedExpandableListView) view.findViewById(R.id.receivers_expandableListView);
+        mGroupsRecyclerView = (RecyclerView) view.findViewById(R.id.groups_recyclerView);
+        mAddGroupButton = (LinearLayout) view.findViewById(R.id.add_group_clickableLayout);
+        mAddGroupButton.setOnClickListener(mAddNewGroup);
         // Obtain a link to the SwipeRefreshLayout which holds the list view
+        mGroupsLayout = (RelativeLayout) view.findViewById(R.id.groups_relativeLayout);
         mRefreshLayout = (SwipeRefreshLayout) view.findViewById(R.id.pa_list_swipeRefresh);
         mRefreshLayout.setOnRefreshListener(this);
 
@@ -80,17 +93,19 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
         mReceivers.setTextColor(getResources().getColor(R.color.colorPrimary));
 
         // Radio buttons group to handle checked state changes
-        mGroups = (RadioButton) view.findViewById(R.id.groups_button);
+        mGroupsButton = (RadioButton) view.findViewById(R.id.groups_button);
         radioGroup.setOnCheckedChangeListener(this);
 
         // Initialize PAs list
         mPASystems = new ArrayList<>();
         PASystem.addObserverToList(this);
-        setUpListView(mPASystems);
+        setUpReceiversListView(mPASystems);
 
         if (savedInstanceState != null) {
             mPASystems = savedInstanceState.getParcelableArrayList(PA_LIST_STATE);
-            setUpListView(mPASystems);
+            mGroups = savedInstanceState.getParcelableArrayList(GROUPS_LIST_STATE);
+            setUpGroupsListView(mGroups);
+            setUpReceiversListView(mPASystems);
         } else {
             // build a request
             Request.Builder requestBuilder = new Request.Builder();
@@ -110,17 +125,25 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putParcelableArrayList(PA_LIST_STATE, mPASystems);
+        outState.putParcelableArrayList(GROUPS_LIST_STATE, mGroups);
     }
 
     /**
-     * Initialize adapter with a given list (use adapter methods to add items or to clear, replace
+     * Initialize receivers adapter with a given list (use adapter methods to add items or to clear, replace
      * the list within adapter)
      * @param paSystems list to instantiate the adapter for list view (now it's an empty array
      */
-    private void setUpListView(ArrayList<PASystem> paSystems) {
+    private void setUpReceiversListView(ArrayList<PASystem> paSystems) {
         mReceiverListAdapter = new ReceiverListAdapter(getActivity(), paSystems);
         mReceiverListAdapter.setOnItemClickListener(this);
         mListView.setAdapter(mReceiverListAdapter);
+    }
+
+    private void setUpGroupsListView(ArrayList<Group> groups) {
+        mGroupsListAdapter = new GroupsListAdapter(groups);
+        mGroupsListAdapter.setOnGroupClickListener(this);
+        mGroupsRecyclerView.setLayoutManager(new LinearLayoutManager(mActivity));
+        mGroupsRecyclerView.setAdapter(mGroupsListAdapter);
     }
 
     /**
@@ -131,13 +154,35 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
         switch (checkedId) {
             case R.id.receivers_button:
                 mReceivers.setTextColor(getResources().getColor(R.color.colorPrimary));
-                mGroups.setTextColor(getResources().getColor(android.R.color.white));
+                mGroupsButton.setTextColor(getResources().getColor(android.R.color.white));
+                showReceiversLayout();
                 break;
             case R.id.groups_button:
                 mReceivers.setTextColor(getResources().getColor(android.R.color.white));
-                mGroups.setTextColor(getResources().getColor(R.color.colorPrimary));
+                mGroupsButton.setTextColor(getResources().getColor(R.color.colorPrimary));
+                showGroupsLayout(false);
                 break;
         }
+    }
+
+    private void showGroupsLayout(boolean always) {
+        mRefreshLayout.setVisibility(View.GONE);
+        mGroupsLayout.setVisibility(View.VISIBLE);
+        // Build a request for getting groups
+        if (always || mGroups == null) {
+            Request.Builder builder = new Request.Builder()
+                    .command(Api.Command.RECEIVER_GROUPS)
+                    .userId(SonarCloudApp.user.getId());
+            ResponseReceiver.getInstance().clearResponseListenersList();
+            ResponseReceiver.getInstance().addOnResponseListener(new GroupsGet());
+            mActivity.showLoading();
+            SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
+        }
+    }
+
+    private void showReceiversLayout() {
+        mGroupsLayout.setVisibility(View.GONE);
+        mRefreshLayout.setVisibility(View.VISIBLE);
     }
 
 
@@ -149,7 +194,7 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
     public void onResponse(JSONObject response) {
 
         // Remove the listener because we don't need it any more
-        ResponseReceiver.getInstance().removeOnResponseListener(this);
+        ResponseReceiver.getInstance().clearResponseListenersList();
 
         // Build a list of organisations
         mPASystems = PASystem.build(response);
@@ -178,6 +223,36 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
         }
     }
 
+    /**
+     * Called when a group is clicked
+     * @param group which was clicked
+     * @param position in the list
+     */
+    @Override
+    public void onGroupClicked(Group group, int position) {
+        if (group.isSelected()) group.setIsSelected(false);
+        else group.setIsSelected(true);
+        mGroupsListAdapter.notifyItemChanged(position);
+    }
+
+    /**
+     * Called when a group edit button was clicked
+     * @param group for which the button was clicked
+     * @param position of the group in the list
+     */
+    @Override
+    public void onEditButtonClicked(Group group, int position) {
+        Intent intent = new Intent(mActivity, AddGroupActivity.class);
+        intent.setAction(Api.ACTION_EDIT_GROUP);
+        intent.putExtra(AddGroupActivity.PA_SUSTEMS_BUNDLE, mPASystems);
+        intent.putExtra(AddGroupActivity.GROUP_EDIT_BUNDLE, group);
+        mActivity.startActivityForResult(intent, GROUP_REQUEST_CODE);
+    }
+
+    @Override
+    public void update(Group group) {
+        showGroupsLayout(true);
+    }
 
     class ReceiversGet implements OnResponseListener {
 
@@ -222,6 +297,29 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
         }
     }
 
+    class GroupsGet implements OnResponseListener {
+
+        @Override
+        public void onResponse(JSONObject response) {
+            mGroups = Group.build(response);
+            setUpGroupsListView(mGroups);
+            mActivity.dismissLoading();
+        }
+
+        @Override
+        public void onCommandFailure(String message) {
+            mActivity.dismissLoading();
+            Snackbar.make(mRefreshLayout, message, Snackbar.LENGTH_SHORT).show();
+        }
+
+        @Override
+        public void onError() {
+            mActivity.dismissLoading();
+            Snackbar.make(mRefreshLayout, mActivity.getString(R.string.unknown_error),
+                    Snackbar.LENGTH_SHORT).show();
+        }
+    }
+
     @Override
     public void onCommandFailure(String message) {
         mActivity.alertUserAboutError(mActivity.getString(R.string.error), message);
@@ -257,4 +355,14 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
     public void update(PASystem paSystem, ArrayList<Receiver> receivers) {
         mReceiverListAdapter.refreshList(mPASystems);
     }
+
+    private View.OnClickListener mAddNewGroup = new View.OnClickListener() {
+        @Override
+        public void onClick(View v) {
+            Intent intent = new Intent(mActivity, AddGroupActivity.class);
+            intent.setAction(Api.ACTION_ADD_GROUP);
+            intent.putExtra(AddGroupActivity.PA_SUSTEMS_BUNDLE, mPASystems);
+            mActivity.startActivityForResult(intent, GROUP_REQUEST_CODE);
+        }
+    };
 }

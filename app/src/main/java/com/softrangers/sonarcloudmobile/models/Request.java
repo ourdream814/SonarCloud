@@ -1,14 +1,12 @@
 package com.softrangers.sonarcloudmobile.models;
 
-import android.os.Parcel;
-import android.os.Parcelable;
-
-import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -18,77 +16,26 @@ import java.util.Map;
  *
  * @author eduard.albu@gmail.com
  */
-public class Request implements Parcelable {
+public class Request {
     private String command;
     private String device;
     private String method;
+    private String name;
     private String email;
     private String password;
     private String identifier;
     private String secret;
     private String groupID;
-    //    private int pin;
+    private int pin = -1;
     private String action;
     private String userID;
     private int organizationID;
     private String receiverID;
     private int seq;
-//    private boolean playImmediately;
+    private JSONArray receivers;
 
     private Request() {
 
-    }
-
-    protected Request(Parcel in) {
-        command = in.readString();
-        device = in.readString();
-        method = in.readString();
-        email = in.readString();
-        password = in.readString();
-        identifier = in.readString();
-        secret = in.readString();
-        groupID = in.readString();
-//        pin = in.readInt();
-        action = in.readString();
-        userID = in.readString();
-        organizationID = in.readInt();
-        receiverID = in.readString();
-//        playImmediately = in.readByte() != 0;
-    }
-
-    public static final Creator<Request> CREATOR = new Creator<Request>() {
-        @Override
-        public Request createFromParcel(Parcel in) {
-            return new Request(in);
-        }
-
-        @Override
-        public Request[] newArray(int size) {
-            return new Request[size];
-        }
-    };
-
-    @Override
-    public int describeContents() {
-        return 0;
-    }
-
-    @Override
-    public void writeToParcel(Parcel dest, int flags) {
-        dest.writeString(command);
-        dest.writeString(device);
-        dest.writeString(method);
-        dest.writeString(email);
-        dest.writeString(password);
-        dest.writeString(identifier);
-        dest.writeString(secret);
-        dest.writeString(groupID);
-//        dest.writeInt(pin);
-        dest.writeString(action);
-        dest.writeString(userID);
-        dest.writeInt(organizationID);
-        dest.writeString(receiverID);
-//        dest.writeByte((byte) (playImmediately ? 1 : 0));
     }
 
     public JSONObject toJSON() {
@@ -107,6 +54,7 @@ public class Request implements Parcelable {
                     request.put(set.getKey(), set.getValue().get(this));
                 }
             }
+            if (pin == -1) request.remove("pin");
             if (request.getInt("organizationID") <= 0) request.remove("organizationID");
             request.put(Api.Options.SEQ_FIELD, seq);
             return request;
@@ -120,16 +68,18 @@ public class Request implements Parcelable {
         private String mCommand;
         private String mDevice;
         private String mMethod;
+        private String mName;
         private String mEmail;
         private String mPassword;
         private String mIdentifier;
         private String mSecret;
         private String mGroupId;
-        private int mPin;
+        private int mPin = -1;
         private String mAction;
         private String mUserId;
         private int mOrganisationId;
         private String mReceiverId;
+        private JSONArray mReceivers;
         private boolean mPlayImmediately;
         private int mSeq;
 
@@ -145,6 +95,11 @@ public class Request implements Parcelable {
 
         public Builder method(String method) {
             mMethod = method;
+            return this;
+        }
+
+        public Builder name(String name) {
+            mName = name;
             return this;
         }
 
@@ -208,6 +163,18 @@ public class Request implements Parcelable {
             return this;
         }
 
+        public Builder receivers(ArrayList<Integer> receivers) {
+            try {
+                mReceivers = new JSONArray();
+                for (Integer i : receivers) {
+                    mReceivers.put(i);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return this;
+        }
+
 
         public Request build() {
             Request request = new Request();
@@ -215,17 +182,18 @@ public class Request implements Parcelable {
             request.command = mCommand;
             request.device = mDevice;
             request.email = mEmail;
+            request.name = mName;
             request.groupID = mGroupId;
             request.identifier = mIdentifier;
             request.method = mMethod;
             request.organizationID = mOrganisationId;
             request.password = mPassword;
-//            request.playImmediately = mPlayImmediately;
             request.receiverID = mReceiverId;
             request.secret = mSecret;
-//            request.pin = mPin;
+            request.pin = mPin;
             request.userID = mUserId;
             request.seq = mSeq;
+            request.receivers = mReceivers;
             return request;
         }
     }

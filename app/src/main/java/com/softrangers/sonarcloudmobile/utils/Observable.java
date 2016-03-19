@@ -6,10 +6,10 @@ package com.softrangers.sonarcloudmobile.utils;
  *
  * @author eduard.albu@gmail.com
  */
-public interface ReceiversObservable {
-    void addObserver(ReceiverObserver observer);
+public interface Observable<T> {
+    void addObserver(T observer);
 
-    void removeObserver(ReceiverObserver observer);
+    void removeObserver(T observer);
 
     void notifyObservers();
 }

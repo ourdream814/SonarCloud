@@ -3,12 +3,8 @@ package com.softrangers.sonarcloudmobile.models;
 import android.os.Parcel;
 import android.os.Parcelable;
 
-import com.softrangers.sonarcloudmobile.utils.OnResponseListener;
 import com.softrangers.sonarcloudmobile.utils.ReceiverObserver;
-import com.softrangers.sonarcloudmobile.utils.ReceiversObservable;
-import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
-import com.softrangers.sonarcloudmobile.utils.api.Api;
-import com.softrangers.sonarcloudmobile.utils.api.ResponseReceiver;
+import com.softrangers.sonarcloudmobile.utils.Observable;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -21,7 +17,7 @@ import java.util.ArrayList;
  *
  * @author eduard.albu@gmail.com
  */
-public class PASystem implements Parcelable, ReceiversObservable {
+public class PASystem implements Parcelable, Observable<ReceiverObserver> {
 
     private String mName;
     private String mCreated;

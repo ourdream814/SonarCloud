@@ -28,6 +28,10 @@ public class ResponseReceiver extends BroadcastReceiver {
         return instance;
     }
 
+    public void clearResponseListenersList() {
+        listeners.clear();
+    }
+
     /**
      * Add a new listener
      *
