@@ -27,9 +27,10 @@
             android:background="@drawable/button_blue_borders"
             android:button="@null"
             android:gravity="center"
+            android:checked="true"
             android:padding="5dp"
             android:text="@string/receivers"
-            android:textColor="@android:color/white"/>
+            android:textColor="@drawable/text_color"/>
 
         <RadioButton
             android:id="@+id/groups_button"
@@ -41,7 +42,7 @@
             android:gravity="center"
             android:padding="5dp"
             android:text="@string/groups"
-            android:textColor="@android:color/white"/>
+            android:textColor="@drawable/text_color"/>
     </RadioGroup>
 
     <include

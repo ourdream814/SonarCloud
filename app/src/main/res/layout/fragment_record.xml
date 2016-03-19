@@ -1,7 +1,65 @@
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context=".ui.fragments.RecordFragment">
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                xmlns:tools="http://schemas.android.com/tools"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/gradient_background"
+                tools:context=".ui.fragments.RecordFragment">
 
-</FrameLayout>
+    <RadioGroup
+        android:id="@+id/send_audio_type_selector"
+        android:layout_width="match_parent"
+        android:layout_height="?actionBarSize"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:background="@color/colorPrimary"
+        android:elevation="4dp"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <RadioButton
+            android:id="@+id/records_selector_button"
+            android:layout_width="100dp"
+            android:layout_height="wrap_content"
+            android:layout_marginRight="10dp"
+            android:background="@drawable/button_blue_borders"
+            android:button="@null"
+            android:checked="true"
+            android:gravity="center"
+            android:padding="5dp"
+            android:textColor="@drawable/text_color"
+            android:text="@string/record"/>
+
+        <RadioButton
+            android:id="@+id/stream_selector_button"
+            android:layout_width="100dp"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp"
+            android:background="@drawable/button_blue_borders"
+            android:button="@null"
+            android:gravity="center"
+            android:padding="5dp"
+            android:textColor="@drawable/text_color"
+            android:text="@string/stream"/>
+
+        <RadioButton
+            android:id="@+id/ptt_selector_button"
+            android:layout_width="100dp"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:background="@drawable/button_blue_borders"
+            android:button="@null"
+            android:gravity="center"
+            android:padding="5dp"
+            android:textColor="@drawable/text_color"
+            android:text="@string/ptt"/>
+    </RadioGroup>
+
+    <include layout="@layout/record_and_send"
+             android:layout_width="match_parent"
+             android:layout_height="match_parent"
+             android:layout_below="@+id/send_audio_type_selector"/>
+</RelativeLayout>

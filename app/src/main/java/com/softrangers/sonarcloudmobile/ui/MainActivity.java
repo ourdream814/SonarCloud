@@ -8,6 +8,7 @@ import android.support.design.widget.TabLayout;
 import android.support.v4.view.ViewPager;
 import android.view.View;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.softrangers.sonarcloudmobile.R;
 import com.softrangers.sonarcloudmobile.adapters.MainViewPagerAdapter;
@@ -67,14 +68,15 @@ public class MainActivity extends BaseActivity implements OnResponseListener,
             if (savedInstanceState != null) {
                 mBundle = savedInstanceState;
                 SonarCloudApp.user = savedInstanceState.getParcelable(USER_STATE);
-            } else if (SonarCloudApp.socketService != null && SonarCloudApp.getInstance().isLoggedIn()) {
-                showLoading();
-                Request.Builder builder = new Request.Builder();
-                builder.command(Api.Command.AUTHENTICATE);
-                builder.device(Api.Device.CLIENT).method(Api.Method.IDENTIFIER).identifier(SonarCloudApp.getInstance().getIdentifier())
-                        .secret(SonarCloudApp.getInstance().getSavedData()).seq(SonarCloudApp.SEQ_VALUE);
-                SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
             }
+//            else if (SonarCloudApp.socketService != null && SonarCloudApp.getInstance().isLoggedIn()) {
+//                showLoading();
+//                Request.Builder builder = new Request.Builder();
+//                builder.command(Api.Command.AUTHENTICATE);
+//                builder.device(Api.Device.CLIENT).method(Api.Method.IDENTIFIER).identifier(SonarCloudApp.getInstance().getIdentifier())
+//                        .secret(SonarCloudApp.getInstance().getSavedData()).seq(SonarCloudApp.SEQ_VALUE);
+//                SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
+//            }
         }
     }
 
@@ -133,9 +135,9 @@ public class MainActivity extends BaseActivity implements OnResponseListener,
 
     @Override
     public void onResponse(JSONObject response) {
-        SonarCloudApp.user = User.build(response);
-        ResponseReceiver.getInstance().removeOnResponseListener(this);
         dismissLoading();
+        SonarCloudApp.user = User.build(response);
+        ResponseReceiver.getInstance().clearResponseListenersList();
         setUpTabs();
 
     }
@@ -143,12 +145,14 @@ public class MainActivity extends BaseActivity implements OnResponseListener,
     @Override
     public void onCommandFailure(String message) {
         dismissLoading();
+        ResponseReceiver.getInstance().clearResponseListenersList();
         alertUserAboutError(getString(R.string.error), message);
     }
 
     @Override
     public void onError() {
         dismissLoading();
+        ResponseReceiver.getInstance().clearResponseListenersList();
         Snackbar.make(mViewPager, getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
     }
 
@@ -163,7 +167,7 @@ public class MainActivity extends BaseActivity implements OnResponseListener,
     protected void onDestroy() {
         super.onDestroy();
         if (isLoading()) dismissLoading();
-        ResponseReceiver.getInstance().removeOnResponseListener(this);
+        ResponseReceiver.getInstance().clearResponseListenersList();
         ConnectionReceiver.getInstance().removeOnResponseListener(this);
     }
 
@@ -175,6 +179,7 @@ public class MainActivity extends BaseActivity implements OnResponseListener,
                 builder.command(Api.Command.AUTHENTICATE);
                 builder.device(Api.Device.CLIENT).method(Api.Method.IDENTIFIER).identifier(SonarCloudApp.getInstance().getIdentifier())
                         .secret(SonarCloudApp.getInstance().getSavedData()).seq(SonarCloudApp.SEQ_VALUE);
+                ResponseReceiver.getInstance().addOnResponseListener(this);
                 SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
                 showLoading();
             }
@@ -187,6 +192,7 @@ public class MainActivity extends BaseActivity implements OnResponseListener,
             case RESULT_OK:
                 if (data.getAction().equals(Api.ACTION_ADD_GROUP)) {
                     mGroup = data.getExtras().getParcelable(AddGroupActivity.GROUP_RESULT_BUNDLE);
+                    Toast.makeText(this, getString(R.string.group_saved), Toast.LENGTH_SHORT).show();
                     notifyObservers();
                 }
                 break;
@@ -195,9 +201,6 @@ public class MainActivity extends BaseActivity implements OnResponseListener,
 
     @Override
     public void onBackPressed() {
-        if (isLoading())
-            dismissLoading();
-
         super.onBackPressed();
     }
 

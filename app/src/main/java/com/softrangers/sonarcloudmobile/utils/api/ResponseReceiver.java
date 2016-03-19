@@ -72,7 +72,6 @@ public class ResponseReceiver extends BroadcastReceiver {
                     JSONObject object = new JSONObject(response);
                     // get the request status from response
                     boolean success = object.getBoolean("success");
-                    int seq = object.getInt("seq");
                     // check status and inform listeners about either response or error
                     if (success) {
                         for (OnResponseListener l : listeners) {
@@ -89,12 +88,6 @@ public class ResponseReceiver extends BroadcastReceiver {
                     }
                     SonarCloudApp.SEQ_VALUE += 1;
                 } catch (Exception e) {
-                    // Inform listeners about error in case of exception
-                    for (OnResponseListener l : listeners) {
-                        if (l != null) {
-                            l.onError();
-                        }
-                    }
                     e.printStackTrace();
                 }
                 break;

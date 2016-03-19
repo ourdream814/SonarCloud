@@ -37,5 +37,11 @@
     <string name="cancel">Cancel</string>
     <string name="save">Save</string>
     <string name="select_pa">Select PA System</string>
+    <string name="group_saved">Group saved successfully</string>
+    <string name="stream">Stream</string>
+    <string name="record">Record</string>
+    <string name="ptt">PTT</string>
+    <string name="record_and_send">Record &amp; Send</string>
+    <string name="tap_record_to_start">Tap record to start</string>
 
 </resources>

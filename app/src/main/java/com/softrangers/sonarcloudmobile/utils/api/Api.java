@@ -47,6 +47,7 @@ public class Api {
         public static final String ORGANISATIONS = "organizations";
         public static final String RECEIVER_GROUPS = "receiverGroups";
         public static final String CREATE_GROUP = "createReceiverGroup";
+        public static final String UPDATE_GROUP = "updateReceiverGroup";
     }
 
     /**

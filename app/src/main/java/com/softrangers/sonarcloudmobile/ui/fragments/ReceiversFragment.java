@@ -7,6 +7,7 @@ import android.support.v4.app.Fragment;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -38,9 +39,6 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 
 
-/**
- * A simple {@link Fragment} subclass.
- */
 public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedChangeListener,
         OnResponseListener, SwipeRefreshLayout.OnRefreshListener,
         ReceiverListAdapter.OnItemClickListener, ReceiverObserver,
@@ -49,6 +47,11 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
     private static final String PA_LIST_STATE = "pa_list_state";
     private static final String GROUPS_LIST_STATE = "groups_list_state";
     public static final int GROUP_REQUEST_CODE = 1331;
+
+    // set selected items to send the record to them
+    private static ArrayList<Receiver> selectedReceivers = new ArrayList<>();
+    private static Group selectedGroup;
+
 
     private AnimatedExpandableListView mListView;
     private RadioButton mReceivers;
@@ -89,8 +92,6 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
         // as the selected one
         RadioGroup radioGroup = (RadioGroup) view.findViewById(R.id.pa_list_selector);
         mReceivers = (RadioButton) view.findViewById(R.id.receivers_button);
-        mReceivers.setChecked(true);
-        mReceivers.setTextColor(getResources().getColor(R.color.colorPrimary));
 
         // Radio buttons group to handle checked state changes
         mGroupsButton = (RadioButton) view.findViewById(R.id.groups_button);
@@ -131,6 +132,7 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
     /**
      * Initialize receivers adapter with a given list (use adapter methods to add items or to clear, replace
      * the list within adapter)
+     *
      * @param paSystems list to instantiate the adapter for list view (now it's an empty array
      */
     private void setUpReceiversListView(ArrayList<PASystem> paSystems) {
@@ -139,6 +141,11 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
         mListView.setAdapter(mReceiverListAdapter);
     }
 
+    /**
+     * Initialize the list of groups
+     *
+     * @param groups you want to show in the list
+     */
     private void setUpGroupsListView(ArrayList<Group> groups) {
         mGroupsListAdapter = new GroupsListAdapter(groups);
         mGroupsListAdapter.setOnGroupClickListener(this);
@@ -153,18 +160,19 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
     public void onCheckedChanged(RadioGroup group, int checkedId) {
         switch (checkedId) {
             case R.id.receivers_button:
-                mReceivers.setTextColor(getResources().getColor(R.color.colorPrimary));
-                mGroupsButton.setTextColor(getResources().getColor(android.R.color.white));
                 showReceiversLayout();
                 break;
             case R.id.groups_button:
-                mReceivers.setTextColor(getResources().getColor(android.R.color.white));
-                mGroupsButton.setTextColor(getResources().getColor(R.color.colorPrimary));
                 showGroupsLayout(false);
                 break;
         }
     }
 
+    /**
+     * Hide the PAs layout and show the Groups layout
+     *
+     * @param always make request to server
+     */
     private void showGroupsLayout(boolean always) {
         mRefreshLayout.setVisibility(View.GONE);
         mGroupsLayout.setVisibility(View.VISIBLE);
@@ -180,6 +188,9 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
         }
     }
 
+    /**
+     * Shows the layout with PAs list and hide Groups list layout
+     */
     private void showReceiversLayout() {
         mGroupsLayout.setVisibility(View.GONE);
         mRefreshLayout.setVisibility(View.VISIBLE);
@@ -188,6 +199,7 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
 
     /**
      * Called when the response with the organisations is ready
+     *
      * @param response object from server
      */
     @Override
@@ -225,19 +237,50 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
 
     /**
      * Called when a group is clicked
-     * @param group which was clicked
+     *
+     * @param group    which was clicked
      * @param position in the list
      */
     @Override
     public void onGroupClicked(Group group, int position) {
-        if (group.isSelected()) group.setIsSelected(false);
-        else group.setIsSelected(true);
-        mGroupsListAdapter.notifyItemChanged(position);
+        Log.d(this.getClass().getSimpleName(), String.valueOf(group.isSelected()));
+        if (group.isSelected()) {
+            selectedGroup = null;
+        } else {
+            selectedGroup = group;
+        }
+
+        if (selectedReceivers.size() > 0)
+            mReceiverListAdapter.refreshList(clearPASystemSelection(mPASystems));
+    }
+
+    /**
+     * Clear all selected receivers
+     *
+     * @param systems list with pa systems for which to clear the selection
+     * @return a list with unselected receivers
+     */
+    private ArrayList<PASystem> clearPASystemSelection(ArrayList<PASystem> systems) {
+        for (PASystem system : systems) {
+            for (Receiver receiver : system.getReceivers()) {
+                receiver.setIsSelected(false);
+                selectedReceivers.clear();
+            }
+        }
+        return systems;
+    }
+
+    private ArrayList<Group> clearGroupsSelection(ArrayList<Group> groups) {
+        for (Group group : groups) {
+            group.setIsSelected(false);
+        }
+        return groups;
     }
 
     /**
      * Called when a group edit button was clicked
-     * @param group for which the button was clicked
+     *
+     * @param group    for which the button was clicked
      * @param position of the group in the list
      */
     @Override
@@ -249,15 +292,39 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
         mActivity.startActivityForResult(intent, GROUP_REQUEST_CODE);
     }
 
+    /**
+     * Called when a group where added or edited
+     *
+     * @param group either new or edited
+     */
     @Override
     public void update(Group group) {
-        showGroupsLayout(true);
+        int position = -1;
+        for (int i = 0; i < mGroups.size(); i++) {
+            Group g = mGroups.get(i);
+            if (g.getGroupID() == group.getGroupID()) {
+                mGroups.remove(g);
+                position = i;
+                break;
+            }
+        }
+        group.setIsSelected(true);
+        if (position > -1) {
+            mGroups.add(position, group);
+        } else {
+            mGroups.add(group);
+        }
+        mGroupsListAdapter.notifyDataSetChanged();
     }
 
+    /**
+     * Response listener for receivers
+     */
     class ReceiversGet implements OnResponseListener {
 
         @Override
         public void onResponse(JSONObject response) {
+            mActivity.dismissLoading();
             try {
                 // Parse the response and build an receivers array list
                 ArrayList<Receiver> receivers = Receiver.build(response);
@@ -278,7 +345,7 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
                     }
                 }
                 // hide loading dialog
-                mActivity.dismissLoading();
+
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -286,76 +353,114 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
 
         @Override
         public void onCommandFailure(String message) {
-            mActivity.alertUserAboutError(mActivity.getString(R.string.error), message);
             mActivity.dismissLoading();
+            ResponseReceiver.getInstance().clearResponseListenersList();
+            mActivity.alertUserAboutError(mActivity.getString(R.string.error), message);
         }
 
         @Override
         public void onError() {
-            Snackbar.make(mRefreshLayout, mActivity.getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
             mActivity.dismissLoading();
+            ResponseReceiver.getInstance().clearResponseListenersList();
+            Snackbar.make(mRefreshLayout, mActivity.getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
+
         }
     }
 
+    /**
+     * Response listener for groups
+     */
     class GroupsGet implements OnResponseListener {
 
         @Override
         public void onResponse(JSONObject response) {
-            mGroups = Group.build(response);
-            setUpGroupsListView(mGroups);
             mActivity.dismissLoading();
+            mGroups = Group.build(response);
+            ResponseReceiver.getInstance().clearResponseListenersList();
+            setUpGroupsListView(mGroups);
+
         }
 
         @Override
         public void onCommandFailure(String message) {
             mActivity.dismissLoading();
+            ResponseReceiver.getInstance().clearResponseListenersList();
             Snackbar.make(mRefreshLayout, message, Snackbar.LENGTH_SHORT).show();
         }
 
         @Override
         public void onError() {
             mActivity.dismissLoading();
+            ResponseReceiver.getInstance().clearResponseListenersList();
             Snackbar.make(mRefreshLayout, mActivity.getString(R.string.unknown_error),
                     Snackbar.LENGTH_SHORT).show();
         }
     }
 
+    /**
+     * Called when server can't understand the command
+     *
+     * @param message about server error
+     */
     @Override
     public void onCommandFailure(String message) {
         mActivity.alertUserAboutError(mActivity.getString(R.string.error), message);
         mActivity.dismissLoading();
     }
 
+    /**
+     * Called when any error such parsing the response, connection error and so on
+     */
     @Override
     public void onError() {
         Snackbar.make(mRefreshLayout, mActivity.getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
         mActivity.dismissLoading();
     }
 
+    /**
+     * Called when user swipe down to refresh the list
+     */
     @Override
     public void onRefresh() {
         mRefreshLayout.setRefreshing(false);
     }
 
+    /**
+     * Called when a receiver is clicked in the PAs list
+     *
+     * @param receiver which is clicked
+     * @param position of the receiver in the list
+     */
     @Override
     public void onChildClick(Receiver receiver, int position) {
-        // TODO: 3/16/16 Replace with a correct action
+        if (mGroups != null)
+            setUpGroupsListView(clearGroupsSelection(mGroups));
+
         if (receiver.isSelected()) {
             receiver.setIsSelected(false);
-            Snackbar.make(mListView, receiver.getName() + " deselected, Id = " + receiver.getReceiverId(), Snackbar.LENGTH_SHORT).show();
+            selectedReceivers.remove(receiver);
         } else {
             receiver.setIsSelected(true);
-            Snackbar.make(mListView, receiver.getName() + " selected, Id = " + receiver.getReceiverId(), Snackbar.LENGTH_SHORT).show();
+            selectedReceivers.add(receiver);
         }
 
         mReceiverListAdapter.notifyDataSetChanged();
     }
 
+    /**
+     * Called when a list for one PA is ready
+     *
+     * @param paSystem  which has the receivers list ready
+     * @param receivers list for the PA system
+     */
     @Override
     public void update(PASystem paSystem, ArrayList<Receiver> receivers) {
         mReceiverListAdapter.refreshList(mPASystems);
     }
 
+    /**
+     * Called when Add new group button is called
+     */
     private View.OnClickListener mAddNewGroup = new View.OnClickListener() {
         @Override
         public void onClick(View v) {

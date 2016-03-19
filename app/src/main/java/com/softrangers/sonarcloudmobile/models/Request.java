@@ -17,6 +17,8 @@ import java.util.Map;
  * @author eduard.albu@gmail.com
  */
 public class Request {
+    private static final int UNSPECIFIED_INT = -1;
+
     private String command;
     private String device;
     private String method;
@@ -26,10 +28,12 @@ public class Request {
     private String identifier;
     private String secret;
     private String groupID;
-    private int pin = -1;
+    private int receiverGroupID = UNSPECIFIED_INT;
+    private int loginID = UNSPECIFIED_INT;
+    private int pin = UNSPECIFIED_INT;
     private String action;
     private String userID;
-    private int organizationID;
+    private int organizationID = UNSPECIFIED_INT;
     private String receiverID;
     private int seq;
     private JSONArray receivers;
@@ -54,8 +58,12 @@ public class Request {
                     request.put(set.getKey(), set.getValue().get(this));
                 }
             }
-            if (pin == -1) request.remove("pin");
-            if (request.getInt("organizationID") <= 0) request.remove("organizationID");
+            if (pin == UNSPECIFIED_INT) request.remove("pin");
+            if (receiverGroupID == UNSPECIFIED_INT) request.remove("receiverGroupID");
+            if (loginID == UNSPECIFIED_INT) request.remove("loginID");
+            if (organizationID == UNSPECIFIED_INT) request.remove("organizationID");
+            request.remove("UNSPECIFIED_INT");
+
             request.put(Api.Options.SEQ_FIELD, seq);
             return request;
         } catch (Exception e) {
@@ -74,7 +82,7 @@ public class Request {
         private String mIdentifier;
         private String mSecret;
         private String mGroupId;
-        private int mPin = -1;
+        private int mPin = UNSPECIFIED_INT;
         private String mAction;
         private String mUserId;
         private int mOrganisationId;
@@ -82,6 +90,7 @@ public class Request {
         private JSONArray mReceivers;
         private boolean mPlayImmediately;
         private int mSeq;
+        private int mReceiverGroupId = UNSPECIFIED_INT;
 
         public Builder command(String command) {
             mCommand = command;
@@ -175,6 +184,12 @@ public class Request {
             return this;
         }
 
+        public Builder receiverGroupID(int receiverGroupId) {
+            if (receiverGroupId == 0) receiverGroupId = UNSPECIFIED_INT;
+            mReceiverGroupId = receiverGroupId;
+            return this;
+        }
+
 
         public Request build() {
             Request request = new Request();
@@ -186,13 +201,20 @@ public class Request {
             request.groupID = mGroupId;
             request.identifier = mIdentifier;
             request.method = mMethod;
-            request.organizationID = mOrganisationId;
+
+            if (mOrganisationId != 0)
+                request.organizationID = mOrganisationId;
+
             request.password = mPassword;
             request.receiverID = mReceiverId;
             request.secret = mSecret;
             request.pin = mPin;
             request.userID = mUserId;
-            request.seq = mSeq;
+            request.receiverGroupID = mReceiverGroupId;
+
+            if (mSeq != 0)
+                request.seq = mSeq;
+
             request.receivers = mReceivers;
             return request;
         }

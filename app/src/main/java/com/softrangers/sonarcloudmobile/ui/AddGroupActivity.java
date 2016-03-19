@@ -31,6 +31,8 @@ public class AddGroupActivity extends BaseActivity {
     public static final String PA_SUSTEMS_BUNDLE = "bundle key for PA systems list";
     public static final String GROUP_RESULT_BUNDLE = "bundle key for group result";
 
+    private static String command = Api.Command.CREATE_GROUP;
+
     private TextView mToolbarTitle;
 
     private EditText mNameEditText;
@@ -56,17 +58,42 @@ public class AddGroupActivity extends BaseActivity {
         mAction = intent.getAction();
         switch (mAction) {
             case Api.ACTION_ADD_GROUP:
+                command = Api.Command.CREATE_GROUP;
                 mGroup = new Group();
-                Toast.makeText(this, "Started to add new group", Toast.LENGTH_SHORT).show();
+                clearPASelections(mPASystems);
                 break;
             case Api.ACTION_EDIT_GROUP:
+                command = Api.Command.UPDATE_GROUP;
                 mGroup = intent.getExtras().getParcelable(GROUP_EDIT_BUNDLE);
+                mGroup.setIsSelected(true);
                 mReceivers = mGroup.getReceivers();
+                setSelectedReceivers(mReceivers);
                 mToolbarTitle.setText(getString(R.string.edit_group));
                 mNameEditText.setText(mGroup.getName());
                 mSelectPAButton.setText(mGroup.getReceivers().size() + " " + getString(R.string.pa_systems));
                 break;
         }
+    }
+
+    private void setSelectedReceivers(ArrayList<Receiver> destination) {
+        for (Receiver r : destination) {
+            for (int i = 0; i < mPASystems.size(); i++) {
+                for (Receiver receiver : mPASystems.get(i).getReceivers()) {
+                    if (receiver.getReceiverId() == r.getReceiverId()) {
+                        receiver.setIsSelected(true);
+                    }
+                }
+            }
+        }
+    }
+
+    private void clearPASelections(ArrayList<PASystem> systems) {
+        for (int i = 0; i < systems.size(); i++) {
+            for (Receiver receiver : systems.get(i).getReceivers()) {
+                receiver.setIsSelected(false);
+            }
+        }
+
     }
 
     private void instantiateAllViews() {
@@ -129,7 +156,10 @@ public class AddGroupActivity extends BaseActivity {
             mGroup.setReceivers(mReceivers);
 
             Request.Builder builder = new Request.Builder();
-            builder.command(Api.Command.CREATE_GROUP);
+            builder.command(command);
+            if (mAction.equals(Api.ACTION_EDIT_GROUP)) {
+                builder.receiverGroupID(mGroup.getGroupID());
+            }
             builder.pin(mGroup.getPin());
             builder.name(mGroup.getName());
 
@@ -140,7 +170,8 @@ public class AddGroupActivity extends BaseActivity {
             builder.receivers(receivers);
             ResponseReceiver.getInstance().clearResponseListenersList();
             ResponseReceiver.getInstance().addOnResponseListener(new AddGroupListener());
-            SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
+            JSONObject object = builder.build().toJSON();
+            SonarCloudApp.socketService.sendRequest(object);
             showLoading();
         }
     };
@@ -163,8 +194,21 @@ public class AddGroupActivity extends BaseActivity {
             case RESULT_OK:
                 mReceivers = data.getExtras().getParcelableArrayList(SelectPASystemActivity.RECEIVERS_RESULT);
                 if (mReceivers == null) mReceivers = new ArrayList<>();
+                updatePAReceivers(mReceivers);
                 mSelectPAButton.setText(mReceivers.size() + " " + getString(R.string.pa_systems));
                 break;
+        }
+    }
+
+    private void updatePAReceivers(ArrayList<Receiver> receivers) {
+        for (Receiver receiver : receivers) {
+            for (PASystem system : mPASystems) {
+                for (Receiver r : system.getReceivers()) {
+                    if (receiver.getReceiverId() == r.getReceiverId()) {
+                        r.setIsSelected(receiver.isSelected());
+                    }
+                }
+            }
         }
     }
 
@@ -172,24 +216,28 @@ public class AddGroupActivity extends BaseActivity {
 
         @Override
         public void onResponse(JSONObject response) {
+            dismissLoading();
             mGroup = Group.buildSingle(response);
+            ResponseReceiver.getInstance().clearResponseListenersList();
             Intent intent = new Intent();
             intent.setAction(Api.ACTION_ADD_GROUP);
             intent.putExtra(GROUP_RESULT_BUNDLE, mGroup);
             setResult(RESULT_OK, intent);
-            dismissLoading();
+
             finish();
         }
 
         @Override
         public void onCommandFailure(String message) {
             dismissLoading();
+            ResponseReceiver.getInstance().clearResponseListenersList();
             Snackbar.make(mSelectPAButton, message, Snackbar.LENGTH_SHORT).show();
         }
 
         @Override
         public void onError() {
             dismissLoading();
+            ResponseReceiver.getInstance().clearResponseListenersList();
             Snackbar.make(mSelectPAButton, getString(R.string.unknown_error),
                     Snackbar.LENGTH_SHORT).show();
         }

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:background="@drawable/gradient_background">
+
+    <TextView
+        android:id="@+id/record_and_sendTextView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:padding="15dp"
+        android:gravity="center"
+        android:textColor="@android:color/white"
+        android:textSize="24sp"
+        android:text="@string/record_and_send"/>
+
+    <TextView
+        android:id="@+id/tap_record_textView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:padding="15dp"
+        android:gravity="center"
+        android:textColor="@android:color/white"
+        android:textSize="17sp"
+        android:text="@string/tap_record_to_start"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:layout_marginBottom="20dp"
+        android:layout_above="@+id/tap_record_textView"
+        android:orientation="horizontal">
+
+        <com.softrangers.sonarcloudmobile.utils.widgets.ToggleImageButton
+            style="@style/Base.Widget.AppCompat.ActionButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginRight="50dp"
+            android:layout_marginEnd="50dp"
+            android:checked="true"
+            android:src="@mipmap/ic_button_stop"
+            android:id="@+id/stop_recording_button"/>
+
+        <com.softrangers.sonarcloudmobile.utils.widgets.ToggleImageButton
+            style="@style/Base.Widget.AppCompat.ActionButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="50dp"
+            android:layout_marginStart="50dp"
+            android:checked="false"
+            android:src="@drawable/record_button_src"
+            android:id="@+id/start_pause_recording_button"/>
+    </LinearLayout>
+</RelativeLayout>

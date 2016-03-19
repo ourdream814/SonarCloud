@@ -20,7 +20,6 @@ public class SelectPASystemActivity extends BaseActivity implements
     public static final String PA_BUNDLE_KEY = "key for PAs from bundle";
     public static final String RECEIVERS_RESULT = "key for receivers list from result";
 
-    private ArrayList<PASystem> mPASystems;
     private ArrayList<Receiver> mReceivers;
     private ReceiverListAdapter mAdapter;
 
@@ -30,13 +29,24 @@ public class SelectPASystemActivity extends BaseActivity implements
         setContentView(R.layout.activity_select_pasystem);
         Intent intent = getIntent();
         mReceivers = new ArrayList<>();
-        mPASystems = intent.getExtras().getParcelableArrayList(PA_BUNDLE_KEY);
+        ArrayList<PASystem> PASystems = intent.getExtras().getParcelableArrayList(PA_BUNDLE_KEY);
         AnimatedExpandableListView listView = (AnimatedExpandableListView) findViewById(R.id.select_pa_activityList);
-        mAdapter = new ReceiverListAdapter(this, mPASystems);
+        addSelectedReceivers(PASystems);
+        mAdapter = new ReceiverListAdapter(this, PASystems);
         mAdapter.setOnItemClickListener(this);
 
         assert listView != null;
         listView.setAdapter(mAdapter);
+    }
+
+    private void addSelectedReceivers(ArrayList<PASystem> systems) {
+        for (PASystem system : systems) {
+            for (Receiver receiver : system.getReceivers()) {
+                if (receiver.isSelected()) {
+                    mReceivers.add(receiver);
+                }
+            }
+        }
     }
 
     public void save(View view) {
@@ -53,8 +63,13 @@ public class SelectPASystemActivity extends BaseActivity implements
 
     @Override
     public void onChildClick(Receiver receiver, int position) {
-        receiver.setIsSelected(true);
+        if (receiver.isSelected()) {
+            receiver.setIsSelected(false);
+            mReceivers.remove(receiver);
+        } else {
+            receiver.setIsSelected(true);
+            mReceivers.add(receiver);
+        }
         mAdapter.notifyDataSetChanged();
-        mReceivers.add(receiver);
     }
 }

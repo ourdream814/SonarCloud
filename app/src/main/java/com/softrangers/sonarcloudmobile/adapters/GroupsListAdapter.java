@@ -1,6 +1,7 @@
 package com.softrangers.sonarcloudmobile.adapters;
 
 import android.support.v7.widget.RecyclerView;
+import android.util.SparseBooleanArray;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -18,11 +19,18 @@ import java.util.ArrayList;
  */
 public class GroupsListAdapter extends RecyclerView.Adapter<GroupsListAdapter.ViewHolder> {
 
+    private static final int NOT_SELECTED = -1;
+    private static final int WAS_NOT_SELECTED = -2;
+
     private ArrayList<Group> mGroups;
     private OnGroupClickListener mOnGroupClickListener;
+    private static int lastSelectedPosition;
+    private static int currentSelectedPosition;
 
     public GroupsListAdapter(ArrayList<Group> groups) {
         mGroups = groups;
+        lastSelectedPosition = WAS_NOT_SELECTED;
+        currentSelectedPosition = NOT_SELECTED;
     }
 
     public void setOnGroupClickListener(OnGroupClickListener onGroupClickListener) {
@@ -39,6 +47,9 @@ public class GroupsListAdapter extends RecyclerView.Adapter<GroupsListAdapter.Vi
     @Override
     public void onBindViewHolder(ViewHolder holder, int position) {
         holder.mGroup = mGroups.get(position);
+
+        if (holder.mGroup.isSelected()) currentSelectedPosition = position;
+
         holder.mCheckCircle.setImageResource(
                 holder.mGroup.isSelected() ? R.mipmap.ic_circle_checked : R.mipmap.ic_circle
         );
@@ -61,6 +72,7 @@ public class GroupsListAdapter extends RecyclerView.Adapter<GroupsListAdapter.Vi
         final TextView mGroupDescription;
         final ImageButton mEditButton;
         Group mGroup;
+
         public ViewHolder(View itemView) {
             super(itemView);
             itemView.setOnClickListener(this);
@@ -80,8 +92,16 @@ public class GroupsListAdapter extends RecyclerView.Adapter<GroupsListAdapter.Vi
                     }
                     break;
                 default:
+                    currentSelectedPosition = getAdapterPosition();
+                    mGroup.setIsSelected(!mGroup.isSelected());
+                    if (lastSelectedPosition != WAS_NOT_SELECTED) {
+                        mGroups.get(lastSelectedPosition).setIsSelected(false);
+                        notifyItemChanged(lastSelectedPosition);
+                    }
+                    notifyItemChanged(currentSelectedPosition);
+                    lastSelectedPosition = currentSelectedPosition;
                     if (mOnGroupClickListener != null) {
-                        mOnGroupClickListener.onGroupClicked(mGroup, getAdapterPosition());
+                        mOnGroupClickListener.onGroupClicked(mGroup, currentSelectedPosition);
                     }
                     break;
             }
@@ -90,6 +110,7 @@ public class GroupsListAdapter extends RecyclerView.Adapter<GroupsListAdapter.Vi
 
     public interface OnGroupClickListener {
         void onGroupClicked(Group group, int position);
+
         void onEditButtonClicked(Group group, int position);
     }
 }
