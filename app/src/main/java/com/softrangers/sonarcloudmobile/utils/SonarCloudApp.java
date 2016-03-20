@@ -28,6 +28,7 @@ public class SonarCloudApp extends Application {
 
     public static final String NO_IDENTIFIER = "no identifier";
     public static final String NO_DATA = "no_user_server_data";
+    private static final String IS_FIRST_LAUNCH = "is first launch";
 
     public static int SEQ_VALUE;
 
@@ -73,6 +74,16 @@ public class SonarCloudApp extends Application {
             socketService = null;
         }
     };
+
+    public void setIsFirstLaunch(boolean isFirstLaunch) {
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putBoolean(IS_FIRST_LAUNCH, isFirstLaunch);
+        editor.apply();
+    }
+
+    public boolean isFirstLaunch() {
+        return preferences.getBoolean(IS_FIRST_LAUNCH, false);
+    }
 
     /**
      * @return either old or new instance of current class

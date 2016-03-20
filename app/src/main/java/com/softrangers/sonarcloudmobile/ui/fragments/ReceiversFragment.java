@@ -7,15 +7,14 @@ import android.support.v4.app.Fragment;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.helper.ItemTouchHelper;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
-import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.RelativeLayout;
-import android.widget.Toast;
 
 import com.softrangers.sonarcloudmobile.R;
 import com.softrangers.sonarcloudmobile.adapters.GroupsListAdapter;
@@ -48,21 +47,14 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
     private static final String GROUPS_LIST_STATE = "groups_list_state";
     public static final int GROUP_REQUEST_CODE = 1331;
 
-    // set selected items to send the record to them
-    private static ArrayList<Receiver> selectedReceivers = new ArrayList<>();
-    private static Group selectedGroup;
-
 
     private AnimatedExpandableListView mListView;
-    private RadioButton mReceivers;
-    private RadioButton mGroupsButton;
     private MainActivity mActivity;
     private SwipeRefreshLayout mRefreshLayout;
     private RelativeLayout mGroupsLayout;
     private ReceiverListAdapter mReceiverListAdapter;
     private GroupsListAdapter mGroupsListAdapter;
     private RecyclerView mGroupsRecyclerView;
-    private LinearLayout mAddGroupButton;
     private ArrayList<PASystem> mPASystems;
     private ArrayList<Group> mGroups;
 
@@ -81,8 +73,10 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
         // Obtain a link to the lists from layout
         mListView = (AnimatedExpandableListView) view.findViewById(R.id.receivers_expandableListView);
         mGroupsRecyclerView = (RecyclerView) view.findViewById(R.id.groups_recyclerView);
-        mAddGroupButton = (LinearLayout) view.findViewById(R.id.add_group_clickableLayout);
-        mAddGroupButton.setOnClickListener(mAddNewGroup);
+        ItemTouchHelper itemTouchHelper = new ItemTouchHelper(mSimpleItemTouchHelper);
+        itemTouchHelper.attachToRecyclerView(mGroupsRecyclerView);
+        LinearLayout addGroupButton = (LinearLayout) view.findViewById(R.id.add_group_clickableLayout);
+        addGroupButton.setOnClickListener(mAddNewGroup);
         // Obtain a link to the SwipeRefreshLayout which holds the list view
         mGroupsLayout = (RelativeLayout) view.findViewById(R.id.groups_relativeLayout);
         mRefreshLayout = (SwipeRefreshLayout) view.findViewById(R.id.pa_list_swipeRefresh);
@@ -91,10 +85,8 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
         // Obtain a link to the top buttons (PAs and Groups) and customize them, setting PAs button
         // as the selected one
         RadioGroup radioGroup = (RadioGroup) view.findViewById(R.id.pa_list_selector);
-        mReceivers = (RadioButton) view.findViewById(R.id.receivers_button);
 
         // Radio buttons group to handle checked state changes
-        mGroupsButton = (RadioButton) view.findViewById(R.id.groups_button);
         radioGroup.setOnCheckedChangeListener(this);
 
         // Initialize PAs list
@@ -244,13 +236,13 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
     @Override
     public void onGroupClicked(Group group, int position) {
         Log.d(this.getClass().getSimpleName(), String.valueOf(group.isSelected()));
-        if (group.isSelected()) {
-            selectedGroup = null;
+        if (!group.isSelected()) {
+            MainActivity.selectedGroup = null;
         } else {
-            selectedGroup = group;
+            MainActivity.selectedGroup = group;
         }
-
-        if (selectedReceivers.size() > 0)
+        MainActivity.statusChanged = true;
+        if (MainActivity.selectedReceivers.size() > 0)
             mReceiverListAdapter.refreshList(clearPASystemSelection(mPASystems));
     }
 
@@ -264,7 +256,7 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
         for (PASystem system : systems) {
             for (Receiver receiver : system.getReceivers()) {
                 receiver.setIsSelected(false);
-                selectedReceivers.clear();
+                MainActivity.selectedReceivers.clear();
             }
         }
         return systems;
@@ -308,12 +300,14 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
                 break;
             }
         }
+        clearGroupsSelection(mGroups);
         group.setIsSelected(true);
         if (position > -1) {
             mGroups.add(position, group);
         } else {
             mGroups.add(group);
         }
+        MainActivity.selectedGroup = group;
         mGroupsListAdapter.notifyDataSetChanged();
     }
 
@@ -435,15 +429,16 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
     public void onChildClick(Receiver receiver, int position) {
         if (mGroups != null)
             setUpGroupsListView(clearGroupsSelection(mGroups));
+        MainActivity.selectedGroup = null;
 
         if (receiver.isSelected()) {
             receiver.setIsSelected(false);
-            selectedReceivers.remove(receiver);
+            MainActivity.selectedReceivers.remove(receiver);
         } else {
             receiver.setIsSelected(true);
-            selectedReceivers.add(receiver);
+            MainActivity.selectedReceivers.add(receiver);
         }
-
+        MainActivity.statusChanged = true;
         mReceiverListAdapter.notifyDataSetChanged();
     }
 
@@ -470,4 +465,63 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
             mActivity.startActivityForResult(intent, GROUP_REQUEST_CODE);
         }
     };
+
+    private ItemTouchHelper.SimpleCallback mSimpleItemTouchHelper = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT) {
+        @Override
+        public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, RecyclerView.ViewHolder target) {
+            return false;
+        }
+
+        @Override
+        public void onSwiped(final RecyclerView.ViewHolder viewHolder, int direction) {
+            final int position = viewHolder.getAdapterPosition();
+            final Group group = mGroupsListAdapter.deleteItem(position);
+            mGroupsListAdapter.notifyItemRemoved(position);
+            Snackbar.make(mGroupsRecyclerView,
+                    mActivity.getString(R.string.group_deleted), Snackbar.LENGTH_LONG)
+                    .setAction(mActivity.getString(R.string.undo), new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            mGroupsListAdapter.addItem(group, position);
+                        }
+                    }).setActionTextColor(mActivity.getResources()
+                    .getColor(R.color.colorAlertAction))
+                    .setCallback(new Snackbar.Callback() {
+                        @Override
+                        public void onDismissed(Snackbar snackbar, int event) {
+                            switch (event) {
+                                case DISMISS_EVENT_TIMEOUT:
+                                    if (group.equals(MainActivity.selectedGroup)) {
+                                        MainActivity.selectedGroup = null;
+                                        MainActivity.statusChanged = true;
+                                    }
+                                    deleteGroupFromServer(group);
+                                    break;
+                                case DISMISS_EVENT_CONSECUTIVE:
+                                    if (group.equals(MainActivity.selectedGroup)) {
+                                        MainActivity.selectedGroup = null;
+                                        MainActivity.statusChanged = true;
+                                    }
+                                    deleteGroupFromServer(group);
+                                    break;
+                                case DISMISS_EVENT_MANUAL:
+                                    if (group.equals(MainActivity.selectedGroup)) {
+                                        MainActivity.selectedGroup = null;
+                                        MainActivity.statusChanged = true;
+                                    }
+                                    deleteGroupFromServer(group);
+                                    break;
+                            }
+                        }
+                    }).show();
+        }
+    };
+
+    private void deleteGroupFromServer(Group group) {
+        Request.Builder builder = new Request.Builder();
+        builder.command(Api.Command.DELETE_GROUP);
+        builder.receiverGroupID(group.getGroupID());
+        ResponseReceiver.getInstance().clearResponseListenersList();
+        SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
+    }
 }

@@ -48,6 +48,10 @@ public class Api {
         public static final String RECEIVER_GROUPS = "receiverGroups";
         public static final String CREATE_GROUP = "createReceiverGroup";
         public static final String UPDATE_GROUP = "updateReceiverGroup";
+        public static final String RECORDINGS = "recordings";
+        public static final String DELETE_GROUP = "deleteReceiverGroup";
+        public static final String SCHEDULES = "schedules";
+        public static final String DELETE_SCHEDULE = "deleteSchedule";
     }
 
     /**

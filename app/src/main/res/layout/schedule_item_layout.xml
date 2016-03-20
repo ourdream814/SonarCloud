@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                xmlns:tools="http://schemas.android.com/tools"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/white_selectable"
+                android:orientation="vertical">
+
+    <ImageButton
+        android:id="@+id/schedule_record_item_playButton"
+        style="@style/Base.Widget.AppCompat.ActionButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
+        android:layout_margin="5dp"
+        android:contentDescription="@string/start_playing_record"
+        android:src="@mipmap/ic_play"/>
+
+    <TextView
+        android:id="@+id/schedule_minutes_textView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
+        android:textColor="@android:color/black"
+        android:gravity="center"
+        tools:text="12\nAM"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true"/>
+
+    <TextView
+        android:id="@+id/schedule_hour_textView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
+        android:layout_marginRight="5dp"
+        android:layout_marginEnd="5dp"
+        android:textSize="35sp"
+        android:textColor="@android:color/black"
+        tools:text="12"
+        android:layout_toStartOf="@id/schedule_minutes_textView"
+        android:layout_toLeftOf="@id/schedule_minutes_textView"/>
+
+    <LinearLayout
+        android:id="@+id/schedule_texts_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
+        android:layout_margin="5dp"
+        android:layout_toStartOf="@id/schedule_hour_textView"
+        android:layout_toLeftOf="@id/schedule_hour_textView"
+        android:layout_toEndOf="@id/schedule_record_item_playButton"
+        android:layout_toRightOf="@id/schedule_record_item_playButton"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/schedule_record_item_nameText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:textColor="@android:color/black"
+            android:textSize="18sp"
+            tools:text="Recording 118"/>
+
+        <TextView
+            android:id="@+id/schedule_record_timeText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:drawableLeft="@mipmap/ic_clock"
+            android:drawablePadding="5dp"
+            android:drawableStart="@mipmap/ic_clock"
+            tools:text="0:00"/>
+    </LinearLayout>
+
+    <View android:layout_width="match_parent"
+          android:layout_height="1dp"
+          android:layout_alignParentBottom="true"
+          android:background="#cacaca"/>
+</RelativeLayout>

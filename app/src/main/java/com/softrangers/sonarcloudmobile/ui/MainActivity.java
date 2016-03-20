@@ -13,6 +13,7 @@ import android.widget.Toast;
 import com.softrangers.sonarcloudmobile.R;
 import com.softrangers.sonarcloudmobile.adapters.MainViewPagerAdapter;
 import com.softrangers.sonarcloudmobile.models.Group;
+import com.softrangers.sonarcloudmobile.models.Receiver;
 import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.models.User;
 import com.softrangers.sonarcloudmobile.ui.fragments.ReceiversFragment;
@@ -37,6 +38,8 @@ public class MainActivity extends BaseActivity implements OnResponseListener,
 
     private static final String USER_STATE = "user_state";
     private static ArrayList<GroupObserver> observers;
+    private static boolean isConnected;
+    public static boolean statusChanged;
     private Group mGroup;
 
     private TextView mToolbarTitle;
@@ -44,6 +47,10 @@ public class MainActivity extends BaseActivity implements OnResponseListener,
     private ViewPager mViewPager;
     private MainViewPagerAdapter mPagerAdapter;
     private Bundle mBundle;
+
+    // set selected items to send the record to them
+    public static ArrayList<Receiver> selectedReceivers = new ArrayList<>();
+    public static Group selectedGroup;
 
 
     @Override
@@ -68,15 +75,11 @@ public class MainActivity extends BaseActivity implements OnResponseListener,
             if (savedInstanceState != null) {
                 mBundle = savedInstanceState;
                 SonarCloudApp.user = savedInstanceState.getParcelable(USER_STATE);
+            } else {
+                if (SonarCloudApp.socketService != null && !isConnected) {
+                    SonarCloudApp.socketService.restartConnection();
+                }
             }
-//            else if (SonarCloudApp.socketService != null && SonarCloudApp.getInstance().isLoggedIn()) {
-//                showLoading();
-//                Request.Builder builder = new Request.Builder();
-//                builder.command(Api.Command.AUTHENTICATE);
-//                builder.device(Api.Device.CLIENT).method(Api.Method.IDENTIFIER).identifier(SonarCloudApp.getInstance().getIdentifier())
-//                        .secret(SonarCloudApp.getInstance().getSavedData()).seq(SonarCloudApp.SEQ_VALUE);
-//                SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
-//            }
         }
     }
 
@@ -89,7 +92,9 @@ public class MainActivity extends BaseActivity implements OnResponseListener,
     private void setUpTabs() {
         mPagerAdapter.addFragment(new ReceiversFragment(), getString(R.string.select_pa_system));
         mPagerAdapter.addFragment(new RecordFragment(), getString(R.string.make_announcement));
-        mPagerAdapter.addFragment(new ScheduleFragment(), getString(R.string.schedule_announcement));
+
+        final ScheduleFragment scheduleFragment = new ScheduleFragment();
+        mPagerAdapter.addFragment(scheduleFragment, getString(R.string.schedule_announcement));
         mPagerAdapter.addFragment(new SettingsFragment(), getString(R.string.settings));
         mViewPager.setAdapter(mPagerAdapter);
         mViewPager.setOffscreenPageLimit(5);
@@ -102,6 +107,17 @@ public class MainActivity extends BaseActivity implements OnResponseListener,
 
             @Override
             public void onPageSelected(int position) {
+                if (mPagerAdapter.getItem(position) instanceof ScheduleFragment) {
+                    if (!statusChanged) return;
+                    if (selectedReceivers.size() > 0) {
+                        scheduleFragment.getAllRecordingsFromServer(selectedReceivers);
+                    } else if (selectedGroup != null) {
+                        scheduleFragment.getAllRecordingsFromServer(selectedGroup);
+                    } else {
+                        scheduleFragment.clearList();
+                    }
+                    statusChanged = false;
+                }
                 setToolbarTitle(mPagerAdapter.getTitle(position));
             }
 
@@ -173,16 +189,15 @@ public class MainActivity extends BaseActivity implements OnResponseListener,
 
     @Override
     public void onSocketConnected() {
-        if (mBundle == null) {
-            if (SonarCloudApp.socketService != null && SonarCloudApp.getInstance().isLoggedIn()) {
-                Request.Builder builder = new Request.Builder();
-                builder.command(Api.Command.AUTHENTICATE);
-                builder.device(Api.Device.CLIENT).method(Api.Method.IDENTIFIER).identifier(SonarCloudApp.getInstance().getIdentifier())
-                        .secret(SonarCloudApp.getInstance().getSavedData()).seq(SonarCloudApp.SEQ_VALUE);
-                ResponseReceiver.getInstance().addOnResponseListener(this);
-                SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
-                showLoading();
-            }
+        if (SonarCloudApp.socketService != null && SonarCloudApp.getInstance().isLoggedIn()) {
+            Request.Builder builder = new Request.Builder();
+            builder.command(Api.Command.AUTHENTICATE);
+            builder.device(Api.Device.CLIENT).method(Api.Method.IDENTIFIER).identifier(SonarCloudApp.getInstance().getIdentifier())
+                    .secret(SonarCloudApp.getInstance().getSavedData()).seq(SonarCloudApp.SEQ_VALUE);
+            ResponseReceiver.getInstance().addOnResponseListener(this);
+            SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
+            isConnected = true;
+            showLoading();
         }
     }
 
@@ -192,6 +207,7 @@ public class MainActivity extends BaseActivity implements OnResponseListener,
             case RESULT_OK:
                 if (data.getAction().equals(Api.ACTION_ADD_GROUP)) {
                     mGroup = data.getExtras().getParcelable(AddGroupActivity.GROUP_RESULT_BUNDLE);
+                    statusChanged = true;
                     Toast.makeText(this, getString(R.string.group_saved), Toast.LENGTH_SHORT).show();
                     notifyObservers();
                 }
@@ -221,5 +237,13 @@ public class MainActivity extends BaseActivity implements OnResponseListener,
                 observer.update(mGroup);
             }
         }
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        isConnected = false;
+        selectedGroup = null;
+        selectedReceivers.clear();
     }
 }

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                android:id="@+id/scheduled_list_layout"
+                android:visibility="gone"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent">
+
+    <android.support.v7.widget.RecyclerView
+        android:id="@+id/schedule_horizontal_list"
+        android:background="@color/colorAccent"
+        android:layout_width="match_parent"
+        android:layout_height="?actionBarSize"/>
+
+    <android.support.v7.widget.RecyclerView
+        android:id="@+id/schedule_vertical_list"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@+id/schedule_horizontal_list"/>
+</RelativeLayout>

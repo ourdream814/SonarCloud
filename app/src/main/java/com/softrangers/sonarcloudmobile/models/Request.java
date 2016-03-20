@@ -34,8 +34,9 @@ public class Request {
     private String action;
     private String userID;
     private int organizationID = UNSPECIFIED_INT;
-    private String receiverID;
+    private int receiverID = UNSPECIFIED_INT;
     private int seq;
+    private int scheduleID = UNSPECIFIED_INT;
     private JSONArray receivers;
 
     private Request() {
@@ -62,6 +63,8 @@ public class Request {
             if (receiverGroupID == UNSPECIFIED_INT) request.remove("receiverGroupID");
             if (loginID == UNSPECIFIED_INT) request.remove("loginID");
             if (organizationID == UNSPECIFIED_INT) request.remove("organizationID");
+            if (receiverID == UNSPECIFIED_INT) request.remove("receiverID");
+            if (scheduleID == UNSPECIFIED_INT) request.remove("scheduleID");
             request.remove("UNSPECIFIED_INT");
 
             request.put(Api.Options.SEQ_FIELD, seq);
@@ -86,11 +89,12 @@ public class Request {
         private String mAction;
         private String mUserId;
         private int mOrganisationId;
-        private String mReceiverId;
+        private int mReceiverId = UNSPECIFIED_INT;
         private JSONArray mReceivers;
         private boolean mPlayImmediately;
         private int mSeq;
         private int mReceiverGroupId = UNSPECIFIED_INT;
+        private int mScheduleId = UNSPECIFIED_INT;
 
         public Builder command(String command) {
             mCommand = command;
@@ -157,7 +161,7 @@ public class Request {
             return this;
         }
 
-        public Builder receiverId(String receiverId) {
+        public Builder receiverId(int receiverId) {
             mReceiverId = receiverId;
             return this;
         }
@@ -190,6 +194,11 @@ public class Request {
             return this;
         }
 
+        public Builder scheduleId(int scheduleId) {
+            mScheduleId = scheduleId;
+            return this;
+        }
+
 
         public Request build() {
             Request request = new Request();
@@ -211,6 +220,8 @@ public class Request {
             request.pin = mPin;
             request.userID = mUserId;
             request.receiverGroupID = mReceiverGroupId;
+
+            request.scheduleID = mScheduleId;
 
             if (mSeq != 0)
                 request.seq = mSeq;

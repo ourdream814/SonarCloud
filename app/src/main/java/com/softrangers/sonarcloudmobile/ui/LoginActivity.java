@@ -210,6 +210,7 @@ public class LoginActivity extends BaseActivity implements OnResponseListener {
                 // start MainActivity and finish current
                 Intent main = new Intent(LoginActivity.this, MainActivity.class);
                 startActivity(main);
+                SonarCloudApp.getInstance().setIsFirstLaunch(true);
                 finish();
             } catch (Exception e) {
                 e.printStackTrace();

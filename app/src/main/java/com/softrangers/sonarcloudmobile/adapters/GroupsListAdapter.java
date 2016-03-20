@@ -37,6 +37,25 @@ public class GroupsListAdapter extends RecyclerView.Adapter<GroupsListAdapter.Vi
         mOnGroupClickListener = onGroupClickListener;
     }
 
+    public Group deleteItem(int position) {
+        Group group = mGroups.get(position);
+        mGroups.remove(position);
+        group.setIsSelected(false);
+        if (currentSelectedPosition == position) {
+            currentSelectedPosition = NOT_SELECTED;
+        }
+        if (lastSelectedPosition == position) {
+            lastSelectedPosition = WAS_NOT_SELECTED;
+        }
+        notifyItemChanged(position);
+        return group;
+    }
+
+    public void addItem(Group group, int position) {
+        mGroups.add(position, group);
+        notifyItemInserted(position);
+    }
+
     @Override
     public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.group_list_item,
@@ -71,11 +90,13 @@ public class GroupsListAdapter extends RecyclerView.Adapter<GroupsListAdapter.Vi
         final TextView mGroupTitle;
         final TextView mGroupDescription;
         final ImageButton mEditButton;
-        Group mGroup;
+        public Group mGroup;
+        public View mRoot;
 
         public ViewHolder(View itemView) {
             super(itemView);
             itemView.setOnClickListener(this);
+            mRoot = itemView;
             mCheckCircle = (ImageView) itemView.findViewById(R.id.check_unCheck_groupItem);
             mGroupTitle = (TextView) itemView.findViewById(R.id.group_item_titleText);
             mGroupDescription = (TextView) itemView.findViewById(R.id.group_item_receiversCount);
@@ -94,7 +115,8 @@ public class GroupsListAdapter extends RecyclerView.Adapter<GroupsListAdapter.Vi
                 default:
                     currentSelectedPosition = getAdapterPosition();
                     mGroup.setIsSelected(!mGroup.isSelected());
-                    if (lastSelectedPosition != WAS_NOT_SELECTED) {
+                    if (lastSelectedPosition != WAS_NOT_SELECTED &&
+                            lastSelectedPosition != currentSelectedPosition) {
                         mGroups.get(lastSelectedPosition).setIsSelected(false);
                         notifyItemChanged(lastSelectedPosition);
                     }

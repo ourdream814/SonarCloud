@@ -46,6 +46,7 @@ public class BaseActivity extends AppCompatActivity {
     }
 
     public void showLoading() {
+        if (mLoadingDialog != null && mLoadingDialog.isShowing()) return;
         View view = LayoutInflater.from(this).inflate(R.layout.loading_dialog, null);
         TextView loadingText = (TextView) view.findViewById(R.id.loading_dialog_textView);
         loadingText.setTypeface(SonarCloudApp.avenirMedium);

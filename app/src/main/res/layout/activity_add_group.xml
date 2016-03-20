@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context="com.softrangers.sonarcloudmobile.ui.AddGroupActivity"
-    android:background="#d4d4d4">
+    android:background="#e0e0e0">
 
     <RelativeLayout
         android:id="@+id/add_group_toolbar_layout"
@@ -54,7 +54,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="30dp"
         android:layout_marginBottom="5dp"
-        android:padding="20dp"
+        android:padding="14dp"
         android:background="@drawable/white_rectangle"
         android:inputType="textPersonName"
         android:hint="@string/group_name"
@@ -71,7 +71,7 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="5dp"
         android:maxLength="4"
-        android:padding="20dp"
+        android:padding="14dp"
         android:background="@drawable/white_rectangle"
         android:inputType="numberPassword"
         android:hint="@string/phone_pin_number"
@@ -87,9 +87,9 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:maxLength="4"
-        android:layout_marginBottom="5dp"
+        android:layout_marginBottom="3dp"
         android:hint="@string/confirm_pin_number"
-        android:padding="20dp"
+        android:padding="14dp"
         android:background="@drawable/white_rectangle"
         android:inputType="numberPassword"
         android:ems="10"

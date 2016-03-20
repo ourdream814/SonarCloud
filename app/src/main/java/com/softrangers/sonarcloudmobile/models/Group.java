@@ -152,6 +152,17 @@ public class Group implements Parcelable {
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (o instanceof Group) {
+            Group group = (Group) o;
+            if (this.getGroupID() == group.getGroupID()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
     public int describeContents() {
         return 0;
     }

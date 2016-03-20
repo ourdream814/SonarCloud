@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    tools:context=".ui.MainActivity">
+                xmlns:app="http://schemas.android.com/apk/res-auto"
+                xmlns:tools="http://schemas.android.com/tools"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@color/colorSecondary"
+                android:orientation="vertical"
+                tools:context=".ui.MainActivity">
 
     <RelativeLayout
         android:id="@+id/relativeLayout"
@@ -34,10 +35,9 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_above="@+id/main_activity_tabLayout"
-        android:layout_below="@+id/relativeLayout" />
+        android:layout_below="@+id/relativeLayout"/>
 
     <android.support.design.widget.TabLayout
-        android:elevation="4dp"
         android:id="@+id/main_activity_tabLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -47,27 +47,29 @@
         android:layout_alignParentRight="true"
         android:layout_alignParentStart="true"
         android:background="@color/colorAccent"
+        android:elevation="4dp"
         app:tabGravity="fill"
-        app:tabIndicatorColor="@color/colorPrimary" />
+        app:tabIndicatorColor="@color/colorPrimary"/>
 
     <RelativeLayout
         android:id="@+id/loading_layout"
-        android:visibility="gone"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:visibility="gone">
+
         <ProgressBar
+            android:id="@+id/progressBar"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:id="@+id/progressBar"
-            android:layout_centerVertical="true"
-            android:layout_centerHorizontal="true"/>
+            android:layout_centerHorizontal="true"
+            android:layout_centerVertical="true"/>
 
         <TextView
+            android:id="@+id/textView"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Loading..."
-            android:id="@+id/textView"
             android:layout_below="@+id/progressBar"
-            android:layout_centerHorizontal="true"/>
+            android:layout_centerHorizontal="true"
+            android:text="Loading..."/>
     </RelativeLayout>
 </RelativeLayout>

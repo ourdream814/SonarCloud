@@ -98,17 +98,19 @@ public class Receiver implements Parcelable {
     public static ArrayList<Receiver> build(JSONObject response) {
         ArrayList<Receiver> receivers = new ArrayList<>();
         try {
-            JSONArray receiversArray = response.getJSONArray("receivers");
-            for (int i = 0; i < receiversArray.length(); i++) {
-                JSONObject o = receiversArray.getJSONObject(i);
-                Receiver receiver = new Receiver();
-                receiver.setReceiverId(o.optInt("receiverID"));
-                receiver.setName(o.optString("name", ""));
-                receiver.setCreated(o.optString("created", ""));
-                receiver.setModified(o.optString("modified", ""));
-                receiver.setSeqValue(response.optInt("seq"));
-                if (!receiver.getName().equals("null")) {
-                    receivers.add(receiver);
+            JSONArray receiversArray = response.optJSONArray("receivers");
+            if (receiversArray != null) {
+                for (int i = 0; i < receiversArray.length(); i++) {
+                    JSONObject o = receiversArray.getJSONObject(i);
+                    Receiver receiver = new Receiver();
+                    receiver.setReceiverId(o.optInt("receiverID"));
+                    receiver.setName(o.optString("name", ""));
+                    receiver.setCreated(o.optString("created", ""));
+                    receiver.setModified(o.optString("modified", ""));
+                    receiver.setSeqValue(response.optInt("seq"));
+                    if (!receiver.getName().equals("null")) {
+                        receivers.add(receiver);
+                    }
                 }
             }
         } catch (Exception e) {
