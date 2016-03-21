@@ -3,9 +3,11 @@ package com.softrangers.sonarcloudmobile.ui;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.DatePicker;
 import android.widget.ExpandableListView;
 import android.widget.ImageButton;
 import android.widget.TextView;
+import android.widget.TimePicker;
 import android.widget.Toast;
 
 import com.softrangers.sonarcloudmobile.R;
@@ -81,9 +83,6 @@ public class ScheduleActivity extends BaseActivity implements ExpandableListView
         repeatTitle.setTitle(getString(R.string.repeating));
         repeatTitle.setScheduleListItems(new ArrayList<Schedule>(){{add(schedule);}});
         headerArrayList.add(repeatTitle);
-
-        headerArrayList.add(headerTime);
-        headerArrayList.add(headerTime);
         return headerArrayList;
     }
 
@@ -106,13 +105,13 @@ public class ScheduleActivity extends BaseActivity implements ExpandableListView
     }
 
     @Override
-    public void onTimeChanged(int hour, int minutes) {
+    public void onTimeChanged(TimePicker picker, int hour, int minutes, int groupPos, int childPos) {
         schedule.getFormattedStartDate().setHours(hour);
         schedule.getFormattedStartDate().setMinutes(minutes);
     }
 
     @Override
-    public void onDateChanged(int day, int month, int year) {
+    public void onDateChanged(DatePicker picker, int day, int month, int year, int groupPos, int childPos) {
         schedule.getFormattedStartDate().setDate(day);
         schedule.getFormattedStartDate().setMonth(month);
         schedule.getFormattedStartDate().setYear(year);

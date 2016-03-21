@@ -1,6 +1,13 @@
 package com.softrangers.sonarcloudmobile.adapters;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,6 +23,7 @@ import com.softrangers.sonarcloudmobile.utils.widgets.AnimatedExpandableListView
 
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 
 /**
  * Created by Eduard Albu on 21 03 2016
@@ -26,15 +34,16 @@ import java.util.Calendar;
 public class ScheduleEditAdapter extends AnimatedExpandableListView.AnimatedExpandableListAdapter {
 
     private static final long TEN_SECONDS = 10000;
+
     private ArrayList<ScheduleListHeader> mScheduleListItems;
-    private Context mContext;
     private LayoutInflater mLayoutInflater;
     private OnItemInteractionListener mOnItemInteractionListener;
+    public Context mContext;
 
     public ScheduleEditAdapter(ArrayList<ScheduleListHeader> scheduleListItems, Context context) {
         mScheduleListItems = scheduleListItems;
-        mContext = context;
         mLayoutInflater = LayoutInflater.from(context);
+        mContext = context;
     }
 
     public void setOnItemInteractionListener(OnItemInteractionListener onItemInteractionListener) {
@@ -51,42 +60,48 @@ public class ScheduleEditAdapter extends AnimatedExpandableListView.AnimatedExpa
 
     @Override
     public View getRealChildView(int groupPosition, int childPosition, boolean isLastChild, View convertView, ViewGroup parent) {
-        View row = convertView;
         Schedule item = mScheduleListItems.get(groupPosition).getScheduleListItems().get(childPosition);
         ScheduleListHeader.RowType rowType = mScheduleListItems.get(groupPosition).getRowType();
-        switch (rowType) {
-            case TIME:
-                TimePickerChild timePickerChild = new TimePickerChild();
-                row = mLayoutInflater.inflate(R.layout.schedule_time_picker, parent, false);
-                timePickerChild.mTimePicker = (TimePicker) row.findViewById(R.id.schedule_activity_timePicker);
-                timePickerChild.mTimePicker.setOnTimeChangedListener(new TimePicker.OnTimeChangedListener() {
-                    @Override
-                    public void onTimeChanged(TimePicker view, int hourOfDay, int minute) {
-                        if (mOnItemInteractionListener != null) {
-                            mOnItemInteractionListener.onTimeChanged(hourOfDay, minute);
-                        }
-                    }
-                });
-                timePickerChild.mTimePicker.setCurrentHour(item.getFormattedStartDate().getHours());
-                timePickerChild.mTimePicker.setCurrentMinute(item.getFormattedStartDate().getMinutes());
-                break;
-            case DATE:
-                DatePickerChild datePickerChild = new DatePickerChild();
-                row = mLayoutInflater.inflate(R.layout.schedule_date_picker, parent, false);
-                datePickerChild.mDatePicker = (DatePicker) row.findViewById(R.id.schedule_activity_datePicker);
-                datePickerChild.mDatePicker.setMinDate(Calendar.getInstance().getTimeInMillis() - TEN_SECONDS);
-                datePickerChild.mDatePicker.init(item.getFormattedStartDate().getYear(),
-                        item.getFormattedStartDate().getMonth(), item.getFormattedStartDate().getDay(),
-                        new DatePicker.OnDateChangedListener() {
-                            @Override
-                            public void onDateChanged(DatePicker view, int year, int monthOfYear, int dayOfMonth) {
-                                if (mOnItemInteractionListener != null) {
-                                    mOnItemInteractionListener.onDateChanged(dayOfMonth, monthOfYear, year);
-                                }
-                            }
-                        });
+        BaseChild childHolder = new BaseChild();
+        if (convertView == null) {
+            switch (rowType) {
+                case TIME:
+                    childHolder = new TimeChild();
+                    convertView = mLayoutInflater.inflate(R.layout.schedule_time_picker, parent, false);
+                    ((TimeChild)childHolder).mTimePicker = (TimePicker) convertView.findViewById(R.id.schedule_activity_timePicker);
+                    break;
+                case DATE:
+                    childHolder = new DateChild();
+                    convertView = mLayoutInflater.inflate(R.layout.schedule_date_picker, parent, false);
+                    ((DateChild)childHolder).mDatePicker = (DatePicker) convertView.findViewById(R.id.schedule_activity_datePicker);
+
+                    break;
+            }
+            convertView.setTag(childHolder);
+        } else {
+            switch (rowType) {
+                case TIME:
+                    childHolder = (TimeChild) convertView.getTag();
+                    break;
+                case DATE:
+                    childHolder = (DateChild) convertView.getTag();
+                    break;
+            }
         }
-        return row;
+
+        if (childHolder instanceof TimeChild) {
+            TimeChild timeChild = (TimeChild) childHolder;
+            timeChild.mTimePicker.setCurrentHour(item.getFormattedStartDate().getHours());
+            timeChild.mTimePicker.setCurrentMinute(item.getFormattedStartDate().getMinutes());
+            timeChild.mTimePicker.setOnTimeChangedListener(new OnTimeChangedListener(groupPosition, childPosition));
+        } else if (childHolder instanceof DateChild) {
+            DateChild dateChild = (DateChild) childHolder;
+            dateChild.mDatePicker.setMinDate(Calendar.getInstance().getTimeInMillis() - TEN_SECONDS);
+            dateChild.mDatePicker.init(item.getFormattedStartDate().getYear(),
+                    item.getFormattedStartDate().getMonth(), item.getFormattedStartDate().getDay(),
+                    new OnDateSetListener(groupPosition, childPosition));
+        }
+        return convertView;
     }
 
     @Override
@@ -128,28 +143,38 @@ public class ScheduleEditAdapter extends AnimatedExpandableListView.AnimatedExpa
     public View getGroupView(int groupPosition, boolean isExpanded, View convertView, ViewGroup parent) {
         ScheduleListHeader header = mScheduleListItems.get(groupPosition);
         ScheduleListHeader.RowType rowType = header.getRowType();
-        View row = convertView;
+        BaseGroup groupHolder = new BaseGroup();
+        if (convertView == null) {
+            switch (rowType) {
+                case TITLE:
+                    convertView = mLayoutInflater.inflate(R.layout.schedule_title_layout, parent, false);
+                    groupHolder.mTitleAlone = (TextView) convertView.findViewById(R.id.schedule_group_titleText);
+                    groupHolder.mTitleAlone.setTypeface(SonarCloudApp.avenirMedium);
+                    break;
+                default:
+                    convertView = mLayoutInflater.inflate(R.layout.schedule_group_item, parent, false);
+                    groupHolder.mTitle = (TextView) convertView.findViewById(R.id.schedule_header_itemTitle);
+                    groupHolder.mTitle.setTypeface(SonarCloudApp.avenirBook);
+                    groupHolder.mSubtitle = (TextView) convertView.findViewById(R.id.schedule_header_itemSubtitle);
+                    groupHolder.mSubtitle.setTypeface(SonarCloudApp.avenirBook);
+
+            }
+            convertView.setTag(groupHolder);
+        } else {
+            groupHolder = (BaseGroup) convertView.getTag();
+        }
+
         switch (rowType) {
             case TITLE:
-                TitleGroup titleGroup = new TitleGroup();
-                row = mLayoutInflater.inflate(R.layout.schedule_title_layout, parent, false);
-                titleGroup.mTitle = (TextView) row.findViewById(R.id.schedule_group_titleText);
-                titleGroup.mTitle.setTypeface(SonarCloudApp.avenirMedium);
-                titleGroup.mTitle.setText(header.getTitle());
-                row.setOnClickListener(null);
+                groupHolder.mTitleAlone.setText(header.getTitle());
+                convertView.setOnClickListener(null);
                 break;
             default:
-                ChildHolderGroup childHolderGroup = new ChildHolderGroup();
-                row = mLayoutInflater.inflate(R.layout.schedule_group_item, parent, false);
-                childHolderGroup.mTitle = (TextView) row.findViewById(R.id.schedule_header_itemTitle);
-                childHolderGroup.mTitle.setTypeface(SonarCloudApp.avenirBook);
-                childHolderGroup.mSubtitle = (TextView) row.findViewById(R.id.schedule_header_itemSubtitle);
-                childHolderGroup.mSubtitle.setTypeface(SonarCloudApp.avenirBook);
-
-                childHolderGroup.mTitle.setText(header.getTitle());
-                childHolderGroup.mSubtitle.setText(header.getSubtitle());
+                groupHolder.mTitle.setText(header.getTitle());
+                groupHolder.mSubtitle.setText(header.getSubtitle());
+                break;
         }
-        return row;
+        return convertView;
     }
 
     @Override
@@ -158,29 +183,66 @@ public class ScheduleEditAdapter extends AnimatedExpandableListView.AnimatedExpa
     }
 
     public interface OnItemInteractionListener {
-        void onTimeChanged(int hour, int minutes);
+        void onTimeChanged(TimePicker picker, int hour, int minutes, int groupPos, int childPos);
 
-        void onDateChanged(int day, int month, int year);
+        void onDateChanged(DatePicker picker, int day, int month, int year, int groupPos, int childPos);
     }
 
-    class TimePickerChild {
+    class OnDateSetListener implements DatePicker.OnDateChangedListener {
+
+        private int mGroupPosition;
+        private int mChildPosition;
+
+        public OnDateSetListener(int groupPos, int childPos) {
+            mGroupPosition = groupPos;
+            mChildPosition = childPos;
+        }
+
+        @Override
+        public void onDateChanged(DatePicker view, int year, int monthOfYear, int dayOfMonth) {
+            if (mOnItemInteractionListener != null) {
+                mOnItemInteractionListener.onDateChanged(view, dayOfMonth, monthOfYear, year,
+                        mGroupPosition, mChildPosition);
+            }
+        }
+    }
+
+    class OnTimeChangedListener implements TimePicker.OnTimeChangedListener {
+
+        private int mGroupPosition;
+        private int mChildPosition;
+
+        public OnTimeChangedListener(int groupPos, int childPos) {
+            mGroupPosition = groupPos;
+            mChildPosition = childPos;
+        }
+
+        @Override
+        public void onTimeChanged(TimePicker view, int hourOfDay, int minute) {
+            Schedule schedule = mScheduleListItems.get(mGroupPosition).getScheduleListItems().get(mChildPosition);
+            Date date = schedule.getFormattedStartDate();
+            date.setHours(hourOfDay);
+            date.setMinutes(minute);
+            if (mOnItemInteractionListener != null) {
+                mOnItemInteractionListener.onTimeChanged(view, hourOfDay, minute, mGroupPosition, mChildPosition);
+            }
+        }
+    }
+
+    public class BaseGroup {
+        TextView mTitle;
+        TextView mSubtitle;
+        TextView mTitleAlone;
+    }
+
+    class BaseChild {
+    }
+
+    class TimeChild extends BaseChild {
         TimePicker mTimePicker;
     }
 
-    class DatePickerChild {
+    class DateChild extends BaseChild {
         DatePicker mDatePicker;
-    }
-
-    class RepeatChild {
-
-    }
-
-    class TitleGroup {
-        TextView mTitle;
-    }
-
-    class ChildHolderGroup {
-        TextView mTitle;
-        TextView mSubtitle;
     }
 }

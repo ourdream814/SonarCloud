@@ -143,6 +143,7 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
      * @param groups you want to show in the list
      */
     private void setUpGroupsListView(ArrayList<Group> groups) {
+        if (groups == null) return;
         mGroupsListAdapter = new GroupsListAdapter(groups);
         mGroupsListAdapter.setOnGroupClickListener(this);
         mGroupsRecyclerView.setLayoutManager(new LinearLayoutManager(mActivity));
