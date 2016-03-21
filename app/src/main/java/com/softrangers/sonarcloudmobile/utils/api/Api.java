@@ -17,6 +17,7 @@ public class Api {
     public static final int ERROR = 0;
     public static final int RESPONSE = 1;
 
+    public static final String EXCEPTION = "exception";
     public static final String COMMAND = "command";
     public static final String DEVICE = "device";
     public static final String METHOD = "method";

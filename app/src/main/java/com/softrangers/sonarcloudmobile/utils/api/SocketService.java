@@ -6,10 +6,6 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.os.Looper;
 import android.support.annotation.Nullable;
-import android.util.Log;
-import android.widget.Toast;
-
-import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 
 import org.json.JSONObject;
 
@@ -38,7 +34,6 @@ import javax.net.ssl.X509TrustManager;
  */
 public class SocketService extends Service implements HandshakeCompletedListener {
 
-    private static final String TAG = SocketService.class.getSimpleName();
     public static SSLSocket sslSocket;
     private static SSLSocketFactory sslSocketFactory;
     public BufferedReader readIn;
@@ -63,7 +58,6 @@ public class SocketService extends Service implements HandshakeCompletedListener
 
     /**
      * Send a request to server if the connection is ok and send back the response through
-     * ResponseReceiver broadcast
      *
      * @param request to send
      */
@@ -123,16 +117,12 @@ public class SocketService extends Service implements HandshakeCompletedListener
                         new Socket(Api.URL, Api.PORT), Api.M_URL, Api.PORT, true
                 );
 
-                Log.e(this.getClass().getSimpleName(), "Socket connected");
-
                 Intent intent = new Intent(SocketService.this, ConnectionReceiver.class);
                 intent.setAction(Api.CONNECTION_BROADCAST);
                 sendBroadcast(intent);
 
                 isConnected = true;
             } catch (Exception e) {
-                e.printStackTrace();
-                Log.e(this.getClass().getSimpleName(), "Can't connect to server: " + e.getMessage());
                 isConnected = false;
             }
         }
@@ -201,14 +191,9 @@ public class SocketService extends Service implements HandshakeCompletedListener
                     writeOut.write(message.toString() + "\n");
                     writeOut.flush();
                     new Thread(new ReceiveMessage(readIn)).start();
-
-                    Log.e(this.getClass().getSimpleName(), "Request sent");
-                } else {
-                    Log.e(this.getClass().getSimpleName(), "Socket != null && Socket is not connected equals false");
                 }
             } catch (Exception e) {
                 e.printStackTrace();
-                Log.e(this.getClass().getSimpleName(), "Can not send request: " + e.getMessage());
             }
         }
     }
@@ -224,60 +209,18 @@ public class SocketService extends Service implements HandshakeCompletedListener
         @Override
         public void run() {
             Looper.prepare();
-            // create an intent for the ResponseReceiver
-            Intent intent = new Intent(SocketService.this, ResponseReceiver.class);
-            // set the action to RESPONSE_BROADCAST object from Api class
-            intent.setAction(Api.RESPONSE_BROADCAST);
-
             try {
                 // Start reading each response line\
                 String stringResponse = mReader.readLine();
-
-                // check if the response it's not null
-                if (stringResponse != null) {
-                    try {
-                        // get response status
-                        JSONObject response = new JSONObject(stringResponse);
-                        boolean success = response.getBoolean("success");
-                        // check if response is successful
-                        if (!success) {
-                            // close current connection if not and open a new one
-                            Log.e(this.getClass().getSimpleName(), "Success: " + String.valueOf(success));
-                            if (sslSocket != null) {
-                                sslSocket.close();
-                            }
-                            sslSocket = null;
-                            new Connection();
-                        }
-                    } catch (Exception e) {
-                        // close connection and open new if an Exception occurs
-                        Log.e(this.getClass().getSimpleName(), "Response != null exception: " + e.getMessage());
-                        if (sslSocket != null) {
-                            sslSocket.close();
-                        }
-                        sslSocket = null;
-                        new Connection();
-                    }
-                } else {
-                    // close connection and open a new one if the response is null
-                    Log.e(this.getClass().getSimpleName(), "Response == null");
-                    if (sslSocket != null) {
-                        sslSocket.close();
-                    }
-                    sslSocket = null;
-                    new Connection();
-                }
-
-                Log.e(this.getClass().getSimpleName(), "Broadcast is sent");
+                JSONObject response = new JSONObject(stringResponse);
+                String command = response.optString("originalCommand", Api.EXCEPTION);
                 // send the response to ui
-                intent.putExtra(Api.RESPONSE_MESSAGE, stringResponse);
-                sendBroadcast(intent);
+                Intent responseContainer = new Intent();
+                responseContainer.setAction(command);
+                responseContainer.putExtra(command, stringResponse);
+                sendBroadcast(responseContainer);
             } catch (Exception e) {
                 e.printStackTrace();
-                Log.e(this.getClass().getSimpleName(), "Error while reading response: " + e.getMessage());
-                // send a null object to ui in case an exception occurs
-                intent.putExtra(Api.RESPONSE_MESSAGE, "");
-                sendBroadcast(intent);
             }
         }
     }

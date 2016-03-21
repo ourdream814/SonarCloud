@@ -3,9 +3,6 @@ package com.softrangers.sonarcloudmobile.models;
 import android.os.Parcel;
 import android.os.Parcelable;
 
-import com.softrangers.sonarcloudmobile.utils.ReceiverObserver;
-import com.softrangers.sonarcloudmobile.utils.Observable;
-
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -17,7 +14,7 @@ import java.util.ArrayList;
  *
  * @author eduard.albu@gmail.com
  */
-public class PASystem implements Parcelable, Observable<ReceiverObserver> {
+public class PASystem implements Parcelable {
 
     private String mName;
     private String mCreated;
@@ -25,7 +22,6 @@ public class PASystem implements Parcelable, Observable<ReceiverObserver> {
     private int mOrganisationId;
     private int mSeqValue;
     private ArrayList<Receiver> mReceivers;
-    private static ArrayList<ReceiverObserver> observers = new ArrayList<>();
 
     public PASystem() {
     }
@@ -64,7 +60,6 @@ public class PASystem implements Parcelable, Observable<ReceiverObserver> {
 
     public void setReceivers(ArrayList<Receiver> receivers) {
         mReceivers = receivers;
-        notifyObservers();
     }
 
     public int getOrganisationId() {
@@ -131,29 +126,5 @@ public class PASystem implements Parcelable, Observable<ReceiverObserver> {
         dest.writeString(mModified);
         dest.writeInt(mOrganisationId);
         dest.writeTypedList(mReceivers);
-    }
-
-    public static void addObserverToList(ReceiverObserver observer) {
-        if (observers != null)
-            observers.add(observer);
-    }
-
-    @Override
-    public void addObserver(ReceiverObserver observer) {
-        observers.add(observer);
-    }
-
-    @Override
-    public void removeObserver(ReceiverObserver observer) {
-        observers.remove(observer);
-    }
-
-    @Override
-    public void notifyObservers() {
-        for (ReceiverObserver o : observers) {
-            if (o != null) {
-                o.update(this, this.getReceivers());
-            }
-        }
     }
 }

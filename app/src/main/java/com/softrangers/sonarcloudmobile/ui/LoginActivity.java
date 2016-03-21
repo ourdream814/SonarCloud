@@ -1,6 +1,9 @@
 package com.softrangers.sonarcloudmobile.ui;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
 import android.support.design.widget.Snackbar;
 import android.view.View;
@@ -12,15 +15,13 @@ import com.softrangers.sonarcloudmobile.R;
 import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.models.User;
 import com.softrangers.sonarcloudmobile.utils.BaseActivity;
-import com.softrangers.sonarcloudmobile.utils.OnResponseListener;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
-import com.softrangers.sonarcloudmobile.utils.api.ResponseReceiver;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
-public class LoginActivity extends BaseActivity implements OnResponseListener {
+public class LoginActivity extends BaseActivity {
 
     private EditText mEmail;
     private EditText mPassword;
@@ -33,8 +34,10 @@ public class LoginActivity extends BaseActivity implements OnResponseListener {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
-        // Register current activity as a response handler
-//        ResponseReceiver.getInstance().addOnResponseListener(this);
+        IntentFilter intentFilter = new IntentFilter(Api.Command.AUTHENTICATE);
+        intentFilter.addAction(Api.Command.IDENTIFIER);
+        intentFilter.addAction(Api.EXCEPTION);
+        registerReceiver(mLoginReceiver, intentFilter);
 
         // Instantiate email input field
         mEmail = (EditText) findViewById(R.id.email_label);
@@ -55,6 +58,32 @@ public class LoginActivity extends BaseActivity implements OnResponseListener {
         mSignIn.setTypeface(SonarCloudApp.avenirMedium);
         mUser = new User();
     }
+
+    BroadcastReceiver mLoginReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            try {
+                String action = intent.getAction();
+                JSONObject jsonResponse = new JSONObject(intent.getExtras().getString(action));
+                boolean success = jsonResponse.optBoolean("success", false);
+                if (!success) {
+                    String message = jsonResponse.optString("message", getString(R.string.unknown_error));
+                    onCommandFailure(message);
+                    return;
+                }
+                switch (action) {
+                    case Api.Command.AUTHENTICATE:
+                        onResponseSucceed(jsonResponse);
+                        break;
+                    case Api.Command.IDENTIFIER:
+                        onIdentifierReady(jsonResponse);
+                        break;
+                }
+            } catch (Exception e) {
+                onErrorOccurred();
+            }
+        }
+    };
 
     /**
      * Called when the Sig In button is pressed
@@ -94,20 +123,16 @@ public class LoginActivity extends BaseActivity implements OnResponseListener {
                 .password(mUser.getPassword())
                 .seq(SonarCloudApp.SEQ_VALUE)
                 .build().toJSON();
-
-        ResponseReceiver.getInstance().removeOnResponseListener(identifierListener);
-        ResponseReceiver.getInstance().addOnResponseListener(this);
         // Send the request
         SonarCloudApp.socketService.sendRequest(req);
     }
 
 
     /**
-     * Called by ResponseReceiver to notify about server response
+     * Called to notify about server response
      * @param response object which contains desired data
      */
-    @Override
-    public void onResponse(JSONObject response) {
+    public void onResponseSucceed(JSONObject response) {
         try {
             // Get user id from the response object
             String id = response.getString("userID");
@@ -130,10 +155,6 @@ public class LoginActivity extends BaseActivity implements OnResponseListener {
                 requestBuilder.identifier(identifier);
             }
 
-            // Remove curent response listener and register the identifier listener
-            ResponseReceiver.getInstance().removeOnResponseListener(this);
-            ResponseReceiver.getInstance().addOnResponseListener(identifierListener);
-
             // Send the created request to server
             SonarCloudApp.socketService.sendRequest(requestBuilder.build().toJSON());
         } catch (JSONException e) {
@@ -142,10 +163,9 @@ public class LoginActivity extends BaseActivity implements OnResponseListener {
     }
 
     /**
-     * Called by ResponseReceiver to notify about server error
+     * Called to notify about server error
      * @param message about the occurred error
      */
-    @Override
     public void onCommandFailure(final String message) {
         // show an alert dialog to user with server message
         alertUserAboutError(getString(R.string.login_error), message);
@@ -154,7 +174,6 @@ public class LoginActivity extends BaseActivity implements OnResponseListener {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-
                 mProgressBar.setVisibility(View.GONE);
                 mSignIn.setEnabled(true);
             }
@@ -162,10 +181,9 @@ public class LoginActivity extends BaseActivity implements OnResponseListener {
     }
 
     /**
-     * Called by ResponseReceiver to notify any other errors such exceptions and so on
+     * Called to notify any other errors such exceptions and so on
      */
-    @Override
-    public void onError() {
+    public void onErrorOccurred() {
         // show an alert dialog to user that something went wrong
         Snackbar.make(mSignIn, getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
         // hide loading progress
@@ -178,79 +196,50 @@ public class LoginActivity extends BaseActivity implements OnResponseListener {
         });
     }
 
-    OnResponseListener identifierListener = new OnResponseListener() {
-
-        /**
-         * Called by ResponseReceiver to notify about server response
-         * @param response object which contains desired data
-         */
-        @Override
-        public void onResponse(JSONObject response) {
-            // hide loading ui
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    mProgressBar.setVisibility(View.GONE);
-                    mSignIn.setEnabled(true);
-                }
-            });
-
-            try {
-                // Save identifier and secret to app preferences
-                SonarCloudApp.getInstance().saveIdentifier(response.getString(Api.IDENTIFIER));
-                SonarCloudApp.getInstance().saveUserSecret(response.getString(Api.SECRET));
-
-                // save identifier and secret to user object for this session
-                mUser.setIdentifier(SonarCloudApp.getInstance().getIdentifier());
-                mUser.setSecret(SonarCloudApp.getInstance().getSavedData());
-
-                // set the shared user object
-                SonarCloudApp.user = mUser;
-
-                // start MainActivity and finish current
-                Intent main = new Intent(LoginActivity.this, MainActivity.class);
-                startActivity(main);
-                SonarCloudApp.getInstance().setIsFirstLaunch(true);
-                finish();
-            } catch (Exception e) {
-                e.printStackTrace();
-                Snackbar.make(mSignIn, getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
+    private void onIdentifierReady(JSONObject response) {
+        // hide loading ui
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mProgressBar.setVisibility(View.GONE);
+                mSignIn.setEnabled(true);
             }
+        });
 
-        }
+        try {
+            // Save identifier and secret to app preferences
+            SonarCloudApp.getInstance().saveIdentifier(response.getString(Api.IDENTIFIER));
+            SonarCloudApp.getInstance().saveUserSecret(response.getString(Api.SECRET));
 
-        /**
-         * Called by ResponseReceiver to notify about server error
-         * @param message about the occurred error
-         */
-        @Override
-        public void onCommandFailure(final String message) {
-            // show an alert dialog to user with server message
-            alertUserAboutError(getString(R.string.error), message);
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    mProgressBar.setVisibility(View.GONE);
-                    mSignIn.setEnabled(true);
-                }
-            });
-        }
+            // save identifier and secret to user object for this session
+            mUser.setIdentifier(SonarCloudApp.getInstance().getIdentifier());
+            mUser.setSecret(SonarCloudApp.getInstance().getSavedData());
 
-        /**
-         * Called by ResponseReceiver to notify any other errors such exceptions and so on
-         */
-        @Override
-        public void onError() {
-            // show an alert dialog to user that something went wrong
+            // set the shared user object
+            SonarCloudApp.user = mUser;
+
+            // start MainActivity and finish current
+            Intent main = new Intent(LoginActivity.this, MainActivity.class);
+            main.setAction(MainActivity.ACTION_LOGIN);
+            setResult(RESULT_OK, main);
+            finish();
+        } catch (Exception e) {
             Snackbar.make(mSignIn, getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
-            // hide loading progress
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    mProgressBar.setVisibility(View.GONE);
-                    mSignIn.setEnabled(true);
-                }
-            });
         }
-    };
+    }
+
+    @Override
+    public void onBackPressed() {
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.setAction(MainActivity.ACTION_LOGIN);
+        setResult(RESULT_CANCELED, intent);
+        finish();
+        super.onBackPressed();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unregisterReceiver(mLoginReceiver);
+    }
 }

@@ -1,7 +1,10 @@
 package com.softrangers.sonarcloudmobile.ui.fragments;
 
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
@@ -26,10 +29,9 @@ import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.models.Schedule;
 import com.softrangers.sonarcloudmobile.ui.MainActivity;
 import com.softrangers.sonarcloudmobile.ui.ScheduleActivity;
-import com.softrangers.sonarcloudmobile.utils.OnResponseListener;
+import com.softrangers.sonarcloudmobile.utils.BaseFragment;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
-import com.softrangers.sonarcloudmobile.utils.api.ResponseReceiver;
 
 import org.json.JSONObject;
 
@@ -39,7 +41,7 @@ import java.util.ArrayList;
 /**
  * A simple {@link Fragment} subclass.
  */
-public class ScheduleFragment extends Fragment implements RadioGroup.OnCheckedChangeListener,
+public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheckedChangeListener,
         ScheduledRecordsAdapter.OnScheduleClickListener {
 
     private static RelativeLayout scheduledLayout;
@@ -65,6 +67,10 @@ public class ScheduleFragment extends Fragment implements RadioGroup.OnCheckedCh
         View view = inflater.inflate(R.layout.fragment_schedule, container, false);
         // get a link to fragment activity
         mActivity = (MainActivity) getActivity();
+        IntentFilter intentFilter = new IntentFilter(Api.Command.RECORDINGS);
+        intentFilter.addAction(Api.Command.SCHEDULES);
+        intentFilter.addAction(Api.EXCEPTION);
+        mActivity.registerReceiver(mBroadcastReceiver, intentFilter);
         // initialize adapters with empty lists
         ArrayList<Recording> recordings = new ArrayList<>();
         ArrayList<Schedule> schedules = new ArrayList<>();
@@ -177,10 +183,6 @@ public class ScheduleFragment extends Fragment implements RadioGroup.OnCheckedCh
         unselectedText.setVisibility(View.GONE);
         // clear current scheduled list
         scheduledRecordsAdapter.clearList();
-        // clear the response listeners list
-        ResponseReceiver.getInstance().clearResponseListenersList();
-        // add a new response listener to handle the results
-        ResponseReceiver.getInstance().addOnResponseListener(new ScheduledRecordingsListener());
         // build a request with provided receivers
         Request.Builder builder = new Request.Builder();
         builder.command(Api.Command.SCHEDULES);
@@ -200,10 +202,6 @@ public class ScheduleFragment extends Fragment implements RadioGroup.OnCheckedCh
         unselectedText.setVisibility(View.GONE);
         // clear current scheduled list
         scheduledRecordsAdapter.clearList();
-        // clear the response listeners list
-        ResponseReceiver.getInstance().clearResponseListenersList();
-        // add a new response listener to handle the results
-        ResponseReceiver.getInstance().addOnResponseListener(new ScheduledRecordingsListener());
         // build a request with provided receivers
         Request.Builder builder = new Request.Builder();
         builder.command(Api.Command.SCHEDULES);
@@ -229,10 +227,6 @@ public class ScheduleFragment extends Fragment implements RadioGroup.OnCheckedCh
             unselectedText.setVisibility(View.GONE);
             // clear current scheduled list
             allRecordingsAdapter.clearList();
-            // clear the response listeners list
-            ResponseReceiver.getInstance().clearResponseListenersList();
-            // add a new response listener to handle the results
-            ResponseReceiver.getInstance().addOnResponseListener(new AllRecordingsListener());
             // build a request with provided receivers
             Request.Builder builder = new Request.Builder();
             builder.command(Api.Command.RECORDINGS);
@@ -259,10 +253,6 @@ public class ScheduleFragment extends Fragment implements RadioGroup.OnCheckedCh
             unselectedText.setVisibility(View.GONE);
             // clear current scheduled list
             allRecordingsAdapter.clearList();
-            // clear the response listeners list
-            ResponseReceiver.getInstance().clearResponseListenersList();
-            // add a new response listener to handle the results
-            ResponseReceiver.getInstance().addOnResponseListener(new AllRecordingsListener());
             // build a request with provided receivers
             Request.Builder builder = new Request.Builder();
             builder.command(Api.Command.RECORDINGS);
@@ -325,72 +315,48 @@ public class ScheduleFragment extends Fragment implements RadioGroup.OnCheckedCh
 
     }
 
-    /**
-     * Class used to handle the {@link ScheduleFragment#getAllRecordingsFromServer(Group)}
-     * {@link ScheduleFragment#getAllRecordingsFromServer(ArrayList)} response
-     */
-    class AllRecordingsListener implements OnResponseListener {
-
-        /**
-         * Called if the response is successful
-         * @param response object from server
-         */
+    BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
         @Override
-        public void onResponse(JSONObject response) {
-            addRecordingsToList(Recording.build(response));
+        public void onReceive(Context context, Intent intent) {
+            try {
+                String action = intent.getAction();
+                JSONObject jsonResponse = new JSONObject(intent.getExtras().getString(action));
+                boolean success = jsonResponse.optBoolean("success", false);
+                if (!success) {
+                    String message = jsonResponse.optString("message", mActivity.getString(R.string.unknown_error));
+                    onCommandFailure(message);
+                }
+                switch (action) {
+                    case Api.Command.SCHEDULES:
+                        onSchedulesReceived(jsonResponse);
+                        break;
+                    case Api.Command.RECORDINGS:
+                        onRecordingsReceived(jsonResponse);
+                        break;
+                }
+            } catch (Exception e) {
+                onErrorOccurred();
+            }
         }
+    };
 
-        /**
-         * Called if the response success status is false
-         * @param message about server error
-         */
-        @Override
-        public void onCommandFailure(String message) {
-            Snackbar.make(allScheduleLayout, message, Snackbar.LENGTH_SHORT).show();
-        }
-
-        /**
-         * Called if any other errors occurs
-         */
-        @Override
-        public void onError() {
-            Snackbar.make(allScheduleLayout,
-                    mActivity.getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
-        }
+    private void onSchedulesReceived(JSONObject response) {
+        addSchedulesToList(Schedule.build(response));
     }
 
-    /**
-     * Class used to handle the {@link ScheduleFragment#getAllScheduledRecords(ArrayList)}
-     * {@link ScheduleFragment#getAllScheduledRecords(Group)} response
-     */
-    class ScheduledRecordingsListener implements OnResponseListener {
+    private void onRecordingsReceived(JSONObject response) {
+        addRecordingsToList(Recording.build(response));
+    }
 
-        /**
-         * Called if the response is successful
-         * @param response object from server
-         */
-        @Override
-        public void onResponse(JSONObject response) {
-            addSchedulesToList(Schedule.build(response));
-        }
+    @Override
+    public void onCommandFailure(String message) {
+        Snackbar.make(allScheduleLayout, message, Snackbar.LENGTH_SHORT).show();
+    }
 
-        /**
-         * Called if the response success status is false
-         * @param message about server error
-         */
-        @Override
-        public void onCommandFailure(String message) {
-            Snackbar.make(scheduledLayout, message, Snackbar.LENGTH_SHORT).show();
-        }
-
-        /**
-         * Called if any other errors occurs
-         */
-        @Override
-        public void onError() {
-            Snackbar.make(scheduledLayout,
-                    mActivity.getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
-        }
+    @Override
+    public void onErrorOccurred() {
+        Snackbar.make(allScheduleLayout,
+                mActivity.getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
     }
 
     /**
@@ -452,8 +418,6 @@ public class ScheduleFragment extends Fragment implements RadioGroup.OnCheckedCh
         Request.Builder builder = new Request.Builder();
         builder.command(Api.Command.DELETE_SCHEDULE);
         builder.scheduleId(schedule.getScheduleID());
-        // clear all response listeners
-        ResponseReceiver.getInstance().clearResponseListenersList();
         // send request to server
         SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
     }

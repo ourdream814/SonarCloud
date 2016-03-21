@@ -1,6 +1,9 @@
 package com.softrangers.sonarcloudmobile.ui;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
 import android.support.design.widget.Snackbar;
 import android.view.View;
@@ -8,7 +11,6 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.softrangers.sonarcloudmobile.R;
 import com.softrangers.sonarcloudmobile.models.Group;
@@ -16,10 +18,8 @@ import com.softrangers.sonarcloudmobile.models.PASystem;
 import com.softrangers.sonarcloudmobile.models.Receiver;
 import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.utils.BaseActivity;
-import com.softrangers.sonarcloudmobile.utils.OnResponseListener;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
-import com.softrangers.sonarcloudmobile.utils.api.ResponseReceiver;
 
 import org.json.JSONObject;
 
@@ -49,7 +49,10 @@ public class AddGroupActivity extends BaseActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_group);
-
+        IntentFilter intentFilter = new IntentFilter(Api.Command.CREATE_GROUP);
+        intentFilter.addAction(Api.Command.CREATE_GROUP);
+        intentFilter.addAction(Api.EXCEPTION);
+        registerReceiver(mBroadcastReceiver, intentFilter);
         instantiateAllViews();
 
         Intent intent = getIntent();
@@ -65,6 +68,7 @@ public class AddGroupActivity extends BaseActivity {
             case Api.ACTION_EDIT_GROUP:
                 command = Api.Command.UPDATE_GROUP;
                 mGroup = intent.getExtras().getParcelable(GROUP_EDIT_BUNDLE);
+                assert mGroup != null;
                 mGroup.setIsSelected(true);
                 mReceivers = mGroup.getReceivers();
                 setSelectedReceivers(mReceivers);
@@ -168,8 +172,6 @@ public class AddGroupActivity extends BaseActivity {
                 receivers.add(receiver.getReceiverId());
             }
             builder.receivers(receivers);
-            ResponseReceiver.getInstance().clearResponseListenersList();
-            ResponseReceiver.getInstance().addOnResponseListener(new AddGroupListener());
             JSONObject object = builder.build().toJSON();
             SonarCloudApp.socketService.sendRequest(object);
             showLoading();
@@ -212,35 +214,56 @@ public class AddGroupActivity extends BaseActivity {
         }
     }
 
-    class AddGroupListener implements OnResponseListener {
-
+    BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
         @Override
-        public void onResponse(JSONObject response) {
-            dismissLoading();
-            mGroup = Group.buildSingle(response);
-            ResponseReceiver.getInstance().clearResponseListenersList();
-            Intent intent = new Intent();
-            intent.setAction(Api.ACTION_ADD_GROUP);
-            intent.putExtra(GROUP_RESULT_BUNDLE, mGroup);
-            setResult(RESULT_OK, intent);
-
-            finish();
+        public void onReceive(Context context, Intent intent) {
+            try {
+                String action = intent.getAction();
+                JSONObject jsonResponse = new JSONObject(intent.getExtras().getString(action));
+                boolean success = jsonResponse.optBoolean("success", false);
+                if (!success) {
+                    String message = jsonResponse.optString("message", getString(R.string.unknown_error));
+                    onCommandFailure(message);
+                }
+                switch (action) {
+                    case Api.Command.CREATE_GROUP:
+                        onResponseSucceed(jsonResponse);
+                        break;
+                    case Api.Command.UPDATE_GROUP:
+                        onResponseSucceed(jsonResponse);
+                        break;
+                }
+            } catch (Exception e) {
+                onErrorOccurred();
+            }
         }
+    };
 
-        @Override
-        public void onCommandFailure(String message) {
-            dismissLoading();
-            ResponseReceiver.getInstance().clearResponseListenersList();
-            Snackbar.make(mSelectPAButton, message, Snackbar.LENGTH_SHORT).show();
-        }
+    @Override
+    protected void onStop() {
+        super.onStop();
+        unregisterReceiver(mBroadcastReceiver);
+    }
 
-        @Override
-        public void onError() {
-            dismissLoading();
-            ResponseReceiver.getInstance().clearResponseListenersList();
-            Snackbar.make(mSelectPAButton, getString(R.string.unknown_error),
-                    Snackbar.LENGTH_SHORT).show();
-        }
+    private void onResponseSucceed(JSONObject response) {
+        dismissLoading();
+        mGroup = Group.buildSingle(response);
+        Intent intent = new Intent();
+        intent.setAction(Api.ACTION_ADD_GROUP);
+        intent.putExtra(GROUP_RESULT_BUNDLE, mGroup);
+        setResult(RESULT_OK, intent);
+        finish();
+    }
+
+    private void onCommandFailure(String message) {
+        dismissLoading();
+        Snackbar.make(mSelectPAButton, message, Snackbar.LENGTH_SHORT).show();
+    }
+
+    private void onErrorOccurred() {
+        dismissLoading();
+        Snackbar.make(mSelectPAButton, getString(R.string.unknown_error),
+                Snackbar.LENGTH_SHORT).show();
     }
 
     private View.OnClickListener mOnSelectPAClickListener = new View.OnClickListener() {

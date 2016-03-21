@@ -1,6 +1,9 @@
 package com.softrangers.sonarcloudmobile.ui;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
@@ -23,22 +26,21 @@ import com.softrangers.sonarcloudmobile.ui.fragments.SettingsFragment;
 import com.softrangers.sonarcloudmobile.utils.BaseActivity;
 import com.softrangers.sonarcloudmobile.utils.GroupObserver;
 import com.softrangers.sonarcloudmobile.utils.Observable;
-import com.softrangers.sonarcloudmobile.utils.OnResponseListener;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
 import com.softrangers.sonarcloudmobile.utils.api.ConnectionReceiver;
-import com.softrangers.sonarcloudmobile.utils.api.ResponseReceiver;
 
 import org.json.JSONObject;
 
 import java.util.ArrayList;
 
-public class MainActivity extends BaseActivity implements OnResponseListener,
+public class MainActivity extends BaseActivity implements
         ConnectionReceiver.OnConnected, Observable<GroupObserver> {
 
     private static final String USER_STATE = "user_state";
+    public static final String ACTION_LOGIN = "ACTION_LOGIN";
+    public static final int LOGIN_REQUEST_CODE = 2229;
     private static ArrayList<GroupObserver> observers;
-    private static boolean isConnected;
     public static boolean statusChanged;
     private Group mGroup;
 
@@ -46,17 +48,20 @@ public class MainActivity extends BaseActivity implements OnResponseListener,
     private TabLayout mTabLayout;
     private ViewPager mViewPager;
     private MainViewPagerAdapter mPagerAdapter;
-    private Bundle mBundle;
 
     // set selected items to send the record to them
     public static ArrayList<Receiver> selectedReceivers = new ArrayList<>();
     public static Group selectedGroup;
+    private IntentFilter intentFilter;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        intentFilter = new IntentFilter(Api.Command.AUTHENTICATE);
+        intentFilter.addAction(Api.EXCEPTION);
+        registerReceiver(mLoginReceiver, intentFilter);
         observers = new ArrayList<>();
         mPagerAdapter = new MainViewPagerAdapter(this, getSupportFragmentManager());
         mViewPager = (ViewPager) findViewById(R.id.main_activity_viewPager);
@@ -66,21 +71,54 @@ public class MainActivity extends BaseActivity implements OnResponseListener,
         mToolbarTitle.setTypeface(SonarCloudApp.avenirMedium);
 
         ConnectionReceiver.getInstance().addOnConnectedListener(this);
-        ResponseReceiver.getInstance().addOnResponseListener(this);
-        if (!SonarCloudApp.getInstance().isLoggedIn()) {
-            Intent intent = new Intent(this, LoginActivity.class);
-            startActivity(intent);
-            finish();
-        } else {
-            if (savedInstanceState != null) {
-                mBundle = savedInstanceState;
-                SonarCloudApp.user = savedInstanceState.getParcelable(USER_STATE);
-            } else {
-                if (SonarCloudApp.socketService != null && !isConnected) {
-                    SonarCloudApp.socketService.restartConnection();
+        if (SonarCloudApp.socketService != null) {
+            SonarCloudApp.socketService.restartConnection();
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+    }
+
+    BroadcastReceiver mLoginReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            try {
+                String action = intent.getAction();
+                JSONObject jsonResponse = new JSONObject(intent.getExtras().getString(action));
+                boolean success = jsonResponse.optBoolean("success", false);
+                if (!success) {
+                    String message = jsonResponse.optString("message", getString(R.string.unknown_error));
+
+                    onCommandFailure(message);
                 }
+                switch (action) {
+                    case Api.Command.AUTHENTICATE:
+                        onResponseSucceed(jsonResponse);
+                        break;
+                }
+            } catch (Exception e) {
+                onErrorOccurred();
             }
         }
+    };
+
+    public void onResponseSucceed(JSONObject response) {
+        dismissLoading();
+        SonarCloudApp.user = User.build(response);
+        setUpTabs();
+
+    }
+
+    public void onCommandFailure(String message) {
+        dismissLoading();
+        alertUserAboutError(getString(R.string.error), message);
+    }
+
+    public void onErrorOccurred() {
+        dismissLoading();
+        Snackbar.make(mViewPager, getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
     }
 
     @Override
@@ -90,6 +128,7 @@ public class MainActivity extends BaseActivity implements OnResponseListener,
     }
 
     private void setUpTabs() {
+        if (mPagerAdapter.getCount() > 0) return;
         mPagerAdapter.addFragment(new ReceiversFragment(), getString(R.string.select_pa_system));
         mPagerAdapter.addFragment(new RecordFragment(), getString(R.string.make_announcement));
 
@@ -149,55 +188,27 @@ public class MainActivity extends BaseActivity implements OnResponseListener,
         mToolbarTitle.setText(title);
     }
 
-    @Override
-    public void onResponse(JSONObject response) {
-        dismissLoading();
-        SonarCloudApp.user = User.build(response);
-        ResponseReceiver.getInstance().clearResponseListenersList();
-        setUpTabs();
-
-    }
-
-    @Override
-    public void onCommandFailure(String message) {
-        dismissLoading();
-        ResponseReceiver.getInstance().clearResponseListenersList();
-        alertUserAboutError(getString(R.string.error), message);
-    }
-
-    @Override
-    public void onError() {
-        dismissLoading();
-        ResponseReceiver.getInstance().clearResponseListenersList();
-        Snackbar.make(mViewPager, getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
-    }
-
     public void logout(View view) {
         SonarCloudApp.getInstance().clearUserSession();
         Intent intent = new Intent(this, LoginActivity.class);
-        startActivity(intent);
-        finish();
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if (isLoading()) dismissLoading();
-        ResponseReceiver.getInstance().clearResponseListenersList();
-        ConnectionReceiver.getInstance().removeOnResponseListener(this);
+        startActivityForResult(intent, LOGIN_REQUEST_CODE);
     }
 
     @Override
     public void onSocketConnected() {
-        if (SonarCloudApp.socketService != null && SonarCloudApp.getInstance().isLoggedIn()) {
-            Request.Builder builder = new Request.Builder();
-            builder.command(Api.Command.AUTHENTICATE);
-            builder.device(Api.Device.CLIENT).method(Api.Method.IDENTIFIER).identifier(SonarCloudApp.getInstance().getIdentifier())
-                    .secret(SonarCloudApp.getInstance().getSavedData()).seq(SonarCloudApp.SEQ_VALUE);
-            ResponseReceiver.getInstance().addOnResponseListener(this);
-            SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
-            isConnected = true;
-            showLoading();
+        if (SonarCloudApp.getInstance().isLoggedIn()) {
+            if (SonarCloudApp.socketService != null) {
+                registerReceiver(mLoginReceiver, intentFilter);
+                Request.Builder builder = new Request.Builder();
+                builder.command(Api.Command.AUTHENTICATE);
+                builder.device(Api.Device.CLIENT).method(Api.Method.IDENTIFIER).identifier(SonarCloudApp.getInstance().getIdentifier())
+                        .secret(SonarCloudApp.getInstance().getSavedData()).seq(SonarCloudApp.SEQ_VALUE);
+                SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
+                showLoading();
+            }
+        } else {
+            Intent intent = new Intent(this, LoginActivity.class);
+            startActivityForResult(intent, LOGIN_REQUEST_CODE);
         }
     }
 
@@ -210,8 +221,14 @@ public class MainActivity extends BaseActivity implements OnResponseListener,
                     statusChanged = true;
                     Toast.makeText(this, getString(R.string.group_saved), Toast.LENGTH_SHORT).show();
                     notifyObservers();
+                } else if (data.getAction().equals(ACTION_LOGIN)) {
+                    onSocketConnected();
                 }
                 break;
+            case RESULT_CANCELED:
+                if (data.getAction().equals(ACTION_LOGIN)) {
+                    onSocketConnected();
+                }
         }
     }
 
@@ -242,7 +259,10 @@ public class MainActivity extends BaseActivity implements OnResponseListener,
     @Override
     protected void onStop() {
         super.onStop();
-        isConnected = false;
+        try {
+            unregisterReceiver(mLoginReceiver);
+        } catch (Exception e) {
+        }
         selectedGroup = null;
         selectedReceivers.clear();
     }

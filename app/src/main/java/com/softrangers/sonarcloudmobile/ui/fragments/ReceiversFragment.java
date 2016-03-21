@@ -1,9 +1,11 @@
 package com.softrangers.sonarcloudmobile.ui.fragments;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
 import android.support.design.widget.Snackbar;
-import android.support.v4.app.Fragment;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -26,12 +28,10 @@ import com.softrangers.sonarcloudmobile.models.Receiver;
 import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.ui.AddGroupActivity;
 import com.softrangers.sonarcloudmobile.ui.MainActivity;
+import com.softrangers.sonarcloudmobile.utils.BaseFragment;
 import com.softrangers.sonarcloudmobile.utils.GroupObserver;
-import com.softrangers.sonarcloudmobile.utils.OnResponseListener;
-import com.softrangers.sonarcloudmobile.utils.ReceiverObserver;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
-import com.softrangers.sonarcloudmobile.utils.api.ResponseReceiver;
 import com.softrangers.sonarcloudmobile.utils.widgets.AnimatedExpandableListView;
 
 import org.json.JSONObject;
@@ -39,9 +39,9 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 
 
-public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedChangeListener,
-        OnResponseListener, SwipeRefreshLayout.OnRefreshListener,
-        ReceiverListAdapter.OnItemClickListener, ReceiverObserver,
+public class ReceiversFragment extends BaseFragment implements RadioGroup.OnCheckedChangeListener,
+        SwipeRefreshLayout.OnRefreshListener,
+        ReceiverListAdapter.OnItemClickListener,
         GroupsListAdapter.OnGroupClickListener, GroupObserver,
         ExpandableListView.OnGroupClickListener {
 
@@ -52,7 +52,7 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
 
     private AnimatedExpandableListView mListView;
     private MainActivity mActivity;
-//    private SwipeRefreshLayout mRefreshLayout;
+    //    private SwipeRefreshLayout mRefreshLayout;
     private LinearLayout mReceiversLayout;
     private RelativeLayout mGroupsLayout;
     private ReceiverListAdapter mReceiverListAdapter;
@@ -72,6 +72,11 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
         View view = inflater.inflate(R.layout.fragment_receivers, container, false);
         mActivity = (MainActivity) getActivity();
         mActivity.addObserver(this);
+        IntentFilter intentFilter = new IntentFilter(Api.Command.ORGANISATIONS);
+        intentFilter.addAction(Api.Command.RECEIVERS);
+        intentFilter.addAction(Api.Command.RECEIVER_GROUPS);
+        intentFilter.addAction(Api.EXCEPTION);
+        mActivity.registerReceiver(mPAReceiver, intentFilter);
 
         // Obtain a link to the lists from layout
         mListView = (AnimatedExpandableListView) view.findViewById(R.id.receivers_expandableListView);
@@ -95,7 +100,6 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
 
         // Initialize PAs list
         mPASystems = new ArrayList<>();
-        PASystem.addObserverToList(this);
         setUpReceiversListView(mPASystems);
 
         if (savedInstanceState != null) {
@@ -109,12 +113,17 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
             requestBuilder.command(Api.Command.ORGANISATIONS);
             requestBuilder.userId(SonarCloudApp.getInstance().userId());
             requestBuilder.seq(SonarCloudApp.SEQ_VALUE);
-            ResponseReceiver.getInstance().addOnResponseListener(this);
             // send request to server
             SonarCloudApp.socketService.sendRequest(requestBuilder.build().toJSON());
             mActivity.showLoading();
         }
         return view;
+    }
+
+    @Override
+    public void onDetach() {
+        super.onDetach();
+        mActivity.unregisterReceiver(mPAReceiver);
     }
 
     @Override
@@ -179,8 +188,6 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
             Request.Builder builder = new Request.Builder()
                     .command(Api.Command.RECEIVER_GROUPS)
                     .userId(SonarCloudApp.user.getId());
-            ResponseReceiver.getInstance().clearResponseListenersList();
-            ResponseReceiver.getInstance().addOnResponseListener(new GroupsGet());
             SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
             mActivity.showLoading();
         }
@@ -192,45 +199,6 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
     private void showReceiversLayout() {
         mGroupsLayout.setVisibility(View.GONE);
         mReceiversLayout.setVisibility(View.VISIBLE);
-    }
-
-
-    /**
-     * Called when the response with the organisations is ready
-     *
-     * @param response object from server
-     */
-    @Override
-    public void onResponse(JSONObject response) {
-
-        // Remove the listener because we don't need it any more
-        ResponseReceiver.getInstance().clearResponseListenersList();
-
-        // Build a list of organisations
-        mPASystems = PASystem.build(response);
-
-        // Start getting receivers for each organisation
-        for (PASystem system : mPASystems) {
-
-            // increment manually the seq value because the response will return later
-            // and it will not increment on each response
-            SonarCloudApp.SEQ_VALUE += 1;
-
-            // Set the seq value for the current PA system, it is used when the response is ready
-            // to set the receivers in the right PA
-            system.setSeqValue(SonarCloudApp.SEQ_VALUE);
-
-            // Build a request for current PA system
-            Request request = new Request.Builder().command(Api.Command.RECEIVERS)
-                    .organisationId(system.getOrganisationId()).seq(system.getSeqValue()).build();
-
-            // Add a new response listener to handle the response
-            ResponseReceiver.getInstance().addOnResponseListener(
-                    new ReceiversGet());
-
-            // Send the request to server
-            SonarCloudApp.socketService.sendRequest(request.toJSON());
-        }
     }
 
     /**
@@ -317,85 +285,6 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
         mGroupsListAdapter.notifyDataSetChanged();
     }
 
-    /**
-     * Response listener for receivers
-     */
-    class ReceiversGet implements OnResponseListener {
-
-        @Override
-        public void onResponse(JSONObject response) {
-            mActivity.dismissLoading();
-            try {
-                // Parse the response and build an receivers array list
-                ArrayList<Receiver> receivers = Receiver.build(response);
-
-                // For each receiver
-                for (Receiver receiver : receivers) {
-                    // Take a PA system
-                    for (PASystem sys : mPASystems) {
-                        // check if the seq of the receiver and PA are identical
-                        if (receiver.getSeqValue() == sys.getSeqValue()) {
-                            // set receivers for current system if true
-                            sys.setReceivers(receivers);
-                            // hide loading dialog
-                            mActivity.dismissLoading();
-                            // exit the loop because we already have all receivers for current PA
-                            return;
-                        }
-                    }
-                }
-                // hide loading dialog
-
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
-        @Override
-        public void onCommandFailure(String message) {
-            mActivity.dismissLoading();
-            ResponseReceiver.getInstance().clearResponseListenersList();
-            mActivity.alertUserAboutError(mActivity.getString(R.string.error), message);
-        }
-
-        @Override
-        public void onError() {
-            mActivity.dismissLoading();
-            ResponseReceiver.getInstance().clearResponseListenersList();
-            Snackbar.make(mReceiversLayout, mActivity.getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
-
-        }
-    }
-
-    /**
-     * Response listener for groups
-     */
-    class GroupsGet implements OnResponseListener {
-
-        @Override
-        public void onResponse(JSONObject response) {
-            mActivity.dismissLoading();
-            mGroups = Group.build(response);
-            ResponseReceiver.getInstance().clearResponseListenersList();
-            setUpGroupsListView(mGroups);
-
-        }
-
-        @Override
-        public void onCommandFailure(String message) {
-            mActivity.dismissLoading();
-            ResponseReceiver.getInstance().clearResponseListenersList();
-            Snackbar.make(mGroupsLayout, message, Snackbar.LENGTH_SHORT).show();
-        }
-
-        @Override
-        public void onError() {
-            mActivity.dismissLoading();
-            ResponseReceiver.getInstance().clearResponseListenersList();
-            Snackbar.make(mGroupsLayout, mActivity.getString(R.string.unknown_error),
-                    Snackbar.LENGTH_SHORT).show();
-        }
-    }
 
     /**
      * Called when server can't understand the command
@@ -405,16 +294,14 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
     @Override
     public void onCommandFailure(String message) {
         mActivity.dismissLoading();
-        mActivity.alertUserAboutError(mActivity.getString(R.string.error), message);
+        Snackbar.make(mGroupsLayout, message, Snackbar.LENGTH_SHORT).show();
     }
 
-    /**
-     * Called when any error such parsing the response, connection error and so on
-     */
     @Override
-    public void onError() {
+    public void onErrorOccurred() {
         mActivity.dismissLoading();
-        Snackbar.make(mReceiversLayout, mActivity.getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
+        Snackbar.make(mGroupsLayout, mActivity.getString(R.string.unknown_error),
+                Snackbar.LENGTH_SHORT).show();
     }
 
     /**
@@ -446,17 +333,6 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
         }
         MainActivity.statusChanged = true;
         mReceiverListAdapter.notifyDataSetChanged();
-    }
-
-    /**
-     * Called when a list for one PA is ready
-     *
-     * @param paSystem  which has the receivers list ready
-     * @param receivers list for the PA system
-     */
-    @Override
-    public void update(PASystem paSystem, ArrayList<Receiver> receivers) {
-        mReceiverListAdapter.refreshList(mPASystems);
     }
 
     /**
@@ -527,7 +403,6 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
         Request.Builder builder = new Request.Builder();
         builder.command(Api.Command.DELETE_GROUP);
         builder.receiverGroupID(group.getGroupID());
-        ResponseReceiver.getInstance().clearResponseListenersList();
         SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
     }
 
@@ -542,5 +417,83 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
             mListView.expandGroupWithAnimation(groupPosition);
         }
         return true;
+    }
+
+    BroadcastReceiver mPAReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            try {
+                String action = intent.getAction();
+                JSONObject jsonResponse = new JSONObject(intent.getExtras().getString(action));
+                boolean success = jsonResponse.optBoolean("success", false);
+                if (!success) {
+                    String message = jsonResponse.optString("message", mActivity.getString(R.string.unknown_error));
+                    onCommandFailure(message);
+                    return;
+                }
+                switch (action) {
+                    case Api.Command.ORGANISATIONS:
+                        onOrganisationsReceived(jsonResponse);
+                        break;
+                    case Api.Command.RECEIVERS:
+                        onReceiversReceived(jsonResponse);
+                        break;
+                    case Api.Command.RECEIVER_GROUPS:
+                        onGroupsReceived(jsonResponse);
+                        break;
+                }
+            } catch (Exception e) {
+                onErrorOccurred();
+            }
+
+        }
+    };
+
+    private void onOrganisationsReceived(JSONObject response) {
+        // Build a list of organisations
+        mPASystems = PASystem.build(response);
+        // Start getting receivers for each organisation
+        for (PASystem system : mPASystems) {
+            // increment manually the seq value because the response will return later
+            // and it will not increment on each response
+            SonarCloudApp.SEQ_VALUE += 1;
+            // Set the seq value for the current PA system, it is used when the response is ready
+            // to set the receivers in the right PA
+            system.setSeqValue(SonarCloudApp.SEQ_VALUE);
+            // Build a request for current PA system
+            Request request = new Request.Builder().command(Api.Command.RECEIVERS)
+                    .organisationId(system.getOrganisationId()).seq(system.getSeqValue()).build();
+            // Send the request to server
+            SonarCloudApp.socketService.sendRequest(request.toJSON());
+        }
+    }
+
+    private void onReceiversReceived(JSONObject response) {
+        mActivity.dismissLoading();
+        try {
+            // Parse the response and build an receivers array list
+            ArrayList<Receiver> receivers = Receiver.build(response);
+
+            // For each receiver
+            for (Receiver receiver : receivers) {
+                // Take a PA system
+                for (PASystem sys : mPASystems) {
+                    // check if the seq of the receiver and PA are identical
+                    if (receiver.getSeqValue() == sys.getSeqValue()) {
+                        // set receivers for current system if true
+                        sys.setReceivers(receivers);
+                    }
+                }
+            }
+            mReceiverListAdapter.refreshList(mPASystems);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void onGroupsReceived(JSONObject response) {
+        mActivity.dismissLoading();
+        mGroups = Group.build(response);
+        setUpGroupsListView(mGroups);
     }
 }

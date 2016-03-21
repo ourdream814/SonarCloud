@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest package="com.softrangers.sonarcloudmobile"
-          xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest
+    package="com.softrangers.sonarcloudmobile"
+    xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET"/>
 
@@ -32,16 +33,12 @@
             android:name=".utils.api.SocketService"
             android:exported="false"/>
 
-        <receiver
-            android:name=".utils.api.ResponseReceiver"
-            android:enabled="true">
-            <intent-filter>
-                <action android:name="com.softrangers.sonarcloudmobile.RESPONSE_BROADCAST"/>
-            </intent-filter>
-        </receiver>
+
+        <!-- Notifies when the socket is connected -->
         <receiver
             android:name=".utils.api.ConnectionReceiver"
-            android:enabled="true">
+            android:enabled="true"
+            android:exported="false">
             <intent-filter>
                 <action android:name="com.softrangers.sonarcloudmobile.CONNECTED"/>
             </intent-filter>
