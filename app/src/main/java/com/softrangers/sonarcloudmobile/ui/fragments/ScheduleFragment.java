@@ -1,6 +1,7 @@
 package com.softrangers.sonarcloudmobile.ui.fragments;
 
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
@@ -24,6 +25,7 @@ import com.softrangers.sonarcloudmobile.models.Recording;
 import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.models.Schedule;
 import com.softrangers.sonarcloudmobile.ui.MainActivity;
+import com.softrangers.sonarcloudmobile.ui.ScheduleActivity;
 import com.softrangers.sonarcloudmobile.utils.OnResponseListener;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
@@ -37,29 +39,20 @@ import java.util.ArrayList;
 /**
  * A simple {@link Fragment} subclass.
  */
-public class ScheduleFragment extends Fragment implements RadioGroup.OnCheckedChangeListener {
+public class ScheduleFragment extends Fragment implements RadioGroup.OnCheckedChangeListener,
+        ScheduledRecordsAdapter.OnScheduleClickListener {
 
     private static RelativeLayout scheduledLayout;
     private static LinearLayout allScheduleLayout;
 
-    private RecyclerView mDaysHorizontalList;
-    private RecyclerView mScheduledList;
-    private RecyclerView mAllScheduleList;
     private static TextView unselectedText;
     private static TextView noRecordsText;
 
     public static boolean isScheduleSelected;
-    public static boolean gotScheduledRecords;
 
     private static ScheduleAllRecordingsAdapter allRecordingsAdapter;
     private static ScheduledRecordsAdapter scheduledRecordsAdapter;
     private MainActivity mActivity;
-
-    private static ArrayList<Recording> recordings;
-    private static ArrayList<Schedule> schedules;
-
-    private Group mGroup;
-    private ArrayList<Receiver> mReceivers;
 
     public ScheduleFragment() {
         // Required empty public constructor
@@ -70,60 +63,90 @@ public class ScheduleFragment extends Fragment implements RadioGroup.OnCheckedCh
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.fragment_schedule, container, false);
+        // get a link to fragment activity
         mActivity = (MainActivity) getActivity();
-        recordings = new ArrayList<>();
-        schedules = new ArrayList<>();
+        // initialize adapters with empty lists
+        ArrayList<Recording> recordings = new ArrayList<>();
+        ArrayList<Schedule> schedules = new ArrayList<>();
         allRecordingsAdapter = new ScheduleAllRecordingsAdapter(recordings, mActivity);
         scheduledRecordsAdapter = new ScheduledRecordsAdapter(schedules, mActivity);
+        // initialize all fragment views
         initializeViews(view);
         return view;
     }
 
+    /**
+     * Initialize all views for this fragment
+     * @param view root for this fragment
+     */
     private void initializeViews(View view) {
+        // The buttons used to switch between layouts in this fragment
         RadioGroup topButtonsGroup = (RadioGroup) view.findViewById(R.id.schedule_list_selector);
         topButtonsGroup.setOnCheckedChangeListener(this);
 
+        // Text views with no data texts, used to show and information if there is no data to display
         unselectedText = (TextView) view.findViewById(R.id.schedule_fragment_unselected);
         unselectedText.setTypeface(SonarCloudApp.avenirBook);
         noRecordsText = (TextView) view.findViewById(R.id.schedule_fragment_no_recordsText);
         noRecordsText.setTypeface(SonarCloudApp.avenirBook);
 
+        // Layouts which are holding all lists, used to hide/show the lists on the screen
         scheduledLayout = (RelativeLayout) view.findViewById(R.id.scheduled_list_layout);
         allScheduleLayout = (LinearLayout) view.findViewById(R.id.schedule_all_layout);
 
         // initialize horizontal days list
-        mDaysHorizontalList = (RecyclerView) view.findViewById(R.id.schedule_horizontal_list);
-        mDaysHorizontalList.setLayoutManager(new LinearLayoutManager(mActivity, LinearLayoutManager.HORIZONTAL, false));
+        RecyclerView daysHorizontalList = (RecyclerView) view.findViewById(R.id.schedule_horizontal_list);
+        daysHorizontalList.setLayoutManager(new LinearLayoutManager(mActivity, LinearLayoutManager.HORIZONTAL, false));
 
         // initialize scheduled recordings list
-        mScheduledList = (RecyclerView) view.findViewById(R.id.schedule_vertical_list);
+        RecyclerView scheduledList = (RecyclerView) view.findViewById(R.id.schedule_vertical_list);
         ItemTouchHelper itemTouchHelper = new ItemTouchHelper(mSimpleItemTouchHelper);
-        itemTouchHelper.attachToRecyclerView(mScheduledList);
-        mScheduledList.setLayoutManager(new LinearLayoutManager(mActivity));
-        mScheduledList.setAdapter(scheduledRecordsAdapter);
+        itemTouchHelper.attachToRecyclerView(scheduledList);
+        scheduledList.setLayoutManager(new LinearLayoutManager(mActivity));
+        scheduledList.setAdapter(scheduledRecordsAdapter);
+        scheduledRecordsAdapter.setOnScheduleClickListener(this);
 
         // initialize all recordings list
-        mAllScheduleList = (RecyclerView) view.findViewById(R.id.schedule_all_recyclerView);
-        mAllScheduleList.setLayoutManager(new LinearLayoutManager(mActivity));
-        mAllScheduleList.setAdapter(allRecordingsAdapter);
+        RecyclerView allScheduleList = (RecyclerView) view.findViewById(R.id.schedule_all_recyclerView);
+        allScheduleList.setLayoutManager(new LinearLayoutManager(mActivity));
+        allScheduleList.setAdapter(allRecordingsAdapter);
     }
 
+    /**
+     * Called when user press the top buttons
+     */
     @Override
     public void onCheckedChanged(RadioGroup group, int checkedId) {
         switch (checkedId) {
             case R.id.all_schedule_list_button:
+                // Change the selected status to know which button was selected
                 isScheduleSelected = false;
+                // check if the list is not empty
                 if (allRecordingsAdapter.getItemCount() > 0) {
+                    // if is not empty hide the no data texts
                     unselectedText.setVisibility(View.GONE);
                     noRecordsText.setVisibility(View.GONE);
+                } else {
+                    // else check if there are any receiver selected and if true get all recordings
+                    // for selected receiver
+                    if (MainActivity.selectedGroup != null) {
+                        getAllRecordingsFromServer(MainActivity.selectedGroup);
+                    } else if (MainActivity.selectedReceivers.size() > 0) {
+                        getAllRecordingsFromServer(MainActivity.selectedReceivers);
+                    }
                 }
+                // hide the scheduled layout and show the all recordings layout
                 scheduledLayout.setVisibility(View.GONE);
                 allScheduleLayout.setVisibility(View.VISIBLE);
                 break;
             case R.id.scheduled_list_button:
+                // Change the selected status to know which button was selected
                 isScheduleSelected = true;
+                // Hide the all recordings layout and show the scheduled layout
                 allScheduleLayout.setVisibility(View.GONE);
                 scheduledLayout.setVisibility(View.VISIBLE);
+                // check if there are any receiver selected
+                // if true then get all scheduled recordings for selected receivers
                 if (MainActivity.selectedGroup != null) {
                     getAllScheduledRecords(MainActivity.selectedGroup);
                 } else if (MainActivity.selectedReceivers.size() > 0) {
@@ -133,77 +156,134 @@ public class ScheduleFragment extends Fragment implements RadioGroup.OnCheckedCh
         }
     }
 
+    /**
+     * Clear all adapters lists
+     */
     public void clearList() {
+        // clear all recordings list
         allRecordingsAdapter.clearList();
+        // clear scheduled recordings list
+        scheduledRecordsAdapter.clearList();
+        // show the unselected receiver text
         unselectedText.setVisibility(View.VISIBLE);
     }
 
+    /**
+     * Get all scheduled recordings from server for given receivers
+     * @param receivers for which to get recordings
+     */
     public void getAllScheduledRecords(ArrayList<Receiver> receivers) {
-        if (!gotScheduledRecords) {
-            unselectedText.setVisibility(View.GONE);
-            scheduledRecordsAdapter.clearList();
-            ResponseReceiver.getInstance().clearResponseListenersList();
-            ResponseReceiver.getInstance().addOnResponseListener(new ScheduledRecordingsListener());
-            Request.Builder builder = new Request.Builder();
-            builder.command(Api.Command.SCHEDULES);
-            for (Receiver receiver : receivers) {
-                builder.receiverId(receiver.getReceiverId());
-                SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
-            }
-            gotScheduledRecords = true;
+        // hide the unselected text
+        unselectedText.setVisibility(View.GONE);
+        // clear current scheduled list
+        scheduledRecordsAdapter.clearList();
+        // clear the response listeners list
+        ResponseReceiver.getInstance().clearResponseListenersList();
+        // add a new response listener to handle the results
+        ResponseReceiver.getInstance().addOnResponseListener(new ScheduledRecordingsListener());
+        // build a request with provided receivers
+        Request.Builder builder = new Request.Builder();
+        builder.command(Api.Command.SCHEDULES);
+        for (Receiver receiver : receivers) {
+            builder.receiverId(receiver.getReceiverId());
+            // send request to server
+            SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
         }
     }
 
+    /**
+     * Get all scheduled recordings from server for given receivers group
+     * @param group of receivers for which to get recordings
+     */
     public void getAllScheduledRecords(Group group) {
-        if (!gotScheduledRecords) {
-            unselectedText.setVisibility(View.GONE);
-            scheduledRecordsAdapter.clearList();
-            ResponseReceiver.getInstance().clearResponseListenersList();
-            ResponseReceiver.getInstance().addOnResponseListener(new ScheduledRecordingsListener());
-            Request.Builder builder = new Request.Builder();
-            builder.command(Api.Command.SCHEDULES);
-            for (Receiver receiver : group.getReceivers()) {
-                builder.receiverId(receiver.getReceiverId());
-                SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
-            }
-            gotScheduledRecords = true;
+        // hide the unselected text
+        unselectedText.setVisibility(View.GONE);
+        // clear current scheduled list
+        scheduledRecordsAdapter.clearList();
+        // clear the response listeners list
+        ResponseReceiver.getInstance().clearResponseListenersList();
+        // add a new response listener to handle the results
+        ResponseReceiver.getInstance().addOnResponseListener(new ScheduledRecordingsListener());
+        // build a request with provided receivers
+        Request.Builder builder = new Request.Builder();
+        builder.command(Api.Command.SCHEDULES);
+        for (Receiver receiver : group.getReceivers()) {
+            builder.receiverId(receiver.getReceiverId());
+            // send request to server
+            SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
         }
     }
 
+    /**
+     * Get all recordings from server for given receivers
+     * @param receivers for which to get recordings
+     */
     public void getAllRecordingsFromServer(ArrayList<Receiver> receivers) {
-        if (isScheduleSelected) getAllScheduledRecords(receivers);
-        else {
+        // check which button is selected
+        // if scheduled recordings is selected get scheduled recordings from server
+        // else get all recordings from server
+        if (isScheduleSelected) {
+            getAllScheduledRecords(receivers);
+        } else {
+            // hide the unselected text
             unselectedText.setVisibility(View.GONE);
+            // clear current scheduled list
             allRecordingsAdapter.clearList();
+            // clear the response listeners list
             ResponseReceiver.getInstance().clearResponseListenersList();
+            // add a new response listener to handle the results
             ResponseReceiver.getInstance().addOnResponseListener(new AllRecordingsListener());
+            // build a request with provided receivers
             Request.Builder builder = new Request.Builder();
             builder.command(Api.Command.RECORDINGS);
             for (Receiver receiver : receivers) {
                 builder.receiverId(receiver.getReceiverId());
+                // send request to server
                 SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
             }
         }
     }
 
+    /**
+     * Get all recordings from server for given receivers group
+     * @param group of receivers for which to get recordings
+     */
     public void getAllRecordingsFromServer(Group group) {
-        if (isScheduleSelected) getAllScheduledRecords(group);
-        else {
+        // check which button is selected
+        // if scheduled recordings is selected get scheduled recordings from server
+        // else get all recordings from server
+        if (isScheduleSelected) {
+            getAllScheduledRecords(group);
+        } else {
+            // hide the unselected text
             unselectedText.setVisibility(View.GONE);
+            // clear current scheduled list
             allRecordingsAdapter.clearList();
+            // clear the response listeners list
             ResponseReceiver.getInstance().clearResponseListenersList();
+            // add a new response listener to handle the results
             ResponseReceiver.getInstance().addOnResponseListener(new AllRecordingsListener());
+            // build a request with provided receivers
             Request.Builder builder = new Request.Builder();
             builder.command(Api.Command.RECORDINGS);
             for (Receiver receiver : group.getReceivers()) {
                 builder.receiverId(receiver.getReceiverId());
+                // send request to server
                 SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
             }
         }
     }
 
+    /**
+     * Add recordings to the list with all receiver records
+     * @param recordings list to add to adapter
+     */
     private void addRecordingsToList(ArrayList<Recording> recordings) {
+        // add recordings to adapter's list
         allRecordingsAdapter.addItems(recordings);
+        // check if there are any item in the list
+        // if false then show the no data text and hide the list layout
+        // else hide the no data text and show the list layout
         if (allRecordingsAdapter.getItemCount() <= 0) {
             noRecordsText.setVisibility(View.VISIBLE);
             allScheduleLayout.setVisibility(View.GONE);
@@ -213,8 +293,16 @@ public class ScheduleFragment extends Fragment implements RadioGroup.OnCheckedCh
         }
     }
 
+    /**
+     * Add scheduled recordings to the list with all receiver records
+     * @param schedules list to add to adapter
+     */
     private void addSchedulesToList(ArrayList<Schedule> schedules) {
+        // add schedules to adapter's list
         scheduledRecordsAdapter.addItems(schedules);
+        // check if there are any item in the list
+        // if false then show the no data text and hide the list layout
+        // else hide the no data text and show the list layout
         if (scheduledRecordsAdapter.getItemCount() <= 0) {
             noRecordsText.setVisibility(View.VISIBLE);
             scheduledLayout.setVisibility(View.GONE);
@@ -224,19 +312,46 @@ public class ScheduleFragment extends Fragment implements RadioGroup.OnCheckedCh
         }
     }
 
+    @Override
+    public void onScheduleClick(Schedule schedule, int position) {
+        Intent intent = new Intent(mActivity, ScheduleActivity.class);
+        intent.setAction(ScheduleActivity.ACTION_EDIT_SCHEDULE);
+        intent.putExtra(ScheduleActivity.SCHEDULE_EXTRAS, schedule);
+        mActivity.startActivity(intent);
+    }
 
+    @Override
+    public void onSchedulePlayClick(Schedule schedule, Recording recording, int position) {
+
+    }
+
+    /**
+     * Class used to handle the {@link ScheduleFragment#getAllRecordingsFromServer(Group)}
+     * {@link ScheduleFragment#getAllRecordingsFromServer(ArrayList)} response
+     */
     class AllRecordingsListener implements OnResponseListener {
 
+        /**
+         * Called if the response is successful
+         * @param response object from server
+         */
         @Override
         public void onResponse(JSONObject response) {
             addRecordingsToList(Recording.build(response));
         }
 
+        /**
+         * Called if the response success status is false
+         * @param message about server error
+         */
         @Override
         public void onCommandFailure(String message) {
             Snackbar.make(allScheduleLayout, message, Snackbar.LENGTH_SHORT).show();
         }
 
+        /**
+         * Called if any other errors occurs
+         */
         @Override
         public void onError() {
             Snackbar.make(allScheduleLayout,
@@ -244,18 +359,33 @@ public class ScheduleFragment extends Fragment implements RadioGroup.OnCheckedCh
         }
     }
 
+    /**
+     * Class used to handle the {@link ScheduleFragment#getAllScheduledRecords(ArrayList)}
+     * {@link ScheduleFragment#getAllScheduledRecords(Group)} response
+     */
     class ScheduledRecordingsListener implements OnResponseListener {
 
+        /**
+         * Called if the response is successful
+         * @param response object from server
+         */
         @Override
         public void onResponse(JSONObject response) {
             addSchedulesToList(Schedule.build(response));
         }
 
+        /**
+         * Called if the response success status is false
+         * @param message about server error
+         */
         @Override
         public void onCommandFailure(String message) {
             Snackbar.make(scheduledLayout, message, Snackbar.LENGTH_SHORT).show();
         }
 
+        /**
+         * Called if any other errors occurs
+         */
         @Override
         public void onError() {
             Snackbar.make(scheduledLayout,
@@ -263,6 +393,9 @@ public class ScheduleFragment extends Fragment implements RadioGroup.OnCheckedCh
         }
     }
 
+    /**
+     * Swipe to delete implementation
+     */
     private ItemTouchHelper.SimpleCallback mSimpleItemTouchHelper = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT) {
         @Override
         public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, RecyclerView.ViewHolder target) {
@@ -271,21 +404,29 @@ public class ScheduleFragment extends Fragment implements RadioGroup.OnCheckedCh
 
         @Override
         public void onSwiped(final RecyclerView.ViewHolder viewHolder, int direction) {
+            // get the swiped position
             final int position = viewHolder.getAdapterPosition();
+            // remove the item for the above position from adapter but store it in an object to
+            // be able to restore it in case user clicks "Undo" button
             final Schedule schedule = scheduledRecordsAdapter.removeItem(position);
-            scheduledRecordsAdapter.notifyItemRemoved(position);
+            // Show the Snackbar with information about deleting and "Undo" button
             Snackbar.make(scheduledLayout,
                     mActivity.getString(R.string.schedule_deleted), Snackbar.LENGTH_LONG)
+                    // set the undo action for Snackbar button
                     .setAction(mActivity.getString(R.string.undo), new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
+                            // restore the saved Schedule object
                             scheduledRecordsAdapter.addItem(schedule, position);
                         }
                     }).setActionTextColor(mActivity.getResources()
                     .getColor(R.color.colorAlertAction))
+                    // add a callback to know when the Snackbar goes away
                     .setCallback(new Snackbar.Callback() {
                         @Override
                         public void onDismissed(Snackbar snackbar, int event) {
+                            // check the event status and delete schedule from server if
+                            // the Snackbar was not dismissed by "Undo" button click
                             switch (event) {
                                 case DISMISS_EVENT_TIMEOUT:
                                     deleteScheduleFromServer(schedule);
@@ -302,11 +443,18 @@ public class ScheduleFragment extends Fragment implements RadioGroup.OnCheckedCh
         }
     };
 
+    /**
+     * Send request to server to delete the given Schedule
+     * @param schedule to delete from server
+     */
     private void deleteScheduleFromServer(Schedule schedule) {
+        // build a request object
         Request.Builder builder = new Request.Builder();
         builder.command(Api.Command.DELETE_SCHEDULE);
         builder.scheduleId(schedule.getScheduleID());
+        // clear all response listeners
         ResponseReceiver.getInstance().clearResponseListenersList();
+        // send request to server
         SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
     }
 }

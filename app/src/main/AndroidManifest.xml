@@ -51,6 +51,8 @@
         </activity>
         <activity android:name=".ui.SelectPASystemActivity">
         </activity>
+        <activity android:name=".ui.ScheduleActivity">
+        </activity>
     </application>
 
 </manifest>

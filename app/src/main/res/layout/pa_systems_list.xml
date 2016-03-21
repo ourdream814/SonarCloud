@@ -1,5 +1,5 @@
-<android.support.v4.widget.SwipeRefreshLayout
-    android:id="@+id/pa_list_swipeRefresh"
+<LinearLayout
+    android:id="@+id/pa_list_linearLayout"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_below="@id/pa_list_selector"
@@ -13,4 +13,4 @@
         android:childDivider="@color/colorSecondary"
         android:childIndicator="@null"
         android:groupIndicator="@null"/>
-</android.support.v4.widget.SwipeRefreshLayout>
+</LinearLayout>

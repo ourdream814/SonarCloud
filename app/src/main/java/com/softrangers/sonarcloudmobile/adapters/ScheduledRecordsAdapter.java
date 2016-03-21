@@ -99,8 +99,8 @@ public class ScheduledRecordsAdapter extends RecyclerView.Adapter<ScheduledRecor
 
         holder.mRecordLength.setText(holder.mSchedule.getRecording().getFromatedLength());
 
-        holder.mHour.setText(holder.mSchedule.getHour());
-        holder.mMinutesAmPm.setText(holder.mSchedule.getMinute());
+        holder.mHour.setText(holder.mSchedule.getStringHour(date));
+        holder.mMinutesAmPm.setText(holder.mSchedule.getStringMinute(date));
         // TODO: 3/20/16 chenge the icon for playing state
         holder.mPlayPauseBtn.setImageResource(
                 holder.mSchedule.isSelected() ? R.mipmap.ic_play : R.mipmap.ic_play

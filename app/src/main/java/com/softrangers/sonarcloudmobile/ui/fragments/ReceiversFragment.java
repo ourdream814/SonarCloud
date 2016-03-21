@@ -12,6 +12,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ExpandableListView;
 import android.widget.LinearLayout;
 import android.widget.RadioGroup;
 import android.widget.RelativeLayout;
@@ -41,7 +42,8 @@ import java.util.ArrayList;
 public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedChangeListener,
         OnResponseListener, SwipeRefreshLayout.OnRefreshListener,
         ReceiverListAdapter.OnItemClickListener, ReceiverObserver,
-        GroupsListAdapter.OnGroupClickListener, GroupObserver {
+        GroupsListAdapter.OnGroupClickListener, GroupObserver,
+        ExpandableListView.OnGroupClickListener {
 
     private static final String PA_LIST_STATE = "pa_list_state";
     private static final String GROUPS_LIST_STATE = "groups_list_state";
@@ -50,7 +52,8 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
 
     private AnimatedExpandableListView mListView;
     private MainActivity mActivity;
-    private SwipeRefreshLayout mRefreshLayout;
+//    private SwipeRefreshLayout mRefreshLayout;
+    private LinearLayout mReceiversLayout;
     private RelativeLayout mGroupsLayout;
     private ReceiverListAdapter mReceiverListAdapter;
     private GroupsListAdapter mGroupsListAdapter;
@@ -79,8 +82,9 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
         addGroupButton.setOnClickListener(mAddNewGroup);
         // Obtain a link to the SwipeRefreshLayout which holds the list view
         mGroupsLayout = (RelativeLayout) view.findViewById(R.id.groups_relativeLayout);
-        mRefreshLayout = (SwipeRefreshLayout) view.findViewById(R.id.pa_list_swipeRefresh);
-        mRefreshLayout.setOnRefreshListener(this);
+//        mRefreshLayout = (SwipeRefreshLayout) view.findViewById(R.id.receivers_swipe_refreshLayout);
+        mReceiversLayout = (LinearLayout) view.findViewById(R.id.pa_list_linearLayout);
+//        mRefreshLayout.setOnRefreshListener(this);
 
         // Obtain a link to the top buttons (PAs and Groups) and customize them, setting PAs button
         // as the selected one
@@ -110,7 +114,6 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
             SonarCloudApp.socketService.sendRequest(requestBuilder.build().toJSON());
             mActivity.showLoading();
         }
-
         return view;
     }
 
@@ -131,6 +134,7 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
         mReceiverListAdapter = new ReceiverListAdapter(getActivity(), paSystems);
         mReceiverListAdapter.setOnItemClickListener(this);
         mListView.setAdapter(mReceiverListAdapter);
+        mListView.setOnGroupClickListener(this);
     }
 
     /**
@@ -166,8 +170,9 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
      * @param always make request to server
      */
     private void showGroupsLayout(boolean always) {
-        mRefreshLayout.setVisibility(View.GONE);
+        mReceiversLayout.setVisibility(View.GONE);
         mGroupsLayout.setVisibility(View.VISIBLE);
+        mGroupsLayout.bringToFront();
         // Build a request for getting groups
         if (always || mGroups == null) {
             Request.Builder builder = new Request.Builder()
@@ -175,8 +180,8 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
                     .userId(SonarCloudApp.user.getId());
             ResponseReceiver.getInstance().clearResponseListenersList();
             ResponseReceiver.getInstance().addOnResponseListener(new GroupsGet());
-            mActivity.showLoading();
             SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
+            mActivity.showLoading();
         }
     }
 
@@ -185,7 +190,7 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
      */
     private void showReceiversLayout() {
         mGroupsLayout.setVisibility(View.GONE);
-        mRefreshLayout.setVisibility(View.VISIBLE);
+        mReceiversLayout.setVisibility(View.VISIBLE);
     }
 
 
@@ -356,7 +361,7 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
         public void onError() {
             mActivity.dismissLoading();
             ResponseReceiver.getInstance().clearResponseListenersList();
-            Snackbar.make(mRefreshLayout, mActivity.getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
+            Snackbar.make(mReceiversLayout, mActivity.getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
 
         }
     }
@@ -379,14 +384,14 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
         public void onCommandFailure(String message) {
             mActivity.dismissLoading();
             ResponseReceiver.getInstance().clearResponseListenersList();
-            Snackbar.make(mRefreshLayout, message, Snackbar.LENGTH_SHORT).show();
+            Snackbar.make(mGroupsLayout, message, Snackbar.LENGTH_SHORT).show();
         }
 
         @Override
         public void onError() {
             mActivity.dismissLoading();
             ResponseReceiver.getInstance().clearResponseListenersList();
-            Snackbar.make(mRefreshLayout, mActivity.getString(R.string.unknown_error),
+            Snackbar.make(mGroupsLayout, mActivity.getString(R.string.unknown_error),
                     Snackbar.LENGTH_SHORT).show();
         }
     }
@@ -398,8 +403,8 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
      */
     @Override
     public void onCommandFailure(String message) {
-        mActivity.alertUserAboutError(mActivity.getString(R.string.error), message);
         mActivity.dismissLoading();
+        mActivity.alertUserAboutError(mActivity.getString(R.string.error), message);
     }
 
     /**
@@ -407,8 +412,8 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
      */
     @Override
     public void onError() {
-        Snackbar.make(mRefreshLayout, mActivity.getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
         mActivity.dismissLoading();
+        Snackbar.make(mReceiversLayout, mActivity.getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
     }
 
     /**
@@ -416,7 +421,7 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
      */
     @Override
     public void onRefresh() {
-        mRefreshLayout.setRefreshing(false);
+//        mRefreshLayout.setRefreshing(false);
     }
 
     /**
@@ -523,5 +528,18 @@ public class ReceiversFragment extends Fragment implements RadioGroup.OnCheckedC
         builder.receiverGroupID(group.getGroupID());
         ResponseReceiver.getInstance().clearResponseListenersList();
         SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
+    }
+
+    @Override
+    public boolean onGroupClick(ExpandableListView parent, View v, int groupPosition, long id) {
+        // We call collapseGroupWithAnimation(int) and
+        // expandGroupWithAnimation(int) to animate group
+        // expansion/collapse.
+        if (mListView.isGroupExpanded(groupPosition)) {
+            mListView.collapseGroupWithAnimation(groupPosition);
+        } else {
+            mListView.expandGroupWithAnimation(groupPosition);
+        }
+        return true;
     }
 }

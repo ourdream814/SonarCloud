@@ -5,58 +5,55 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/colorSecondary"
-    tools:context=".ui.SelectPASystemActivity">
+    tools:context="com.softrangers.sonarcloudmobile.ui.ScheduleActivity">
 
     <RelativeLayout
-        android:id="@+id/add_group_toolbar_layout"
         android:layout_width="match_parent"
         android:layout_height="?actionBarSize"
-        android:background="@color/colorPrimary">
+        android:background="@color/colorPrimary"
+        android:elevation="4dp"
+        android:id="@+id/relativeLayout2">
 
         <android.support.v7.widget.Toolbar
-            android:id="@+id/add_edit_groupToolbar"
             android:layout_width="match_parent"
             android:layout_height="match_parent"/>
 
         <TextView
+            android:id="@+id/schedule_toolbarTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/select_pa"
+            android:layout_centerInParent="true"
             android:textSize="20sp"
             android:textColor="@android:color/white"
-            android:id="@+id/add_edit_group_toolbarTitle"
-            android:layout_centerVertical="true"
-            android:layout_centerHorizontal="true"/>
+            android:text="@string/add_schedule"/>
 
-        <Button
+        <ImageButton
             style="@style/Base.Widget.AppCompat.ActionButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:id="@+id/select_pa_cancelButton"
-            android:textColor="@android:color/white"
-            android:onClick="cancel"
-            android:text="@string/cancel"
+            android:onClick="cancelEdditSchedule"
+            android:id="@+id/edit_schedule_cancelButton"
+            android:src="@mipmap/ic_close_new_group"
             android:layout_centerVertical="true"
             android:layout_alignParentLeft="true"
             android:layout_alignParentStart="true"/>
 
-        <Button
+        <ImageButton
             style="@style/Base.Widget.AppCompat.ActionButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:onClick="save"
-            android:id="@+id/select_pa_saveButton"
-            android:textColor="@android:color/white"
-            android:text="@string/save"
+            android:onClick="saveSchedule"
+            android:id="@+id/edit_schedule_saveButton"
+            android:src="@mipmap/ic_save_group"
             android:layout_centerVertical="true"
             android:layout_alignParentRight="true"
             android:layout_alignParentEnd="true"/>
     </RelativeLayout>
 
     <com.softrangers.sonarcloudmobile.utils.widgets.AnimatedExpandableListView
-        android:id="@+id/select_pa_activityList"
+        android:id="@+id/schedule_activity_expandableListView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:groupIndicator="@android:color/transparent"
-        android:layout_below="@+id/add_group_toolbar_layout"/>
+        android:layout_below="@+id/relativeLayout2"/>
 </RelativeLayout>

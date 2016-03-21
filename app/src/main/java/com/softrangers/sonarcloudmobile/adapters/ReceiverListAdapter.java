@@ -22,9 +22,11 @@ public class ReceiverListAdapter extends AnimatedExpandableListView.AnimatedExpa
     private Context mContext;
     private ArrayList<PASystem> mPASystems;
     private OnItemClickListener mOnItemClickListener;
+    private LayoutInflater mLayoutInflater;
 
     public ReceiverListAdapter(@NonNull Context context, @NonNull ArrayList<PASystem> paSystems) {
         mContext = context;
+        mLayoutInflater = LayoutInflater.from(context);
         mPASystems = paSystems;
     }
 
@@ -64,28 +66,26 @@ public class ReceiverListAdapter extends AnimatedExpandableListView.AnimatedExpa
     @Override
     public View getRealChildView(int groupPosition, final int childPosition, boolean isLastChild,
                                  View convertView, ViewGroup parent) {
-        View row = convertView;
         ChildViewHolder holder;
 
-        if (row == null) {
-            LayoutInflater inflater = (LayoutInflater) this.mContext.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-            row = inflater.inflate(R.layout.receivers_list_item, null);
+        if (convertView == null) {
+            convertView = mLayoutInflater.inflate(R.layout.receivers_list_item, parent, false);
             holder = new ChildViewHolder();
 
-            holder.mChildTitle = (TextView) row.findViewById(R.id.child_title);
+            holder.mChildTitle = (TextView) convertView.findViewById(R.id.child_title);
             holder.mChildTitle.setTypeface(SonarCloudApp.avenirBook);
-            holder.mCheckBox = (ImageView) row.findViewById(R.id.check_box_image);
+            holder.mCheckBox = (ImageView) convertView.findViewById(R.id.check_box_image);
 
-            row.setTag(holder);
+            convertView.setTag(holder);
         } else {
-            holder = (ChildViewHolder) row.getTag();
+            holder = (ChildViewHolder) convertView.getTag();
         }
 
         final Receiver receiver = mPASystems.get(groupPosition).getReceivers().get(childPosition);
         holder.mCheckBox.setImageResource(receiver.isSelected() ? R.mipmap.ic_circle_checked : R.mipmap.ic_circle);
         holder.mChildTitle.setText(receiver.getName());
 
-        row.setOnClickListener(new View.OnClickListener() {
+        convertView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (mOnItemClickListener != null) {
@@ -93,7 +93,7 @@ public class ReceiverListAdapter extends AnimatedExpandableListView.AnimatedExpa
                 }
             }
         });
-        return row;
+        return convertView;
     }
 
     @Override
@@ -132,27 +132,25 @@ public class ReceiverListAdapter extends AnimatedExpandableListView.AnimatedExpa
 
     @Override
     public boolean hasStableIds() {
-        return false;
+        return true;
     }
 
     @Override
     public View getGroupView(final int groupPosition, boolean isExpanded,
                              View convertView, ViewGroup parent) {
-        View row = convertView;
         HeaderViewHolder holder;
 
-        if (row == null) {
-            LayoutInflater inflater = (LayoutInflater) this.mContext.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-            row = inflater.inflate(R.layout.receivers_list_header, null);
+        if (convertView == null) {
+            convertView = mLayoutInflater.inflate(R.layout.receivers_list_header, parent, false);
             holder = new HeaderViewHolder();
 
-            holder.mHeaderTitle = (TextView) row.findViewById(R.id.receiver_list_header_title);
+            holder.mHeaderTitle = (TextView) convertView.findViewById(R.id.receiver_list_header_title);
             holder.mHeaderTitle.setTypeface(SonarCloudApp.avenirMedium);
-            holder.mIndicator = (ImageView) row.findViewById(R.id.expanded_indicator_image);
+            holder.mIndicator = (ImageView) convertView.findViewById(R.id.expanded_indicator_image);
 
-            row.setTag(holder);
+            convertView.setTag(holder);
         } else {
-            holder = (HeaderViewHolder) row.getTag();
+            holder = (HeaderViewHolder) convertView.getTag();
         }
 
         final PASystem system = mPASystems.get(groupPosition);
@@ -160,7 +158,7 @@ public class ReceiverListAdapter extends AnimatedExpandableListView.AnimatedExpa
         holder.mHeaderTitle.setText(system.getName());
         holder.mIndicator.setImageResource(isExpanded ? R.mipmap.ic_indicator_up : R.mipmap.ic_indicator_down);
 
-        return row;
+        return convertView;
     }
 
     @Override

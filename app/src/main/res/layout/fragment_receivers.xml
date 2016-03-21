@@ -45,15 +45,22 @@
             android:textColor="@drawable/text_color"/>
     </RadioGroup>
 
-    <include
-        layout="@layout/pa_systems_list"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_below="@+id/pa_list_selector"/>
+    <!--<android.support.v4.widget.SwipeRefreshLayout-->
+        <!--android:id="@+id/receivers_swipe_refreshLayout"-->
+        <!--android:layout_width="match_parent"-->
+        <!--android:layout_height="match_parent"-->
+        <!--android:layout_below="@+id/pa_list_selector">-->
 
-    <include
-        layout="@layout/group_list_layout"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_below="@+id/pa_list_selector"/>
+        <include
+            layout="@layout/pa_systems_list"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_below="@+id/pa_list_selector"/>
+
+        <include
+            layout="@layout/group_list_layout"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_below="@+id/pa_list_selector"/>
+    <!--</android.support.v4.widget.SwipeRefreshLayout>-->
 </RelativeLayout>

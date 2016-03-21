@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ExpandableListView;
 
 import com.softrangers.sonarcloudmobile.R;
 import com.softrangers.sonarcloudmobile.adapters.ReceiverListAdapter;
@@ -15,13 +16,14 @@ import com.softrangers.sonarcloudmobile.utils.widgets.AnimatedExpandableListView
 import java.util.ArrayList;
 
 public class SelectPASystemActivity extends BaseActivity implements
-        ReceiverListAdapter.OnItemClickListener {
+        ReceiverListAdapter.OnItemClickListener, ExpandableListView.OnGroupClickListener {
 
     public static final String PA_BUNDLE_KEY = "key for PAs from bundle";
     public static final String RECEIVERS_RESULT = "key for receivers list from result";
 
     private ArrayList<Receiver> mReceivers;
     private ReceiverListAdapter mAdapter;
+    private AnimatedExpandableListView mListView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -30,13 +32,14 @@ public class SelectPASystemActivity extends BaseActivity implements
         Intent intent = getIntent();
         mReceivers = new ArrayList<>();
         ArrayList<PASystem> PASystems = intent.getExtras().getParcelableArrayList(PA_BUNDLE_KEY);
-        AnimatedExpandableListView listView = (AnimatedExpandableListView) findViewById(R.id.select_pa_activityList);
+        mListView = (AnimatedExpandableListView) findViewById(R.id.select_pa_activityList);
         addSelectedReceivers(PASystems);
         mAdapter = new ReceiverListAdapter(this, PASystems);
         mAdapter.setOnItemClickListener(this);
 
-        assert listView != null;
-        listView.setAdapter(mAdapter);
+        assert mListView != null;
+        mListView.setAdapter(mAdapter);
+        mListView.setOnGroupClickListener(this);
     }
 
     private void addSelectedReceivers(ArrayList<PASystem> systems) {
@@ -71,5 +74,18 @@ public class SelectPASystemActivity extends BaseActivity implements
             mReceivers.add(receiver);
         }
         mAdapter.notifyDataSetChanged();
+    }
+
+    @Override
+    public boolean onGroupClick(ExpandableListView parent, View v, int groupPosition, long id) {
+        // We call collapseGroupWithAnimation(int) and
+        // expandGroupWithAnimation(int) to animate group
+        // expansion/collapse.
+        if (mListView.isGroupExpanded(groupPosition)) {
+            mListView.collapseGroupWithAnimation(groupPosition);
+        } else {
+            mListView.expandGroupWithAnimation(groupPosition);
+        }
+        return true;
     }
 }

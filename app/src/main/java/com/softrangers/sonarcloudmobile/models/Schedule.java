@@ -94,14 +94,42 @@ public class Schedule implements Parcelable {
     }
 
     public Date getFormattedStartDate() {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSZ", Locale.getDefault());
         Date date = new Date();
-        try {
-            date = dateFormat.parse(startDate);
-        } catch (Exception e) {
-            e.printStackTrace();
+        if (!startDate.equalsIgnoreCase("null")) {
+            String editedDate = startDate.replace("T", " ");
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault());
+            try {
+                date = dateFormat.parse(editedDate);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
         return date;
+    }
+
+    public String getStringDate(Date date) {
+        SimpleDateFormat format = new SimpleDateFormat("cccc, MMM dd, yyyy", Locale.getDefault());
+        return format.format(date);
+    }
+
+    public String getStringTime(Date date) {
+        SimpleDateFormat format = new SimpleDateFormat("hh mm a", Locale.getDefault());
+        return format.format(date);
+    }
+
+    public String getStringHour(Date date) {
+        SimpleDateFormat format = new SimpleDateFormat("hh", Locale.getDefault());
+        return format.format(date);
+    }
+
+    public String getStringMinute(Date date) {
+        SimpleDateFormat format = new SimpleDateFormat("mm", Locale.getDefault());
+        StringBuilder builder = new StringBuilder();
+        builder.append(format.format(date));
+        builder.append("\n");
+        SimpleDateFormat formatAmPm = new SimpleDateFormat("a", Locale.getDefault());
+        builder.append(formatAmPm.format(date));
+        return builder.toString();
     }
 
     public void setStartDate(String startDate) {

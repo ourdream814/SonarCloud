@@ -53,5 +53,10 @@
     <string name="undo">Undo</string>
     <string name="record_deleted">Record deleted</string>
     <string name="schedule_deleted">Schedule deleted</string>
+    <string name="add_schedule">Add Schedule</string>
+    <string name="date_and_time">Date and time</string>
+    <string name="repeating">Repeating</string>
+    <string name="date">Date</string>
+    <string name="time">Time</string>
 
 </resources>
