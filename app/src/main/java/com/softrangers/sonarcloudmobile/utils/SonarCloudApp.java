@@ -81,6 +81,16 @@ public class SonarCloudApp extends Application {
         editor.apply();
     }
 
+    public void addNewRecording(int recordingNumber) {
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putInt("recording_counter", recordingNumber);
+        editor.apply();
+    }
+
+    public int getLastRecordingNumber() {
+        return preferences.getInt("recording_number", 0);
+    }
+
     public boolean isFirstLaunch() {
         return preferences.getBoolean(IS_FIRST_LAUNCH, false);
     }

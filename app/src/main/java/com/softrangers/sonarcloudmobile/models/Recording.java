@@ -26,6 +26,8 @@ public class Recording implements Parcelable {
     private String mModified;
     private int mLength;
     private boolean mIsPlaying;
+    private String mFilePath;
+    private String mRecordName;
 
     public Recording() {}
 
@@ -42,6 +44,8 @@ public class Recording implements Parcelable {
         mModified = in.readString();
         mLength = in.readInt();
         mIsPlaying = in.readByte() != 0;
+        mFilePath = in.readString();
+        mRecordName = in.readString();
     }
 
     public static final Creator<Recording> CREATOR = new Creator<Recording>() {
@@ -156,6 +160,22 @@ public class Recording implements Parcelable {
         mIsPlaying = isPlaying;
     }
 
+    public String getFilePath() {
+        return mFilePath;
+    }
+
+    public void setFilePath(String filePath) {
+        mFilePath = filePath;
+    }
+
+    public String getRecordName() {
+        return mRecordName;
+    }
+
+    public void setRecordName(String recordName) {
+        mRecordName = recordName;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (o instanceof Recording) {
@@ -254,5 +274,7 @@ public class Recording implements Parcelable {
         dest.writeString(mModified);
         dest.writeInt(mLength);
         dest.writeByte((byte) (mIsPlaying ? 1 : 0));
+        dest.writeString(mFilePath);
+        dest.writeString(mRecordName);
     }
 }

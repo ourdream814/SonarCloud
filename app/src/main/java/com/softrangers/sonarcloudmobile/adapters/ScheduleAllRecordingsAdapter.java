@@ -93,7 +93,7 @@ public class ScheduleAllRecordingsAdapter extends RecyclerView.Adapter<ScheduleA
         holder.mRecording = mRecordings.get(position);
         // TODO: 3/20/16 chenge the icon for playing state
         holder.mPlayStopButton.setImageResource(
-                holder.mRecording.isPlaying() ? R.mipmap.ic_play : R.mipmap.ic_play
+                holder.mRecording.isPlaying() ? R.mipmap.ic_button_pause : R.mipmap.ic_play
         );
 
         holder.mRecordTitle.setText(

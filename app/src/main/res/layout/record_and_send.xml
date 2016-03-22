@@ -6,6 +6,14 @@
     xmlns:tools="http://schemas.android.com/tools"
     tools:background="@drawable/gradient_background">
 
+    <android.support.v7.widget.RecyclerView
+        android:id="@+id/make_announcement_recordingsList"
+        android:paddingTop="80dp"
+        android:paddingBottom="100dp"
+        android:clipToPadding="false"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+
     <TextView
         android:id="@+id/record_and_sendTextView"
         android:layout_width="match_parent"
@@ -36,7 +44,7 @@
         android:layout_above="@+id/tap_record_textView"
         android:orientation="horizontal">
 
-        <com.softrangers.sonarcloudmobile.utils.widgets.ToggleImageButton
+        <ImageButton
             style="@style/Base.Widget.AppCompat.ActionButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -46,14 +54,23 @@
             android:src="@mipmap/ic_button_stop"
             android:id="@+id/stop_recording_button"/>
 
-        <com.softrangers.sonarcloudmobile.utils.widgets.ToggleImageButton
+        <ImageButton
             style="@style/Base.Widget.AppCompat.ActionButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginLeft="50dp"
             android:layout_marginStart="50dp"
             android:checked="false"
-            android:src="@drawable/record_button_src"
+            android:src="@mipmap/ic_button_record"
             android:id="@+id/start_pause_recording_button"/>
     </LinearLayout>
+
+    <Chronometer
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/recording_chronometer"
+        android:textColor="@android:color/white"
+        android:textSize="20sp"
+        android:layout_below="@+id/record_and_sendTextView"
+        android:layout_centerHorizontal="true"/>
 </RelativeLayout>
