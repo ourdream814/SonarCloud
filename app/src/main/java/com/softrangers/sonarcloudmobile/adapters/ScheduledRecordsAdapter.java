@@ -51,6 +51,7 @@ public class ScheduledRecordsAdapter extends RecyclerView.Adapter<ScheduledRecor
 
     public void addItems(ArrayList<Schedule> recordings) {
         for (Schedule recording : recordings) {
+            if (recording.getFormattedStartDate() == null) return;
             if (mSchedules.size() == 0) mSchedules.add(recording);
             boolean exists = false;
             for (Schedule rec : mSchedules) {

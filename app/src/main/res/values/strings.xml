@@ -58,5 +58,9 @@
     <string name="repeating">Repeating</string>
     <string name="date">Date</string>
     <string name="time">Time</string>
+    <string name="repeat">Repeat</string>
+    <string name="select_date">Select a date</string>
+    <string name="set">Set</string>
+    <string name="repeat_until">Repeat until</string>
 
 </resources>

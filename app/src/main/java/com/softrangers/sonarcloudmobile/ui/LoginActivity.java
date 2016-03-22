@@ -17,6 +17,7 @@ import com.softrangers.sonarcloudmobile.models.User;
 import com.softrangers.sonarcloudmobile.utils.BaseActivity;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
+import com.softrangers.sonarcloudmobile.utils.api.ConnectionReceiver;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -38,6 +39,8 @@ public class LoginActivity extends BaseActivity {
         intentFilter.addAction(Api.Command.IDENTIFIER);
         intentFilter.addAction(Api.EXCEPTION);
         registerReceiver(mLoginReceiver, intentFilter);
+
+        ConnectionReceiver.getInstance().removeAllListeners();
 
         // Instantiate email input field
         mEmail = (EditText) findViewById(R.id.email_label);
@@ -114,6 +117,7 @@ public class LoginActivity extends BaseActivity {
 
         // Disable Sign In button while loading
         mSignIn.setEnabled(false);
+        mSignIn.setVisibility(View.INVISIBLE);
 
         // Create a JSON request for server
         JSONObject req = new Request.Builder().command(Api.Command.AUTHENTICATE)
@@ -176,6 +180,7 @@ public class LoginActivity extends BaseActivity {
             public void run() {
                 mProgressBar.setVisibility(View.GONE);
                 mSignIn.setEnabled(true);
+                mSignIn.setVisibility(View.VISIBLE);
             }
         });
     }
@@ -192,19 +197,21 @@ public class LoginActivity extends BaseActivity {
             public void run() {
                 mProgressBar.setVisibility(View.GONE);
                 mSignIn.setEnabled(true);
+                mSignIn.setVisibility(View.VISIBLE);
             }
         });
     }
 
     private void onIdentifierReady(JSONObject response) {
         // hide loading ui
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                mProgressBar.setVisibility(View.GONE);
-                mSignIn.setEnabled(true);
-            }
-        });
+//        runOnUiThread(new Runnable() {
+//            @Override
+//            public void run() {
+//                mProgressBar.setVisibility(View.GONE);
+//                mSignIn.setEnabled(true);
+//                mSignIn.setVisibility(View.VISIBLE);
+//            }
+//        });
 
         try {
             // Save identifier and secret to app preferences

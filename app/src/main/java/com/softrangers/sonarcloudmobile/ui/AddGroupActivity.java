@@ -28,7 +28,7 @@ import java.util.ArrayList;
 public class AddGroupActivity extends BaseActivity {
 
     public static final String GROUP_EDIT_BUNDLE = "bundle key for editable group";
-    public static final String PA_SUSTEMS_BUNDLE = "bundle key for PA systems list";
+    public static final String PA_SYSTEMS_BUNDLE = "bundle key for PA systems list";
     public static final String GROUP_RESULT_BUNDLE = "bundle key for group result";
 
     private static String command = Api.Command.CREATE_GROUP;
@@ -57,7 +57,7 @@ public class AddGroupActivity extends BaseActivity {
 
         Intent intent = getIntent();
         if (intent == null) return;
-        mPASystems = intent.getExtras().getParcelableArrayList(PA_SUSTEMS_BUNDLE);
+        mPASystems = intent.getExtras().getParcelableArrayList(PA_SYSTEMS_BUNDLE);
         mAction = intent.getAction();
         switch (mAction) {
             case Api.ACTION_ADD_GROUP:
@@ -123,7 +123,9 @@ public class AddGroupActivity extends BaseActivity {
     private View.OnClickListener mOnCloseClickListener = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
-            setResult(RESULT_CANCELED);
+            Intent intent = new Intent(AddGroupActivity.this, MainActivity.class);
+            intent.setAction("Add group canceled");
+            setResult(RESULT_CANCELED, intent);
             onBackPressed();
         }
     };
@@ -224,6 +226,7 @@ public class AddGroupActivity extends BaseActivity {
                 if (!success) {
                     String message = jsonResponse.optString("message", getString(R.string.unknown_error));
                     onCommandFailure(message);
+                    return;
                 }
                 switch (action) {
                     case Api.Command.CREATE_GROUP:

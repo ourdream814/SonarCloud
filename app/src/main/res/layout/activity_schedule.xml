@@ -31,7 +31,7 @@
             style="@style/Base.Widget.AppCompat.ActionButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:onClick="cancelEdditSchedule"
+            android:onClick="cancelEditSchedule"
             android:id="@+id/edit_schedule_cancelButton"
             android:src="@mipmap/ic_close_new_group"
             android:layout_centerVertical="true"
@@ -50,10 +50,9 @@
             android:layout_alignParentEnd="true"/>
     </RelativeLayout>
 
-    <com.softrangers.sonarcloudmobile.utils.widgets.AnimatedExpandableListView
-        android:id="@+id/schedule_activity_expandableListView"
+    <android.support.v7.widget.RecyclerView
+        android:id="@+id/schedule_activity_recyclerView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:groupIndicator="@android:color/transparent"
         android:layout_below="@+id/relativeLayout2"/>
 </RelativeLayout>

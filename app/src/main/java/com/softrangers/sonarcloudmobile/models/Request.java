@@ -28,11 +28,20 @@ public class Request {
     private String identifier;
     private String secret;
     private String groupID;
+    private String time;
+    private String minute;
+    private String hour;
+    private String day;
+    private String month;
+    private String wday;
+    private String endDate;
+    private String startDate;
     private int receiverGroupID = UNSPECIFIED_INT;
     private int loginID = UNSPECIFIED_INT;
     private int pin = UNSPECIFIED_INT;
     private String action;
     private String userID;
+    private int deleteAfter;
     private int organizationID = UNSPECIFIED_INT;
     private int receiverID = UNSPECIFIED_INT;
     private int seq;
@@ -65,6 +74,7 @@ public class Request {
             if (organizationID == UNSPECIFIED_INT) request.remove("organizationID");
             if (receiverID == UNSPECIFIED_INT) request.remove("receiverID");
             if (scheduleID == UNSPECIFIED_INT) request.remove("scheduleID");
+            if (!command.equalsIgnoreCase(Api.Command.UPDATE_SCHEDULE)) request.remove("deleteAfter");
             request.remove("UNSPECIFIED_INT");
 
             request.put(Api.Options.SEQ_FIELD, seq);
@@ -95,6 +105,15 @@ public class Request {
         private int mSeq;
         private int mReceiverGroupId = UNSPECIFIED_INT;
         private int mScheduleId = UNSPECIFIED_INT;
+        private String time;
+        private String minute;
+        private String hour;
+        private String day;
+        private String month;
+        private String wday;
+        private String endDate;
+        private String startDate;
+        private int deleteAfter;
 
         public Builder command(String command) {
             mCommand = command;
@@ -199,6 +218,51 @@ public class Request {
             return this;
         }
 
+        public Builder time(String time) {
+            this.time = time;
+            return this;
+        }
+
+        public Builder minute(String minute) {
+            this.minute = minute;
+            return this;
+        }
+
+        public Builder hour(String hour) {
+            this.hour = hour;
+            return this;
+        }
+
+        public Builder day(String day) {
+            this.day = day;
+            return this;
+        }
+
+        public Builder month(String month) {
+            this.month = month;
+            return this;
+        }
+
+        public Builder wday(String wday) {
+            this.wday = wday;
+            return this;
+        }
+
+        public Builder deleteAfter(int deleteAfter) {
+            this.deleteAfter = deleteAfter;
+            return this;
+        }
+
+        public Builder startDate(String startDate) {
+            this.startDate = startDate;
+            return this;
+        }
+
+        public Builder endDate(String endDate) {
+            this.endDate = endDate;
+            return this;
+        }
+
 
         public Request build() {
             Request request = new Request();
@@ -220,7 +284,15 @@ public class Request {
             request.pin = mPin;
             request.userID = mUserId;
             request.receiverGroupID = mReceiverGroupId;
-
+            request.time = time;
+            request.minute = minute;
+            request.hour = hour;
+            request.day = day;
+            request.month = month;
+            request.wday = wday;
+            request.deleteAfter = deleteAfter;
+            request.startDate = startDate;
+            request.endDate = endDate;
             request.scheduleID = mScheduleId;
 
             if (mSeq != 0)

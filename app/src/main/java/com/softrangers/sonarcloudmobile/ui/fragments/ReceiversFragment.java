@@ -253,7 +253,7 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
     public void onEditButtonClicked(Group group, int position) {
         Intent intent = new Intent(mActivity, AddGroupActivity.class);
         intent.setAction(Api.ACTION_EDIT_GROUP);
-        intent.putExtra(AddGroupActivity.PA_SUSTEMS_BUNDLE, mPASystems);
+        intent.putExtra(AddGroupActivity.PA_SYSTEMS_BUNDLE, mPASystems);
         intent.putExtra(AddGroupActivity.GROUP_EDIT_BUNDLE, group);
         mActivity.startActivityForResult(intent, GROUP_REQUEST_CODE);
     }
@@ -343,7 +343,7 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
         public void onClick(View v) {
             Intent intent = new Intent(mActivity, AddGroupActivity.class);
             intent.setAction(Api.ACTION_ADD_GROUP);
-            intent.putExtra(AddGroupActivity.PA_SUSTEMS_BUNDLE, mPASystems);
+            intent.putExtra(AddGroupActivity.PA_SYSTEMS_BUNDLE, mPASystems);
             mActivity.startActivityForResult(intent, GROUP_REQUEST_CODE);
         }
     };

@@ -55,6 +55,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     private static ScheduleAllRecordingsAdapter allRecordingsAdapter;
     private static ScheduledRecordsAdapter scheduledRecordsAdapter;
     private MainActivity mActivity;
+    private int clickedPosition;
 
     public ScheduleFragment() {
         // Required empty public constructor
@@ -70,6 +71,8 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         IntentFilter intentFilter = new IntentFilter(Api.Command.RECORDINGS);
         intentFilter.addAction(Api.Command.SCHEDULES);
         intentFilter.addAction(Api.EXCEPTION);
+        intentFilter.addAction(ScheduleActivity.ACTION_EDIT_SCHEDULE);
+        intentFilter.addAction(ScheduleActivity.ACTION_ADD_SCHEDULE);
         mActivity.registerReceiver(mBroadcastReceiver, intentFilter);
         // initialize adapters with empty lists
         ArrayList<Recording> recordings = new ArrayList<>();
@@ -83,6 +86,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
 
     /**
      * Initialize all views for this fragment
+     *
      * @param view root for this fragment
      */
     private void initializeViews(View view) {
@@ -176,6 +180,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
 
     /**
      * Get all scheduled recordings from server for given receivers
+     *
      * @param receivers for which to get recordings
      */
     public void getAllScheduledRecords(ArrayList<Receiver> receivers) {
@@ -195,6 +200,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
 
     /**
      * Get all scheduled recordings from server for given receivers group
+     *
      * @param group of receivers for which to get recordings
      */
     public void getAllScheduledRecords(Group group) {
@@ -214,6 +220,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
 
     /**
      * Get all recordings from server for given receivers
+     *
      * @param receivers for which to get recordings
      */
     public void getAllRecordingsFromServer(ArrayList<Receiver> receivers) {
@@ -240,6 +247,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
 
     /**
      * Get all recordings from server for given receivers group
+     *
      * @param group of receivers for which to get recordings
      */
     public void getAllRecordingsFromServer(Group group) {
@@ -266,6 +274,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
 
     /**
      * Add recordings to the list with all receiver records
+     *
      * @param recordings list to add to adapter
      */
     private void addRecordingsToList(ArrayList<Recording> recordings) {
@@ -285,6 +294,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
 
     /**
      * Add scheduled recordings to the list with all receiver records
+     *
      * @param schedules list to add to adapter
      */
     private void addSchedulesToList(ArrayList<Schedule> schedules) {
@@ -304,10 +314,11 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
 
     @Override
     public void onScheduleClick(Schedule schedule, int position) {
+        clickedPosition = position;
         Intent intent = new Intent(mActivity, ScheduleActivity.class);
         intent.setAction(ScheduleActivity.ACTION_EDIT_SCHEDULE);
         intent.putExtra(ScheduleActivity.SCHEDULE_EXTRAS, schedule);
-        mActivity.startActivity(intent);
+        mActivity.startActivityForResult(intent, 1911);
     }
 
     @Override
@@ -320,18 +331,34 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         public void onReceive(Context context, Intent intent) {
             try {
                 String action = intent.getAction();
-                JSONObject jsonResponse = new JSONObject(intent.getExtras().getString(action));
-                boolean success = jsonResponse.optBoolean("success", false);
-                if (!success) {
-                    String message = jsonResponse.optString("message", mActivity.getString(R.string.unknown_error));
-                    onCommandFailure(message);
-                }
                 switch (action) {
-                    case Api.Command.SCHEDULES:
-                        onSchedulesReceived(jsonResponse);
+                    case ScheduleActivity.ACTION_ADD_SCHEDULE: {
+                        Schedule schedule = intent.getExtras().getParcelable(ScheduleActivity.ACTION_ADD_SCHEDULE);
+                        scheduledRecordsAdapter.addItem(schedule, scheduledRecordsAdapter.getItemCount() - 1);
                         break;
-                    case Api.Command.RECORDINGS:
-                        onRecordingsReceived(jsonResponse);
+                    }
+                    case ScheduleActivity.ACTION_EDIT_SCHEDULE: {
+                        Schedule schedule = intent.getExtras().getParcelable(ScheduleActivity.ACTION_EDIT_SCHEDULE);
+                        scheduledRecordsAdapter.removeItem(clickedPosition);
+                        scheduledRecordsAdapter.addItem(schedule, clickedPosition);
+                        break;
+                    }
+                    default:
+                        JSONObject jsonResponse = new JSONObject(intent.getExtras().getString(action));
+                        boolean success = jsonResponse.optBoolean("success", false);
+                        if (!success) {
+                            String message = jsonResponse.optString("message", mActivity.getString(R.string.unknown_error));
+                            onCommandFailure(message);
+                            return;
+                        }
+                        switch (action) {
+                            case Api.Command.SCHEDULES:
+                                onSchedulesReceived(jsonResponse);
+                                break;
+                            case Api.Command.RECORDINGS:
+                                onRecordingsReceived(jsonResponse);
+                                break;
+                        }
                         break;
                 }
             } catch (Exception e) {
@@ -411,6 +438,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
 
     /**
      * Send request to server to delete the given Schedule
+     *
      * @param schedule to delete from server
      */
     private void deleteScheduleFromServer(Schedule schedule) {
@@ -420,5 +448,11 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         builder.scheduleId(schedule.getScheduleID());
         // send request to server
         SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
+    }
+
+    @Override
+    public void onDetach() {
+        super.onDetach();
+        mActivity.unregisterReceiver(mBroadcastReceiver);
     }
 }

@@ -6,6 +6,7 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.os.Looper;
 import android.support.annotation.Nullable;
+import android.util.Log;
 
 import org.json.JSONObject;
 
@@ -18,8 +19,6 @@ import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 
-import javax.net.ssl.HandshakeCompletedEvent;
-import javax.net.ssl.HandshakeCompletedListener;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
@@ -32,13 +31,14 @@ import javax.net.ssl.X509TrustManager;
  *
  * @author eduard.albu@gmail.com
  */
-public class SocketService extends Service implements HandshakeCompletedListener {
+public class SocketService extends Service {
 
     public static SSLSocket sslSocket;
     private static SSLSocketFactory sslSocketFactory;
     public BufferedReader readIn;
     public BufferedWriter writeOut;
     public boolean isConnected;
+    private JSONObject mLastRequest;
 
     // Bind this service to application
     @Nullable
@@ -61,18 +61,10 @@ public class SocketService extends Service implements HandshakeCompletedListener
      *
      * @param request to send
      */
-    public void sendRequest(final JSONObject request) {
+    public void sendRequest(JSONObject request) {
         new SendRequest(request);
     }
 
-
-    /**
-     * Called when socket handShsake is finished
-     */
-    @Override
-    public void handshakeCompleted(HandshakeCompletedEvent event) {
-
-    }
 
     /**
      * Initiate all components needed to build a new SSLSocket object
@@ -165,7 +157,7 @@ public class SocketService extends Service implements HandshakeCompletedListener
         public SendRequest(JSONObject message) {
             // give the message for server and socket object to current thread
             this.message = message;
-
+            mLastRequest = message;
             // send message to server
             new Thread(this, this.getClass().getSimpleName()).start();
         }
@@ -212,6 +204,12 @@ public class SocketService extends Service implements HandshakeCompletedListener
             try {
                 // Start reading each response line\
                 String stringResponse = mReader.readLine();
+                if (stringResponse == null) {
+                    stringResponse = "{\"success\":false}";
+                    restartConnection();
+                    sendRequest(mLastRequest);
+                }
+                mLastRequest = null;
                 JSONObject response = new JSONObject(stringResponse);
                 String command = response.optString("originalCommand", Api.EXCEPTION);
                 // send the response to ui

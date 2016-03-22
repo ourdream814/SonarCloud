@@ -67,33 +67,30 @@ public class ReceiverListAdapter extends AnimatedExpandableListView.AnimatedExpa
     public View getRealChildView(int groupPosition, final int childPosition, boolean isLastChild,
                                  View convertView, ViewGroup parent) {
         ChildViewHolder holder;
-
-        if (convertView == null) {
-            convertView = mLayoutInflater.inflate(R.layout.receivers_list_item, parent, false);
+        View row = convertView;
+        final Receiver receiver = mPASystems.get(groupPosition).getReceivers().get(childPosition);
+        if (row == null) {
+            row = mLayoutInflater.inflate(R.layout.receivers_list_item, parent, false);
             holder = new ChildViewHolder();
 
-            holder.mChildTitle = (TextView) convertView.findViewById(R.id.child_title);
+            holder.mChildTitle = (TextView) row.findViewById(R.id.child_title);
             holder.mChildTitle.setTypeface(SonarCloudApp.avenirBook);
-            holder.mCheckBox = (ImageView) convertView.findViewById(R.id.check_box_image);
-
-            convertView.setTag(holder);
+            holder.mCheckBox = (ImageView) row.findViewById(R.id.check_box_image);
+            row.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (mOnItemClickListener != null) {
+                        mOnItemClickListener.onChildClick(receiver, childPosition);
+                    }
+                }
+            });
+            row.setTag(holder);
         } else {
-            holder = (ChildViewHolder) convertView.getTag();
+            holder = (ChildViewHolder) row.getTag();
         }
-
-        final Receiver receiver = mPASystems.get(groupPosition).getReceivers().get(childPosition);
         holder.mCheckBox.setImageResource(receiver.isSelected() ? R.mipmap.ic_circle_checked : R.mipmap.ic_circle);
         holder.mChildTitle.setText(receiver.getName());
-
-        convertView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (mOnItemClickListener != null) {
-                    mOnItemClickListener.onChildClick(receiver, childPosition);
-                }
-            }
-        });
-        return convertView;
+        return row;
     }
 
     @Override
@@ -139,18 +136,16 @@ public class ReceiverListAdapter extends AnimatedExpandableListView.AnimatedExpa
     public View getGroupView(final int groupPosition, boolean isExpanded,
                              View convertView, ViewGroup parent) {
         HeaderViewHolder holder;
-
-        if (convertView == null) {
-            convertView = mLayoutInflater.inflate(R.layout.receivers_list_header, parent, false);
+        View row = convertView;
+        if (row == null) {
+            row = mLayoutInflater.inflate(R.layout.receivers_list_header, parent, false);
             holder = new HeaderViewHolder();
-
-            holder.mHeaderTitle = (TextView) convertView.findViewById(R.id.receiver_list_header_title);
+            holder.mHeaderTitle = (TextView) row.findViewById(R.id.receiver_list_header_title);
             holder.mHeaderTitle.setTypeface(SonarCloudApp.avenirMedium);
-            holder.mIndicator = (ImageView) convertView.findViewById(R.id.expanded_indicator_image);
-
-            convertView.setTag(holder);
+            holder.mIndicator = (ImageView) row.findViewById(R.id.expanded_indicator_image);
+            row.setTag(holder);
         } else {
-            holder = (HeaderViewHolder) convertView.getTag();
+            holder = (HeaderViewHolder) row.getTag();
         }
 
         final PASystem system = mPASystems.get(groupPosition);
@@ -158,7 +153,7 @@ public class ReceiverListAdapter extends AnimatedExpandableListView.AnimatedExpa
         holder.mHeaderTitle.setText(system.getName());
         holder.mIndicator.setImageResource(isExpanded ? R.mipmap.ic_indicator_up : R.mipmap.ic_indicator_down);
 
-        return convertView;
+        return row;
     }
 
     @Override

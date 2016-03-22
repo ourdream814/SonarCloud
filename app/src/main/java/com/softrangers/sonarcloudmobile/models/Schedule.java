@@ -3,13 +3,17 @@ package com.softrangers.sonarcloudmobile.models;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import com.softrangers.sonarcloudmobile.utils.RepeatingCheck;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
+import java.util.TimeZone;
 
 /**
  * Created by eduard on 3/20/16.
@@ -32,7 +36,13 @@ public class Schedule implements Parcelable {
     private Recording recording;
     private boolean isSelected;
 
-    public Schedule() {}
+    private RowType mRowType;
+    private String mTitle;
+    private String mSubtitle;
+    private int mRepeatOption;
+
+    public Schedule() {
+    }
 
     protected Schedule(Parcel in) {
         scheduleID = in.readInt();
@@ -51,6 +61,7 @@ public class Schedule implements Parcelable {
         modified = in.readString();
         recording = in.readParcelable(Recording.class.getClassLoader());
         isSelected = in.readByte() != 0;
+        mRepeatOption = in.readInt();
     }
 
     public static final Creator<Schedule> CREATOR = new Creator<Schedule>() {
@@ -64,6 +75,14 @@ public class Schedule implements Parcelable {
             return new Schedule[size];
         }
     };
+
+    public int getRepeatOption() {
+        return mRepeatOption;
+    }
+
+    public void setRepeatOption() {
+        mRepeatOption = RepeatingCheck.checkRepeating(minute, hour, day, month, wday);
+    }
 
     public int getScheduleID() {
         return scheduleID;
@@ -93,10 +112,30 @@ public class Schedule implements Parcelable {
         return startDate;
     }
 
+    public String getServerFormatDate(Date date) {
+        SimpleDateFormat serverFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZZZZZ", Locale.getDefault());
+        serverFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+        return serverFormat.format(date);
+    }
+
     public Date getFormattedStartDate() {
+        if (startDate == null || startDate.equalsIgnoreCase("null")) {
+            return getFormattedDate(time);
+        } else {
+            return getFormattedDate(startDate);
+        }
+    }
+
+    public Date getFormattedEndDate() {
+        return getFormattedDate(endDate);
+    }
+
+    private Date getFormattedDate(String stringDate) {
         Date date = new Date();
-        if (!startDate.equalsIgnoreCase("null")) {
-            String editedDate = startDate.replace("T", " ");
+        if (stringDate == null) return date;
+        if (!stringDate.equalsIgnoreCase("null")) {
+            if (stringDate.contains("00:00:00.000Z")) return null;
+            String editedDate = stringDate.replace("T", " ");
             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault());
             try {
                 date = dateFormat.parse(editedDate);
@@ -232,6 +271,56 @@ public class Schedule implements Parcelable {
         this.isSelected = isSelected;
     }
 
+    public enum RowType {
+        TITLE, ITEM, NONE;
+
+        public static int getIntRowType(RowType rowType) {
+            switch (rowType) {
+                case TITLE:
+                    return 1;
+                case ITEM:
+                    return 2;
+                default:
+                    return 0;
+            }
+        }
+
+        public static RowType getRowType(int intRowType) {
+            switch (intRowType) {
+                case 1:
+                    return TITLE;
+                case 2:
+                    return ITEM;
+                default:
+                    return NONE;
+            }
+        }
+    }
+
+    public String getTitle() {
+        return mTitle;
+    }
+
+    public void setTitle(String title) {
+        mTitle = title;
+    }
+
+    public String getSubtitle() {
+        return mSubtitle;
+    }
+
+    public void setSubtitle(String subtitle) {
+        mSubtitle = subtitle;
+    }
+
+    public RowType getRowType() {
+        return mRowType;
+    }
+
+    public void setRowType(RowType rowType) {
+        mRowType = rowType;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (o instanceof Schedule) {
@@ -265,12 +354,40 @@ public class Schedule implements Parcelable {
                 schedule.setCreated(object.getString("created"));
                 schedule.setModified(object.getString("modified"));
                 schedule.setRecording(Recording.buildSingle(object.getJSONObject("recording")));
+                schedule.setRepeatOption();
+                schedule = RepeatingCheck.setRepeating(schedule, schedule.getRepeatOption());
                 schedules.add(schedule);
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
         return schedules;
+    }
+
+    public static Schedule buildSingle(JSONObject response) {
+        Schedule schedule = new Schedule();
+        try {
+            schedule.setScheduleID(response.getInt("scheduleID"));
+            schedule.setRecordingID(response.getInt("recordingID"));
+            schedule.setReceiverID(response.getInt("receiverID"));
+            schedule.setStartDate(response.getString("startDate"));
+            schedule.setEndDate(response.getString("endDate"));
+            schedule.setMinute(response.getString("minute"));
+            schedule.setHour(response.getString("hour"));
+            schedule.setDay(response.getString("day"));
+            schedule.setMonth(response.getString("month"));
+            schedule.setWday(response.getString("wday"));
+            schedule.setTime(response.getString("time"));
+            schedule.setDeleteAfter(response.getBoolean("deleteAfter"));
+            schedule.setCreated(response.getString("created"));
+            schedule.setModified(response.getString("modified"));
+            schedule.setRecording(Recording.buildSingle(response.getJSONObject("recording")));
+            schedule.setRepeatOption();
+            schedule = RepeatingCheck.setRepeating(schedule, schedule.getRepeatOption());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return schedule;
     }
 
     @Override
@@ -296,5 +413,6 @@ public class Schedule implements Parcelable {
         dest.writeString(modified);
         dest.writeParcelable(recording, flags);
         dest.writeByte((byte) (isSelected ? 1 : 0));
+        dest.writeInt(mRepeatOption);
     }
 }

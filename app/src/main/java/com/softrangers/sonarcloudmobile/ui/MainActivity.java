@@ -90,8 +90,8 @@ public class MainActivity extends BaseActivity implements
                 boolean success = jsonResponse.optBoolean("success", false);
                 if (!success) {
                     String message = jsonResponse.optString("message", getString(R.string.unknown_error));
-
                     onCommandFailure(message);
+                    return;
                 }
                 switch (action) {
                     case Api.Command.AUTHENTICATE:
@@ -108,12 +108,11 @@ public class MainActivity extends BaseActivity implements
         dismissLoading();
         SonarCloudApp.user = User.build(response);
         setUpTabs();
-
     }
 
     public void onCommandFailure(String message) {
         dismissLoading();
-        alertUserAboutError(getString(R.string.error), message);
+        Snackbar.make(mViewPager, message, Snackbar.LENGTH_SHORT).show();
     }
 
     public void onErrorOccurred() {
@@ -214,19 +213,28 @@ public class MainActivity extends BaseActivity implements
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        String action = data.getAction();
         switch (resultCode) {
             case RESULT_OK:
-                if (data.getAction().equals(Api.ACTION_ADD_GROUP)) {
-                    mGroup = data.getExtras().getParcelable(AddGroupActivity.GROUP_RESULT_BUNDLE);
-                    statusChanged = true;
-                    Toast.makeText(this, getString(R.string.group_saved), Toast.LENGTH_SHORT).show();
-                    notifyObservers();
-                } else if (data.getAction().equals(ACTION_LOGIN)) {
-                    onSocketConnected();
+                switch (action) {
+                    case Api.ACTION_ADD_GROUP:
+                        mGroup = data.getExtras().getParcelable(AddGroupActivity.GROUP_RESULT_BUNDLE);
+                        statusChanged = true;
+                        Toast.makeText(this, getString(R.string.group_saved), Toast.LENGTH_SHORT).show();
+                        notifyObservers();
+                        break;
+                    case ACTION_LOGIN:
+                        ConnectionReceiver.getInstance().addOnConnectedListener(this);
+                        onSocketConnected();
+                        break;
+                    case ScheduleActivity.ACTION_ADD_SCHEDULE:
+                    case ScheduleActivity.ACTION_EDIT_SCHEDULE:
+                        sendBroadcast(data);
+                        break;
                 }
                 break;
             case RESULT_CANCELED:
-                if (data.getAction().equals(ACTION_LOGIN)) {
+                if (action.equals(ACTION_LOGIN)) {
                     onSocketConnected();
                 }
         }

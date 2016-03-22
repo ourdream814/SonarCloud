@@ -53,6 +53,8 @@ public class Api {
         public static final String DELETE_GROUP = "deleteReceiverGroup";
         public static final String SCHEDULES = "schedules";
         public static final String DELETE_SCHEDULE = "deleteSchedule";
+        public static final String UPDATE_SCHEDULE = "updateSchedule";
+        public static final String CREATE_SCHEDULE = "createSchedule";
     }
 
     /**
