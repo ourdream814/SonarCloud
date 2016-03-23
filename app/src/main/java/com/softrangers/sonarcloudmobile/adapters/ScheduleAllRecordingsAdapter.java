@@ -91,7 +91,7 @@ public class ScheduleAllRecordingsAdapter extends RecyclerView.Adapter<ScheduleA
     @Override
     public void onBindViewHolder(ViewHolder holder, int position) {
         holder.mRecording = mRecordings.get(position);
-        // TODO: 3/20/16 chenge the icon for playing state
+        // TODO: 3/20/16 change the icon for playing state
         holder.mPlayStopButton.setImageResource(
                 holder.mRecording.isPlaying() ? R.mipmap.ic_button_pause : R.mipmap.ic_play
         );

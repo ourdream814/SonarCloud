@@ -1,14 +1,23 @@
 package com.softrangers.sonarcloudmobile.ui;
 
+import android.Manifest;
+import android.annotation.TargetApi;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
+import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
 import android.support.design.widget.TabLayout;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.view.ViewPager;
+import android.support.v7.app.AlertDialog;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -40,6 +49,7 @@ public class MainActivity extends BaseActivity implements
     private static final String USER_STATE = "user_state";
     public static final String ACTION_LOGIN = "ACTION_LOGIN";
     public static final int LOGIN_REQUEST_CODE = 2229;
+    public static final int RECORD_AUDIO_PERM = 29;
     private static ArrayList<GroupObserver> observers;
     public static boolean statusChanged;
     private Group mGroup;
@@ -53,7 +63,6 @@ public class MainActivity extends BaseActivity implements
     public static ArrayList<Receiver> selectedReceivers = new ArrayList<>();
     public static Group selectedGroup;
     private IntentFilter intentFilter;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -126,6 +135,7 @@ public class MainActivity extends BaseActivity implements
         outState.putParcelable(USER_STATE, SonarCloudApp.user);
     }
 
+    @TargetApi(Build.VERSION_CODES.M)
     private void setUpTabs() {
         if (mPagerAdapter.getCount() > 0) return;
         mPagerAdapter.addFragment(new ReceiversFragment(), getString(R.string.select_pa_system));
@@ -181,6 +191,33 @@ public class MainActivity extends BaseActivity implements
 
         assert settings != null;
         settings.setIcon(R.mipmap.ic_settings);
+
+        if (!SonarCloudApp.getInstance().areRecordingPermissed()) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.RECORD_AUDIO)) {
+                new ExplainPermission().execute();
+            } else {
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, RECORD_AUDIO_PERM);
+            }
+        }
+    }
+
+    class ExplainPermission extends AsyncTask<Void, Void, Void> {
+
+        @Override
+        protected Void doInBackground(Void... params) {
+            AlertDialog permissionDialog = new AlertDialog.Builder(MainActivity.this)
+                    .setMessage("We need the permission to record audio in order to be able to make announcements")
+                    .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            ActivityCompat.requestPermissions(MainActivity.this,
+                                    new String[]{Manifest.permission.RECORD_AUDIO}, RECORD_AUDIO_PERM);
+                        }
+                    })
+                    .create();
+            permissionDialog.show();
+            return null;
+        }
     }
 
     public void setToolbarTitle(@NonNull String title) {

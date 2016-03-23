@@ -1,13 +1,16 @@
 package com.softrangers.sonarcloudmobile.utils;
 
+import android.Manifest;
 import android.app.Application;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.Typeface;
 import android.os.IBinder;
+import android.support.v4.content.ContextCompat;
 
 import com.softrangers.sonarcloudmobile.models.User;
 import com.softrangers.sonarcloudmobile.utils.api.SocketService;
@@ -75,6 +78,11 @@ public class SonarCloudApp extends Application {
         }
     };
 
+    public boolean areRecordingPermissed() {
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                == PackageManager.PERMISSION_GRANTED;
+    }
+
     public void setIsFirstLaunch(boolean isFirstLaunch) {
         SharedPreferences.Editor editor = preferences.edit();
         editor.putBoolean(IS_FIRST_LAUNCH, isFirstLaunch);
@@ -88,7 +96,7 @@ public class SonarCloudApp extends Application {
     }
 
     public int getLastRecordingNumber() {
-        return preferences.getInt("recording_number", 0);
+        return preferences.getInt("recording_counter", 0);
     }
 
     public boolean isFirstLaunch() {
