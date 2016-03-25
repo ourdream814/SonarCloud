@@ -80,6 +80,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                 break;
             // User opened an existing schedule
             case ACTION_EDIT_SCHEDULE:
+                toolbarTitle.setText(getString(R.string.edit_schedule));
                 schedule = intent.getExtras().getParcelable(SCHEDULE_EXTRAS);
                 mRequestBuilder.command(Api.Command.UPDATE_SCHEDULE);
                 mRequestBuilder.time(schedule.getTime());
@@ -150,7 +151,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
      */
     private ArrayList<Schedule> buildAdaptersList(final Schedule schedule) {
         ArrayList<Schedule> headerArrayList = new ArrayList<>();
-        Date date = schedule.getFormattedStartDate();
+        Date date = schedule.getFormattedTime();
         int repeatOption = schedule.getRepeatOption();
         // item for Date and Time title
         Schedule dateTimeTitle = new Schedule();
@@ -186,7 +187,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
             repeatUntil.setRowType(Schedule.RowType.ITEM);
             repeatUntil.setTitle(getString(R.string.repeat_until));
             String endDate = schedule.getEndDate();
-            if (!endDate.equals("null") && endDate != null) {
+            if (!endDate.equals("null") && endDate != null && !endDate.contains("00:00:00.000Z")) {
                 repeatUntil.setSubtitle(schedule.getStringDate(schedule.getFormattedEndDate()));
             }
             headerArrayList.add(repeatUntil);
@@ -247,7 +248,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         final SimpleDateFormat serverFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZZZZZ", Locale.getDefault());
         serverFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
         // obtain the date from schedule object
-        final Date date = schedule.getFormattedStartDate();
+        final Date date = schedule.getFormattedTime();
         // get a calendar instance and set the time
         final Calendar calendar = Calendar.getInstance();
         calendar.setTimeInMillis(date.getTime());

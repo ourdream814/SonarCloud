@@ -2,7 +2,6 @@
                 xmlns:tools="http://schemas.android.com/tools"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:animateLayoutChanges="true"
                 tools:context=".ui.fragments.ReceiversFragment">
 
     <RadioGroup
@@ -26,8 +25,8 @@
             android:layout_marginRight="15dp"
             android:background="@drawable/button_blue_borders"
             android:button="@null"
-            android:gravity="center"
             android:checked="true"
+            android:gravity="center"
             android:padding="5dp"
             android:text="@string/receivers"
             android:textColor="@drawable/text_color"/>
@@ -45,22 +44,15 @@
             android:textColor="@drawable/text_color"/>
     </RadioGroup>
 
-    <!--<android.support.v4.widget.SwipeRefreshLayout-->
-        <!--android:id="@+id/receivers_swipe_refreshLayout"-->
-        <!--android:layout_width="match_parent"-->
-        <!--android:layout_height="match_parent"-->
-        <!--android:layout_below="@+id/pa_list_selector">-->
+    <include
+        layout="@layout/group_list_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@+id/pa_list_selector"/>
 
-        <include
-            layout="@layout/pa_systems_list"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_below="@+id/pa_list_selector"/>
-
-        <include
-            layout="@layout/group_list_layout"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_below="@+id/pa_list_selector"/>
-    <!--</android.support.v4.widget.SwipeRefreshLayout>-->
+    <include
+        layout="@layout/pa_systems_list"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@+id/pa_list_selector"/>
 </RelativeLayout>

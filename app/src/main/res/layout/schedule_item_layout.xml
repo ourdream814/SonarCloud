@@ -23,7 +23,7 @@
         android:layout_centerVertical="true"
         android:textColor="@android:color/black"
         android:gravity="center"
-        tools:text="12\nAM"
+        tools:text="57\nAM"
         android:layout_alignParentRight="true"
         android:layout_alignParentEnd="true"/>
 

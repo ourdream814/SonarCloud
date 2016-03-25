@@ -243,9 +243,9 @@ public class AddGroupActivity extends BaseActivity {
     };
 
     @Override
-    protected void onStop() {
-        super.onStop();
+    public void onBackPressed() {
         unregisterReceiver(mBroadcastReceiver);
+        super.onBackPressed();
     }
 
     private void onResponseSucceed(JSONObject response) {

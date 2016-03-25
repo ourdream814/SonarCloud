@@ -62,5 +62,6 @@
     <string name="select_date">Select a date</string>
     <string name="set">Set</string>
     <string name="repeat_until">Repeat until</string>
+    <string name="edit_schedule">Edit Schedule</string>
 
 </resources>

@@ -237,6 +237,7 @@ public class Recording implements Parcelable {
 
     public static Recording buildSingle(JSONObject record) {
         Recording recording = new Recording();
+        if (record == null) return recording;
         try {
             recording.setRecordingId(record.getInt("recordingID"));
             recording.setSendComplete(record.getBoolean("sendingComplete"));

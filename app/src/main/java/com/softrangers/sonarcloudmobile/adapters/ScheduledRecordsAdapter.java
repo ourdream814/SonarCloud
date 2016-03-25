@@ -51,7 +51,7 @@ public class ScheduledRecordsAdapter extends RecyclerView.Adapter<ScheduledRecor
 
     public void addItems(ArrayList<Schedule> recordings) {
         for (Schedule recording : recordings) {
-            if (recording.getFormattedStartDate() == null) return;
+//            if (recording.getFormattedStartDate() == null) return;
             if (mSchedules.size() == 0) mSchedules.add(recording);
             boolean exists = false;
             for (Schedule rec : mSchedules) {
@@ -96,7 +96,7 @@ public class ScheduledRecordsAdapter extends RecyclerView.Adapter<ScheduledRecor
                 mContext.getString(R.string.recording) + " " + holder.mSchedule.getRecordingID()
         );
 
-        Date date = holder.mSchedule.getFormattedStartDate();
+        Date date = holder.mSchedule.getFormattedTime();
 
         holder.mRecordLength.setText(holder.mSchedule.getRecording().getFromatedLength());
 

@@ -11,6 +11,9 @@ import android.support.v4.app.Fragment;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.helper.ItemTouchHelper;
+import android.util.DisplayMetrics;
+import android.util.TypedValue;
+import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -20,8 +23,10 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import com.softrangers.sonarcloudmobile.R;
+import com.softrangers.sonarcloudmobile.adapters.DaysAdapter;
 import com.softrangers.sonarcloudmobile.adapters.ScheduleAllRecordingsAdapter;
 import com.softrangers.sonarcloudmobile.adapters.ScheduledRecordsAdapter;
+import com.softrangers.sonarcloudmobile.models.Day;
 import com.softrangers.sonarcloudmobile.models.Group;
 import com.softrangers.sonarcloudmobile.models.Receiver;
 import com.softrangers.sonarcloudmobile.models.Recording;
@@ -42,7 +47,7 @@ import java.util.ArrayList;
  * A simple {@link Fragment} subclass.
  */
 public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheckedChangeListener,
-        ScheduledRecordsAdapter.OnScheduleClickListener {
+        ScheduledRecordsAdapter.OnScheduleClickListener, DaysAdapter.OnDayClickListener {
 
     private static RelativeLayout scheduledLayout;
     private static LinearLayout allScheduleLayout;
@@ -51,6 +56,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     private static TextView noRecordsText;
 
     public static boolean isScheduleSelected;
+    private DaysAdapter mDaysAdapter;
 
     private static ScheduleAllRecordingsAdapter allRecordingsAdapter;
     private static ScheduledRecordsAdapter scheduledRecordsAdapter;
@@ -68,6 +74,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         View view = inflater.inflate(R.layout.fragment_schedule, container, false);
         // get a link to fragment activity
         mActivity = (MainActivity) getActivity();
+        mDaysAdapter = new DaysAdapter();
         IntentFilter intentFilter = new IntentFilter(Api.Command.RECORDINGS);
         intentFilter.addAction(Api.Command.SCHEDULES);
         intentFilter.addAction(Api.EXCEPTION);
@@ -106,7 +113,17 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
 
         // initialize horizontal days list
         RecyclerView daysHorizontalList = (RecyclerView) view.findViewById(R.id.schedule_horizontal_list);
-        daysHorizontalList.setLayoutManager(new LinearLayoutManager(mActivity, LinearLayoutManager.HORIZONTAL, false));
+        LinearLayoutManager layoutManager = new LinearLayoutManager(mActivity, LinearLayoutManager.HORIZONTAL, false);
+        daysHorizontalList.setLayoutManager(layoutManager);
+
+        mDaysAdapter.setOnDayClickListener(this);
+        daysHorizontalList.setAdapter(mDaysAdapter);
+        // scroll to selected position and set it in the center of the screen
+        int margin = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 30, mActivity.getResources().getDisplayMetrics());
+        int screenWidht = mActivity.getWindow().getDecorView().getWidth() - margin;
+        int selectedPosition = mDaysAdapter.getSelectedPostion();
+        addSchedulesToList(mDaysAdapter.getDays().get(selectedPosition).getSchedules());
+        layoutManager.scrollToPositionWithOffset(selectedPosition, screenWidht / 2);
 
         // initialize scheduled recordings list
         RecyclerView scheduledList = (RecyclerView) view.findViewById(R.id.schedule_vertical_list);
@@ -176,6 +193,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         scheduledRecordsAdapter.clearList();
         // show the unselected receiver text
         unselectedText.setVisibility(View.VISIBLE);
+        noRecordsText.setVisibility(View.GONE);
     }
 
     /**
@@ -299,16 +317,16 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
      */
     private void addSchedulesToList(ArrayList<Schedule> schedules) {
         // add schedules to adapter's list
+        scheduledRecordsAdapter.clearList();
         scheduledRecordsAdapter.addItems(schedules);
         // check if there are any item in the list
         // if false then show the no data text and hide the list layout
         // else hide the no data text and show the list layout
         if (scheduledRecordsAdapter.getItemCount() <= 0) {
-            noRecordsText.setVisibility(View.VISIBLE);
-            scheduledLayout.setVisibility(View.GONE);
+            if (scheduledLayout.getVisibility() == View.VISIBLE)
+                noRecordsText.setVisibility(View.VISIBLE);
         } else {
             noRecordsText.setVisibility(View.GONE);
-            scheduledLayout.setVisibility(View.VISIBLE);
         }
     }
 
@@ -368,7 +386,9 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     };
 
     private void onSchedulesReceived(JSONObject response) {
-        addSchedulesToList(Schedule.build(response));
+        ArrayList<Schedule> schedules = Schedule.build(response);
+        ArrayList<Day> days = Schedule.sortScheduled(schedules, mDaysAdapter.getDays());
+        addSchedulesToList(mDaysAdapter.getDays().get(mDaysAdapter.getSelectedPostion()).getSchedules());
     }
 
     private void onRecordingsReceived(JSONObject response) {
@@ -454,5 +474,10 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     public void onDetach() {
         super.onDetach();
         mActivity.unregisterReceiver(mBroadcastReceiver);
+    }
+
+    @Override
+    public void onDayClick(Day day, int position) {
+        addSchedulesToList(day.getSchedules());
     }
 }

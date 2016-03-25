@@ -126,11 +126,17 @@ public class Schedule implements Parcelable {
         }
     }
 
+    public Date getFormattedTime() {
+        if (time != null && !time.equals("null")) {
+            return getFormattedDate(time);
+        } else return null;
+    }
+
     public Date getFormattedEndDate() {
         return getFormattedDate(endDate);
     }
 
-    private Date getFormattedDate(String stringDate) {
+    public Date getFormattedDate(String stringDate) {
         Date date = new Date();
         if (stringDate == null) return date;
         if (!stringDate.equalsIgnoreCase("null")) {
@@ -353,15 +359,41 @@ public class Schedule implements Parcelable {
                 schedule.setDeleteAfter(object.getBoolean("deleteAfter"));
                 schedule.setCreated(object.getString("created"));
                 schedule.setModified(object.getString("modified"));
-                schedule.setRecording(Recording.buildSingle(object.getJSONObject("recording")));
+                schedule.setRecording(Recording.buildSingle(object.optJSONObject("recording")));
                 schedule.setRepeatOption();
-                schedule = RepeatingCheck.setRepeating(schedule, schedule.getRepeatOption());
+
+                if (schedule.time == null && schedule.time.equals("null"))
+                    schedule = RepeatingCheck.setRepeating(schedule, schedule.getRepeatOption());
+
                 schedules.add(schedule);
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
         return schedules;
+    }
+
+    private ArrayList<Schedule> hourlySchedules = new ArrayList<>();
+
+    public static ArrayList<Day> sortScheduled(ArrayList<Schedule> schedules, ArrayList<Day> days) {
+        for (Schedule schedule : schedules) {
+            Date scheduleDate = schedule.getFormattedTime();
+            if (scheduleDate != null) {
+                int scheduleDayDate = scheduleDate.getDate();
+                int scheduleMonth = scheduleDate.getMonth();
+                int scheduleYear = scheduleDate.getYear();
+                for (Day day : days) {
+                    Date dayDate = day.getDate();
+                    int dayOfMonth = dayDate.getDate();
+                    int month = dayDate.getMonth();
+                    int year = dayDate.getYear();
+                    if (dayOfMonth == scheduleDayDate && month == scheduleMonth && year == scheduleYear) {
+                        day.addSchedules(schedule);
+                    }
+                }
+            }
+        }
+        return days;
     }
 
     public static Schedule buildSingle(JSONObject response) {

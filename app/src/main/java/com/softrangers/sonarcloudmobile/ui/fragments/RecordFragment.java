@@ -78,7 +78,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         mStartRecordingBtn.setOnClickListener(this);
         mStopRecordingBtn = (ImageButton) view.findViewById(R.id.stop_recording_button);
         mStopRecordingBtn.setOnClickListener(this);
-        mStopRecordingBtn.setActivated(false);
+        invalidateViews();
         return view;
     }
 
@@ -234,8 +234,10 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
             case RECORDING:
                 mChronometer.setVisibility(View.VISIBLE);
                 mStartRecordingBtn.setImageResource(R.mipmap.ic_button_pause);
+                mStartRecordingBtn.setClickable(false);
                 mStopRecordingBtn.setImageResource(R.mipmap.ic_button_stop);
                 mStopRecordingBtn.setActivated(true);
+                mStopRecordingBtn.setClickable(true);
                 mChronometer.start();
                 break;
             case PAUSED:
@@ -244,8 +246,10 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                 break;
             case STOPPED:
                 mStartRecordingBtn.setImageResource(R.mipmap.ic_button_record);
+                mStartRecordingBtn.setClickable(true);
                 mStopRecordingBtn.setImageResource(R.mipmap.ic_button_stop_deactivated);
                 mStopRecordingBtn.setActivated(false);
+                mStopRecordingBtn.setClickable(false);
                 mChronometer.setVisibility(View.INVISIBLE);
                 mChronometer.reset();
                 break;

@@ -100,7 +100,7 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
 
         // Initialize PAs list
         mPASystems = new ArrayList<>();
-        setUpReceiversListView(mPASystems);
+//        setUpReceiversListView(mPASystems);
 
         if (savedInstanceState != null) {
             mPASystems = savedInstanceState.getParcelableArrayList(PA_LIST_STATE);
@@ -320,19 +320,18 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
      */
     @Override
     public void onChildClick(Receiver receiver, int position) {
+        receiver.setIsSelected(!receiver.isSelected());
+        mReceiverListAdapter.notifyDataSetChanged();
+
         if (mGroups != null)
             setUpGroupsListView(clearGroupsSelection(mGroups));
         MainActivity.selectedGroup = null;
 
-        if (receiver.isSelected()) {
-            receiver.setIsSelected(false);
-            MainActivity.selectedReceivers.remove(receiver);
-        } else {
-            receiver.setIsSelected(true);
+        if (receiver.isSelected())
             MainActivity.selectedReceivers.add(receiver);
-        }
+        else MainActivity.selectedReceivers.add(receiver);
+
         MainActivity.statusChanged = true;
-        mReceiverListAdapter.notifyDataSetChanged();
     }
 
     /**
@@ -373,19 +372,7 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
                         public void onDismissed(Snackbar snackbar, int event) {
                             switch (event) {
                                 case DISMISS_EVENT_TIMEOUT:
-                                    if (group.equals(MainActivity.selectedGroup)) {
-                                        MainActivity.selectedGroup = null;
-                                        MainActivity.statusChanged = true;
-                                    }
-                                    deleteGroupFromServer(group);
-                                    break;
                                 case DISMISS_EVENT_CONSECUTIVE:
-                                    if (group.equals(MainActivity.selectedGroup)) {
-                                        MainActivity.selectedGroup = null;
-                                        MainActivity.statusChanged = true;
-                                    }
-                                    deleteGroupFromServer(group);
-                                    break;
                                 case DISMISS_EVENT_MANUAL:
                                     if (group.equals(MainActivity.selectedGroup)) {
                                         MainActivity.selectedGroup = null;
@@ -411,7 +398,7 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
         // We call collapseGroupWithAnimation(int) and
         // expandGroupWithAnimation(int) to animate group
         // expansion/collapse.
-        if (mListView.isGroupExpanded(groupPosition)) {
+        if (parent.isGroupExpanded(groupPosition)) {
             mListView.collapseGroupWithAnimation(groupPosition);
         } else {
             mListView.expandGroupWithAnimation(groupPosition);
@@ -466,6 +453,8 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
             // Send the request to server
             SonarCloudApp.socketService.sendRequest(request.toJSON());
         }
+
+        setUpReceiversListView(mPASystems);
     }
 
     private void onReceiversReceived(JSONObject response) {
@@ -482,10 +471,11 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
                     if (receiver.getSeqValue() == sys.getSeqValue()) {
                         // set receivers for current system if true
                         sys.setReceivers(receivers);
+                        break;
                     }
                 }
             }
-            mReceiverListAdapter.refreshList(mPASystems);
+            mReceiverListAdapter.notifyDataSetChanged();
         } catch (Exception e) {
             e.printStackTrace();
         }

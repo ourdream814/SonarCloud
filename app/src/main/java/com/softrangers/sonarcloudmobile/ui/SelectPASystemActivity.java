@@ -66,14 +66,13 @@ public class SelectPASystemActivity extends BaseActivity implements
 
     @Override
     public void onChildClick(Receiver receiver, int position) {
-        if (receiver.isSelected()) {
-            receiver.setIsSelected(false);
-            mReceivers.remove(receiver);
-        } else {
-            receiver.setIsSelected(true);
-            mReceivers.add(receiver);
-        }
+        receiver.setIsSelected(!receiver.isSelected());
         mAdapter.notifyDataSetChanged();
+
+        if (receiver.isSelected())
+            mReceivers.remove(receiver);
+        else
+            mReceivers.add(receiver);
     }
 
     @Override
