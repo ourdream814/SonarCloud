@@ -157,7 +157,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
                     // else check if there are any receiver selected and if true get all recordings
                     // for selected receiver
                     if (MainActivity.selectedGroup != null) {
-                        getAllRecordingsFromServer(MainActivity.selectedGroup);
+                        getAllRecordingsFromServer(MainActivity.selectedGroup.getReceivers());
                     } else if (MainActivity.selectedReceivers.size() > 0) {
                         getAllRecordingsFromServer(MainActivity.selectedReceivers);
                     }
@@ -175,7 +175,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
                 // check if there are any receiver selected
                 // if true then get all scheduled recordings for selected receivers
                 if (MainActivity.selectedGroup != null) {
-                    getAllScheduledRecords(MainActivity.selectedGroup);
+                    getAllScheduledRecords(MainActivity.selectedGroup.getReceivers());
                 } else if (MainActivity.selectedReceivers.size() > 0) {
                     getAllScheduledRecords(MainActivity.selectedReceivers);
                 }
@@ -217,26 +217,6 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     }
 
     /**
-     * Get all scheduled recordings from server for given receivers group
-     *
-     * @param group of receivers for which to get recordings
-     */
-    public void getAllScheduledRecords(Group group) {
-        // hide the unselected text
-        unselectedText.setVisibility(View.GONE);
-        // clear current scheduled list
-        scheduledRecordsAdapter.clearList();
-        // build a request with provided receivers
-        Request.Builder builder = new Request.Builder();
-        builder.command(Api.Command.SCHEDULES);
-        for (Receiver receiver : group.getReceivers()) {
-            builder.receiverId(receiver.getReceiverId());
-            // send request to server
-            SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
-        }
-    }
-
-    /**
      * Get all recordings from server for given receivers
      *
      * @param receivers for which to get recordings
@@ -256,33 +236,6 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
             Request.Builder builder = new Request.Builder();
             builder.command(Api.Command.RECORDINGS);
             for (Receiver receiver : receivers) {
-                builder.receiverId(receiver.getReceiverId());
-                // send request to server
-                SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
-            }
-        }
-    }
-
-    /**
-     * Get all recordings from server for given receivers group
-     *
-     * @param group of receivers for which to get recordings
-     */
-    public void getAllRecordingsFromServer(Group group) {
-        // check which button is selected
-        // if scheduled recordings is selected get scheduled recordings from server
-        // else get all recordings from server
-        if (isScheduleSelected) {
-            getAllScheduledRecords(group);
-        } else {
-            // hide the unselected text
-            unselectedText.setVisibility(View.GONE);
-            // clear current scheduled list
-            allRecordingsAdapter.clearList();
-            // build a request with provided receivers
-            Request.Builder builder = new Request.Builder();
-            builder.command(Api.Command.RECORDINGS);
-            for (Receiver receiver : group.getReceivers()) {
                 builder.receiverId(receiver.getReceiverId());
                 // send request to server
                 SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
@@ -323,8 +276,10 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         // if false then show the no data text and hide the list layout
         // else hide the no data text and show the list layout
         if (scheduledRecordsAdapter.getItemCount() <= 0) {
-            if (scheduledLayout.getVisibility() == View.VISIBLE)
-                noRecordsText.setVisibility(View.VISIBLE);
+            if (MainActivity.selectedReceivers.size() > 0 || MainActivity.selectedGroup != null) {
+                if (scheduledLayout.getVisibility() == View.VISIBLE)
+                    noRecordsText.setVisibility(View.VISIBLE);
+            }
         } else {
             noRecordsText.setVisibility(View.GONE);
         }
@@ -386,8 +341,8 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     };
 
     private void onSchedulesReceived(JSONObject response) {
-        ArrayList<Schedule> schedules = Schedule.build(response);
-        ArrayList<Day> days = Schedule.sortScheduled(schedules, mDaysAdapter.getDays());
+        ArrayList<Schedule> allSchedules = Schedule.build(response);
+        Schedule.sortScheduled(allSchedules, mDaysAdapter.getDays());
         addSchedulesToList(mDaysAdapter.getDays().get(mDaysAdapter.getSelectedPostion()).getSchedules());
     }
 

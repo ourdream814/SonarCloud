@@ -85,6 +85,10 @@ public class GroupsListAdapter extends RecyclerView.Adapter<GroupsListAdapter.Vi
         return mGroups.size();
     }
 
+    public ArrayList<Group> getList() {
+        return mGroups;
+    }
+
     public class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
         final ImageView mCheckCircle;
         final TextView mGroupTitle;

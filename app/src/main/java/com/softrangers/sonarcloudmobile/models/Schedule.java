@@ -3,12 +3,17 @@ package com.softrangers.sonarcloudmobile.models;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import com.cronutils.model.Cron;
+import com.cronutils.model.definition.CronDefinition;
+import com.cronutils.model.definition.CronDefinitionBuilder;
+import com.cronutils.model.time.ExecutionTime;
+import com.cronutils.parser.CronParser;
 import com.softrangers.sonarcloudmobile.utils.RepeatingCheck;
 
+import org.joda.time.DateTime;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -18,21 +23,25 @@ import java.util.TimeZone;
 /**
  * Created by eduard on 3/20/16.
  */
-public class Schedule implements Parcelable {
+public class Schedule implements Parcelable, Cloneable {
     private int scheduleID;
     private int recordingID;
     private int receiverID;
     private String startDate;
+    private Date scheduleStartDate;
     private String endDate;
+    private Date scheduleEndDate;
     private String minute;
     private String hour;
     private String day;
     private String month;
     private String wday;
     private String time;
+    private Date scheduleTime;
     private boolean deleteAfter;
     private String created;
     private String modified;
+    private String cronExpression;
     private Recording recording;
     private boolean isSelected;
 
@@ -327,6 +336,38 @@ public class Schedule implements Parcelable {
         mRowType = rowType;
     }
 
+    public Date getScheduleStartDate() {
+        return scheduleStartDate;
+    }
+
+    public void setScheduleStartDate(Date scheduleStartDate) {
+        this.scheduleStartDate = scheduleStartDate;
+    }
+
+    public Date getScheduleEndDate() {
+        return scheduleEndDate;
+    }
+
+    public void setScheduleEndDate(Date scheduleEndDate) {
+        this.scheduleEndDate = scheduleEndDate;
+    }
+
+    public Date getScheduleTime() {
+        return scheduleTime;
+    }
+
+    public void setScheduleTime(Date scheduleTime) {
+        this.scheduleTime = scheduleTime;
+    }
+
+    public String getCronExpression() {
+        return cronExpression;
+    }
+
+    public void setCronExpression(String cronExpression) {
+        this.cronExpression = cronExpression;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (o instanceof Schedule) {
@@ -348,22 +389,31 @@ public class Schedule implements Parcelable {
                 schedule.setScheduleID(object.getInt("scheduleID"));
                 schedule.setRecordingID(object.getInt("recordingID"));
                 schedule.setReceiverID(object.getInt("receiverID"));
+
                 schedule.setStartDate(object.getString("startDate"));
+                schedule.setScheduleStartDate(schedule.getFormattedStartDate());
+
                 schedule.setEndDate(object.getString("endDate"));
+                schedule.setScheduleEndDate(schedule.getFormattedEndDate());
+
                 schedule.setMinute(object.getString("minute"));
                 schedule.setHour(object.getString("hour"));
                 schedule.setDay(object.getString("day"));
                 schedule.setMonth(object.getString("month"));
                 schedule.setWday(object.getString("wday"));
+
                 schedule.setTime(object.getString("time"));
+                schedule.setScheduleTime(schedule.getFormattedTime());
+
                 schedule.setDeleteAfter(object.getBoolean("deleteAfter"));
                 schedule.setCreated(object.getString("created"));
                 schedule.setModified(object.getString("modified"));
                 schedule.setRecording(Recording.buildSingle(object.optJSONObject("recording")));
                 schedule.setRepeatOption();
 
-                if (schedule.time == null && schedule.time.equals("null"))
-                    schedule = RepeatingCheck.setRepeating(schedule, schedule.getRepeatOption());
+                if (schedule.time == null || schedule.time.equals("null")) {
+                    schedule.parseCronJob();
+                }
 
                 schedules.add(schedule);
             }
@@ -372,8 +422,6 @@ public class Schedule implements Parcelable {
         }
         return schedules;
     }
-
-    private ArrayList<Schedule> hourlySchedules = new ArrayList<>();
 
     public static ArrayList<Day> sortScheduled(ArrayList<Schedule> schedules, ArrayList<Day> days) {
         for (Schedule schedule : schedules) {
@@ -420,6 +468,24 @@ public class Schedule implements Parcelable {
             e.printStackTrace();
         }
         return schedule;
+    }
+
+    private CronDefinition mCronDefinition = CronDefinitionBuilder.defineCron().withMinutes().and().withHours()
+            .and().withDayOfMonth().and().withMonth().and().withDayOfWeek().and().instance();
+
+    private CronParser mCronParser = new CronParser(mCronDefinition);
+
+
+    public void parseCronJob() {
+        Cron mCron = mCronParser.parse(minute + " " + hour + " " + day
+                + " " + month + " " + wday);
+        setCronExpression(mCron.asString());
+    }
+
+    public DateTime getNextExecutionDate() {
+        DateTime now = DateTime.now();
+        ExecutionTime executionTime = ExecutionTime.forCron(mCronParser.parse(cronExpression));
+        return executionTime.nextExecution(now);
     }
 
     @Override

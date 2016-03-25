@@ -76,18 +76,19 @@ public class ReceiverListAdapter extends AnimatedExpandableListView.AnimatedExpa
             holder.mChildTitle = (TextView) row.findViewById(R.id.child_title);
             holder.mChildTitle.setTypeface(SonarCloudApp.avenirBook);
             holder.mCheckBox = (ImageView) row.findViewById(R.id.check_box_image);
-            row.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (mOnItemClickListener != null) {
-                        mOnItemClickListener.onChildClick(receiver, childPosition);
-                    }
-                }
-            });
             row.setTag(holder);
         } else {
             holder = (ChildViewHolder) row.getTag();
         }
+
+        row.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mOnItemClickListener != null) {
+                    mOnItemClickListener.onChildClick(receiver, childPosition);
+                }
+            }
+        });
         holder.mCheckBox.setImageResource(receiver.isSelected() ? R.mipmap.ic_circle_checked : R.mipmap.ic_circle);
         holder.mChildTitle.setText(receiver.getName());
         return row;

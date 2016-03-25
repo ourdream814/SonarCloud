@@ -209,38 +209,35 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
      */
     @Override
     public void onGroupClicked(Group group, int position) {
-        Log.d(this.getClass().getSimpleName(), String.valueOf(group.isSelected()));
-        if (!group.isSelected()) {
+        if (!group.isSelected())
             MainActivity.selectedGroup = null;
-        } else {
-            MainActivity.selectedGroup = group;
-        }
-        MainActivity.statusChanged = true;
+        else MainActivity.selectedGroup = group;
+
         if (MainActivity.selectedReceivers.size() > 0)
-            mReceiverListAdapter.refreshList(clearPASystemSelection(mPASystems));
+            MainActivity.selectedReceivers.clear();
+
+        MainActivity.statusChanged = true;
+        clearPASystemSelection();
     }
 
     /**
      * Clear all selected receivers
-     *
-     * @param systems list with pa systems for which to clear the selection
-     * @return a list with unselected receivers
      */
-    private ArrayList<PASystem> clearPASystemSelection(ArrayList<PASystem> systems) {
-        for (PASystem system : systems) {
+    private void clearPASystemSelection() {
+        for (PASystem system : mReceiverListAdapter.getList()) {
             for (Receiver receiver : system.getReceivers()) {
                 receiver.setIsSelected(false);
                 MainActivity.selectedReceivers.clear();
             }
         }
-        return systems;
+        mReceiverListAdapter.notifyDataSetChanged();
     }
 
-    private ArrayList<Group> clearGroupsSelection(ArrayList<Group> groups) {
-        for (Group group : groups) {
+    private void clearGroupsSelection() {
+        for (Group group : mGroupsListAdapter.getList()) {
             group.setIsSelected(false);
         }
-        return groups;
+        mGroupsListAdapter.notifyDataSetChanged();
     }
 
     /**
@@ -274,7 +271,7 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
                 break;
             }
         }
-        clearGroupsSelection(mGroups);
+        clearGroupsSelection();
         group.setIsSelected(true);
         if (position > -1) {
             mGroups.add(position, group);
@@ -282,6 +279,7 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
             mGroups.add(group);
         }
         MainActivity.selectedGroup = group;
+        MainActivity.statusChanged = true;
         mGroupsListAdapter.notifyDataSetChanged();
     }
 
@@ -324,12 +322,13 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
         mReceiverListAdapter.notifyDataSetChanged();
 
         if (mGroups != null)
-            setUpGroupsListView(clearGroupsSelection(mGroups));
+            clearGroupsSelection();
+
         MainActivity.selectedGroup = null;
 
         if (receiver.isSelected())
             MainActivity.selectedReceivers.add(receiver);
-        else MainActivity.selectedReceivers.add(receiver);
+        else MainActivity.selectedReceivers.remove(receiver);
 
         MainActivity.statusChanged = true;
     }

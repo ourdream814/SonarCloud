@@ -8,6 +8,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+import android.support.design.widget.Snackbar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -131,15 +132,16 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         intent.setAction(mAction);
         intent.putExtra(mAction, schedule);
         setResult(RESULT_OK, intent);
+        unregisterReceiver(mBroadcastReceiver);
         finish();
     }
 
     private void onCommandFailure(String message) {
-
+        Snackbar.make(mRecyclerView, message, Snackbar.LENGTH_SHORT).show();
     }
 
     private void onErrorOccurred() {
-
+        Snackbar.make(mRecyclerView, getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
     }
 
     /**
@@ -233,7 +235,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
     @Override
     public void onBackPressed() {
         setResult(RESULT_CANCELED, new Intent(mAction));
-        finish();
+        unregisterReceiver(mBroadcastReceiver);
         super.onBackPressed();
     }
 
@@ -371,11 +373,5 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                 pickerDialog.show();
                 break;
         }
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        unregisterReceiver(mBroadcastReceiver);
     }
 }

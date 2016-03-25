@@ -255,6 +255,7 @@ public class AddGroupActivity extends BaseActivity {
         intent.setAction(Api.ACTION_ADD_GROUP);
         intent.putExtra(GROUP_RESULT_BUNDLE, mGroup);
         setResult(RESULT_OK, intent);
+        unregisterReceiver(mBroadcastReceiver);
         finish();
     }
 

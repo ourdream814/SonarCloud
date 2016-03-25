@@ -160,7 +160,7 @@ public class MainActivity extends BaseActivity implements
                     if (selectedReceivers.size() > 0) {
                         scheduleFragment.getAllRecordingsFromServer(selectedReceivers);
                     } else if (selectedGroup != null) {
-                        scheduleFragment.getAllRecordingsFromServer(selectedGroup);
+                        scheduleFragment.getAllRecordingsFromServer(selectedGroup.getReceivers());
                     } else {
                         scheduleFragment.clearList();
                     }

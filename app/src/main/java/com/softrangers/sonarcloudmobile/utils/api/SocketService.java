@@ -209,7 +209,6 @@ public class SocketService extends Service {
                     restartConnection();
                     sendRequest(mLastRequest);
                 }
-                mLastRequest = null;
                 JSONObject response = new JSONObject(stringResponse);
                 String command = response.optString("originalCommand", Api.EXCEPTION);
                 // send the response to ui
@@ -217,6 +216,7 @@ public class SocketService extends Service {
                 responseContainer.setAction(command);
                 responseContainer.putExtra(command, stringResponse);
                 sendBroadcast(responseContainer);
+                mLastRequest = null;
             } catch (Exception e) {
                 e.printStackTrace();
             }

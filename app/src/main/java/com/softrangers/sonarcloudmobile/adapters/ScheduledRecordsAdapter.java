@@ -96,7 +96,7 @@ public class ScheduledRecordsAdapter extends RecyclerView.Adapter<ScheduledRecor
                 mContext.getString(R.string.recording) + " " + holder.mSchedule.getRecordingID()
         );
 
-        Date date = holder.mSchedule.getFormattedTime();
+        Date date = holder.mSchedule.getScheduleTime();
 
         holder.mRecordLength.setText(holder.mSchedule.getRecording().getFromatedLength());
 

@@ -70,9 +70,9 @@ public class SelectPASystemActivity extends BaseActivity implements
         mAdapter.notifyDataSetChanged();
 
         if (receiver.isSelected())
-            mReceivers.remove(receiver);
-        else
             mReceivers.add(receiver);
+        else
+            mReceivers.remove(receiver);
     }
 
     @Override
