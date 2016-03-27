@@ -123,9 +123,6 @@ public class AddGroupActivity extends BaseActivity {
     private View.OnClickListener mOnCloseClickListener = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
-            Intent intent = new Intent(AddGroupActivity.this, MainActivity.class);
-            intent.setAction("Add group canceled");
-            setResult(RESULT_CANCELED, intent);
             onBackPressed();
         }
     };
@@ -244,6 +241,9 @@ public class AddGroupActivity extends BaseActivity {
 
     @Override
     public void onBackPressed() {
+        Intent intent = new Intent(AddGroupActivity.this, MainActivity.class);
+        intent.setAction("Add group canceled");
+        setResult(RESULT_CANCELED, intent);
         unregisterReceiver(mBroadcastReceiver);
         super.onBackPressed();
     }

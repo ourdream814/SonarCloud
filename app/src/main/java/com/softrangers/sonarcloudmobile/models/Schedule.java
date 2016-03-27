@@ -24,31 +24,32 @@ import java.util.TimeZone;
  * Created by eduard on 3/20/16.
  */
 public class Schedule implements Parcelable, Cloneable {
-    private int scheduleID;
-    private int recordingID;
-    private int receiverID;
-    private String startDate;
-    private Date scheduleStartDate;
-    private String endDate;
-    private Date scheduleEndDate;
-    private String minute;
-    private String hour;
-    private String day;
-    private String month;
-    private String wday;
-    private String time;
-    private Date scheduleTime;
-    private boolean deleteAfter;
-    private String created;
-    private String modified;
-    private String cronExpression;
-    private Recording recording;
-    private boolean isSelected;
-
-    private RowType mRowType;
-    private String mTitle;
-    private String mSubtitle;
-    private int mRepeatOption;
+    protected int scheduleID;
+    protected int recordingID;
+    protected int receiverID;
+    protected String startDate;
+    protected Date scheduleStartDate;
+    protected String endDate;
+    protected Date scheduleEndDate;
+    protected String minute;
+    protected String hour;
+    protected String day;
+    protected String month;
+    protected String wday;
+    protected String time;
+    protected Date scheduleTime;
+    protected boolean deleteAfter;
+    protected String created;
+    protected String modified;
+    protected String cronExpression;
+    protected Recording recording;
+    protected boolean isSelected;
+    protected Date scheduleDate;
+    protected Date comparatorDate;
+    protected RowType mRowType;
+    protected String mTitle;
+    protected String mSubtitle;
+    protected int mRepeatOption;
 
     public Schedule() {
     }
@@ -68,9 +69,16 @@ public class Schedule implements Parcelable, Cloneable {
         deleteAfter = in.readByte() != 0;
         created = in.readString();
         modified = in.readString();
+        cronExpression = in.readString();
         recording = in.readParcelable(Recording.class.getClassLoader());
         isSelected = in.readByte() != 0;
+        mTitle = in.readString();
+        mSubtitle = in.readString();
         mRepeatOption = in.readInt();
+        scheduleStartDate = (Date) in.readSerializable();
+        scheduleEndDate = (Date) in.readSerializable();
+        scheduleTime = (Date) in.readSerializable();
+        scheduleDate = (Date) in.readSerializable();
     }
 
     public static final Creator<Schedule> CREATOR = new Creator<Schedule>() {
@@ -149,7 +157,6 @@ public class Schedule implements Parcelable, Cloneable {
         Date date = new Date();
         if (stringDate == null) return date;
         if (!stringDate.equalsIgnoreCase("null")) {
-            if (stringDate.contains("00:00:00.000Z")) return null;
             String editedDate = stringDate.replace("T", " ");
             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault());
             try {
@@ -286,6 +293,39 @@ public class Schedule implements Parcelable, Cloneable {
         this.isSelected = isSelected;
     }
 
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeInt(scheduleID);
+        dest.writeInt(recordingID);
+        dest.writeInt(receiverID);
+        dest.writeString(startDate);
+        dest.writeString(endDate);
+        dest.writeString(minute);
+        dest.writeString(hour);
+        dest.writeString(day);
+        dest.writeString(month);
+        dest.writeString(wday);
+        dest.writeString(time);
+        dest.writeByte((byte) (deleteAfter ? 1 : 0));
+        dest.writeString(created);
+        dest.writeString(modified);
+        dest.writeString(cronExpression);
+        dest.writeParcelable(recording, flags);
+        dest.writeByte((byte) (isSelected ? 1 : 0));
+        dest.writeString(mTitle);
+        dest.writeString(mSubtitle);
+        dest.writeInt(mRepeatOption);
+        dest.writeSerializable(scheduleStartDate);
+        dest.writeSerializable(scheduleEndDate);
+        dest.writeSerializable(scheduleTime);
+        dest.writeSerializable(scheduleDate);
+    }
+
     public enum RowType {
         TITLE, ITEM, NONE;
 
@@ -368,6 +408,22 @@ public class Schedule implements Parcelable, Cloneable {
         this.cronExpression = cronExpression;
     }
 
+    public Date getScheduleDate() {
+        return scheduleDate;
+    }
+
+    public void setScheduleDate(Date scheduleDate) {
+        this.scheduleDate = scheduleDate;
+    }
+
+    public Date getComparatorDate() {
+        return comparatorDate;
+    }
+
+    public void setComparatorDate(Date comparatorDate) {
+        this.comparatorDate = comparatorDate;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (o instanceof Schedule) {
@@ -391,10 +447,12 @@ public class Schedule implements Parcelable, Cloneable {
                 schedule.setReceiverID(object.getInt("receiverID"));
 
                 schedule.setStartDate(object.getString("startDate"));
-                schedule.setScheduleStartDate(schedule.getFormattedStartDate());
+                if (schedule.startDate != null && !schedule.startDate.equals("null"))
+                    schedule.setScheduleStartDate(schedule.getFormattedDate(schedule.startDate));
 
                 schedule.setEndDate(object.getString("endDate"));
-                schedule.setScheduleEndDate(schedule.getFormattedEndDate());
+                if (schedule.endDate != null && !schedule.endDate.equals("null"))
+                    schedule.setScheduleEndDate(schedule.getFormattedDate(schedule.endDate));
 
                 schedule.setMinute(object.getString("minute"));
                 schedule.setHour(object.getString("hour"));
@@ -403,7 +461,8 @@ public class Schedule implements Parcelable, Cloneable {
                 schedule.setWday(object.getString("wday"));
 
                 schedule.setTime(object.getString("time"));
-                schedule.setScheduleTime(schedule.getFormattedTime());
+                if (schedule.isOneTimeSchedule())
+                    schedule.setScheduleTime(schedule.getFormattedDate(schedule.time));
 
                 schedule.setDeleteAfter(object.getBoolean("deleteAfter"));
                 schedule.setCreated(object.getString("created"));
@@ -421,27 +480,6 @@ public class Schedule implements Parcelable, Cloneable {
             e.printStackTrace();
         }
         return schedules;
-    }
-
-    public static ArrayList<Day> sortScheduled(ArrayList<Schedule> schedules, ArrayList<Day> days) {
-        for (Schedule schedule : schedules) {
-            Date scheduleDate = schedule.getFormattedTime();
-            if (scheduleDate != null) {
-                int scheduleDayDate = scheduleDate.getDate();
-                int scheduleMonth = scheduleDate.getMonth();
-                int scheduleYear = scheduleDate.getYear();
-                for (Day day : days) {
-                    Date dayDate = day.getDate();
-                    int dayOfMonth = dayDate.getDate();
-                    int month = dayDate.getMonth();
-                    int year = dayDate.getYear();
-                    if (dayOfMonth == scheduleDayDate && month == scheduleMonth && year == scheduleYear) {
-                        day.addSchedules(schedule);
-                    }
-                }
-            }
-        }
-        return days;
     }
 
     public static Schedule buildSingle(JSONObject response) {
@@ -482,35 +520,132 @@ public class Schedule implements Parcelable, Cloneable {
         setCronExpression(mCron.asString());
     }
 
-    public DateTime getNextExecutionDate() {
-        DateTime now = DateTime.now();
-        ExecutionTime executionTime = ExecutionTime.forCron(mCronParser.parse(cronExpression));
-        return executionTime.nextExecution(now);
+    public boolean isOneTimeSchedule() {
+        return time != null && !time.equals("null");
     }
 
-    @Override
-    public int describeContents() {
-        return 0;
-    }
+    public static void sortAllSchedules(Day day, Schedule s, int repeatOption) {
+        ArrayList<Schedule> repeatedSchedules = new ArrayList<>();
+        try {
+            if (s.isOneTimeSchedule()) {
+                repeatOption = 0;
+            }
+            boolean isExpirated = s.scheduleEndDate != null && s.scheduleEndDate.compareTo(day.getDate()) < 0;
+            switch (repeatOption) {
+                case 0: {
+                    Schedule rs = (Schedule) s.clone();
+                    rs.mRepeatOption = repeatOption;
+                    int scheduleYear = rs.scheduleTime.getYear();
+                    int scheduleMonth = rs.scheduleTime.getMonth();
+                    int scheduleDate = rs.scheduleTime.getDate();
+                    int dayYear = day.getDate().getYear();
+                    int dayMonth = day.getDate().getMonth();
+                    int dayDate = day.getDate().getDate();
+                    boolean isAvailable = scheduleYear == dayYear &&
+                            scheduleMonth == dayMonth && scheduleDate == dayDate && !rs.time.contains("00:00:00.000Z");
+                    if (isAvailable) {
+                        rs.comparatorDate = rs.scheduleTime;
+                        repeatedSchedules.add(rs);
+                    }
+                    break;
+                }
+                case 1: {
+                    boolean isAvailable = s.scheduleStartDate != null && s.scheduleStartDate.compareTo(day.getDate()) <= 0;
+                    if (isAvailable && !isExpirated) {
+                        for (int i = 1; i < 25; i++) {
+                            Schedule rs = (Schedule) s.clone();
+                            rs.mRepeatOption = repeatOption;
+                            rs.scheduleDate = (Date) day.getDate().clone();
+                            rs.scheduleDate.setHours(i);
+                            rs.scheduleDate.setMinutes(Integer.parseInt(rs.minute));
+                            rs.comparatorDate = rs.scheduleDate;
+                            repeatedSchedules.add(rs);
+                        }
+                    }
+                    break;
+                }
+                case 2: {
+                    Schedule rs = (Schedule) s.clone();
+                    rs.mRepeatOption = repeatOption;
+                    rs.scheduleDate = (Date) day.getDate().clone();
+                    rs.scheduleDate.setHours(Integer.parseInt(rs.getHour()));
+                    rs.scheduleDate.setMinutes(
+                            rs.getMinute().equals("*") ? 0 : Integer.parseInt(rs.getMinute())
+                    );
 
-    @Override
-    public void writeToParcel(Parcel dest, int flags) {
-        dest.writeInt(scheduleID);
-        dest.writeInt(recordingID);
-        dest.writeInt(receiverID);
-        dest.writeString(startDate);
-        dest.writeString(endDate);
-        dest.writeString(minute);
-        dest.writeString(hour);
-        dest.writeString(day);
-        dest.writeString(month);
-        dest.writeString(wday);
-        dest.writeString(time);
-        dest.writeByte((byte) (deleteAfter ? 1 : 0));
-        dest.writeString(created);
-        dest.writeString(modified);
-        dest.writeParcelable(recording, flags);
-        dest.writeByte((byte) (isSelected ? 1 : 0));
-        dest.writeInt(mRepeatOption);
+                    boolean isAvailable = rs.scheduleStartDate != null && rs.scheduleStartDate.compareTo(day.getDate()) <= 0;
+                    if (isAvailable && !isExpirated) {
+                        rs.comparatorDate = rs.scheduleDate;
+                        repeatedSchedules.add(rs);
+                    }
+                    break;
+                }
+                case 3: {
+                    Schedule rs = (Schedule) s.clone();
+                    rs.mRepeatOption = repeatOption;
+                    rs.scheduleDate = (Date) day.getDate().clone();
+                    rs.scheduleDate.setHours(
+                            rs.hour.equals("*") ? 0 : Integer.parseInt(rs.hour)
+                    );
+                    rs.scheduleDate.setMinutes(
+                            rs.getMinute().equals("*") ? 0 : Integer.parseInt(rs.getMinute())
+                    );
+                    int scheduleDayOfWeek = Integer.parseInt(rs.getWday());
+                    int dayOfWeek = day.getDate().getDay();
+                    boolean isAvailable = scheduleDayOfWeek == dayOfWeek &&
+                            rs.scheduleStartDate.compareTo(day.getDate()) <= 0 && !isExpirated;
+
+                    if (isAvailable && !isExpirated) {
+                        rs.comparatorDate = rs.scheduleDate;
+                        repeatedSchedules.add(rs);
+                    }
+                    break;
+                }
+                case 4: {
+                    Schedule rs = (Schedule) s.clone();
+                    rs.mRepeatOption = repeatOption;
+                    rs.scheduleDate = (Date) day.getDate().clone();
+                    rs.scheduleDate.setHours(
+                            rs.hour.equals("*") ? 0 : Integer.parseInt(rs.hour)
+                    );
+                    rs.scheduleDate.setMinutes(
+                            rs.getMinute().equals("*") ? 0 : Integer.parseInt(rs.getMinute())
+                    );
+                    int scheduleDayOfMonth = Integer.parseInt(s.getDay());
+                    int dayOfMonth = day.getDate().getDate();
+                    boolean isAvailable = scheduleDayOfMonth == dayOfMonth &&
+                            rs.scheduleStartDate.compareTo(day.getDate()) <= 0 && !isExpirated;
+
+                    if (isAvailable && !isExpirated) {
+                        rs.comparatorDate = rs.scheduleDate;
+                        repeatedSchedules.add(rs);
+                    }
+                    break;
+                }
+                case 5: {
+                    Schedule rs = (Schedule) s.clone();
+                    rs.mRepeatOption = repeatOption;
+                    rs.scheduleDate = (Date) day.getDate().clone();
+                    rs.scheduleDate.setHours(
+                            rs.hour.equals("*") ? 0 : Integer.parseInt(rs.hour)
+                    );
+                    rs.scheduleDate.setMinutes(
+                            rs.getMinute().equals("*") ? 0 : Integer.parseInt(rs.getMinute())
+                    );
+                    int scheduleMonth = Integer.parseInt(rs.getMonth());
+                    int month = day.getDate().getMonth();
+                    boolean isAvailable = scheduleMonth == month &&
+                            rs.scheduleStartDate.compareTo(day.getDate()) <= 0 && !isExpirated;
+                    if (isAvailable && !isExpirated) {
+                        rs.comparatorDate = rs.scheduleDate;
+                        repeatedSchedules.add(rs);
+                    }
+                    break;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        day.addSchedules(repeatedSchedules);
     }
 }

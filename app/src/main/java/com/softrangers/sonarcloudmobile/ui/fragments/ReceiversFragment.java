@@ -42,8 +42,7 @@ import java.util.ArrayList;
 public class ReceiversFragment extends BaseFragment implements RadioGroup.OnCheckedChangeListener,
         SwipeRefreshLayout.OnRefreshListener,
         ReceiverListAdapter.OnItemClickListener,
-        GroupsListAdapter.OnGroupClickListener, GroupObserver,
-        ExpandableListView.OnGroupClickListener {
+        GroupsListAdapter.OnGroupClickListener, GroupObserver {
 
     private static final String PA_LIST_STATE = "pa_list_state";
     private static final String GROUPS_LIST_STATE = "groups_list_state";
@@ -143,7 +142,7 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
         mReceiverListAdapter = new ReceiverListAdapter(getActivity(), paSystems);
         mReceiverListAdapter.setOnItemClickListener(this);
         mListView.setAdapter(mReceiverListAdapter);
-        mListView.setOnGroupClickListener(this);
+//        mListView.setOnGroupClickListener(this);
     }
 
     /**
@@ -392,18 +391,18 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
         SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
     }
 
-    @Override
-    public boolean onGroupClick(ExpandableListView parent, View v, int groupPosition, long id) {
-        // We call collapseGroupWithAnimation(int) and
-        // expandGroupWithAnimation(int) to animate group
-        // expansion/collapse.
-        if (parent.isGroupExpanded(groupPosition)) {
-            mListView.collapseGroupWithAnimation(groupPosition);
-        } else {
-            mListView.expandGroupWithAnimation(groupPosition);
-        }
-        return true;
-    }
+//    @Override
+//    public boolean onGroupClick(ExpandableListView parent, View v, int groupPosition, long id) {
+//        // We call collapseGroupWithAnimation(int) and
+//        // expandGroupWithAnimation(int) to animate group
+//        // expansion/collapse.
+//        if (parent.isGroupExpanded(groupPosition)) {
+//            mListView.collapseGroupWithAnimation(groupPosition);
+//        } else {
+//            mListView.expandGroupWithAnimation(groupPosition);
+//        }
+//        return true;
+//    }
 
     BroadcastReceiver mPAReceiver = new BroadcastReceiver() {
         @Override

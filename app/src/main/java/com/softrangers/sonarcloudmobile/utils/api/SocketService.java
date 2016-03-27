@@ -174,8 +174,7 @@ public class SocketService extends Service {
                     // Start socket handshake
                     sslSocket.startHandshake();
 
-                    // set the timeout for the connection
-
+                    if (sslSocket.isClosed()) new Connection();
                     // Create a reader and writer from socket output and input streams
                     writeOut = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream()));
                     readIn = new BufferedReader(new InputStreamReader(sslSocket.getInputStream()));
@@ -203,6 +202,11 @@ public class SocketService extends Service {
             Looper.prepare();
             try {
                 // Start reading each response line\
+//                String line;
+//                StringBuilder responseBuilder = new StringBuilder();
+//                while ((line = mReader.readLine()) != null) {
+//                    responseBuilder.append(line);
+//                }
                 String stringResponse = mReader.readLine();
                 if (stringResponse == null) {
                     stringResponse = "{\"success\":false}";

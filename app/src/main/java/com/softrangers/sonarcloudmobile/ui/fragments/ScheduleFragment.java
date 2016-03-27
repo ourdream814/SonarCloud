@@ -11,9 +11,7 @@ import android.support.v4.app.Fragment;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.helper.ItemTouchHelper;
-import android.util.DisplayMetrics;
 import android.util.TypedValue;
-import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -27,7 +25,6 @@ import com.softrangers.sonarcloudmobile.adapters.DaysAdapter;
 import com.softrangers.sonarcloudmobile.adapters.ScheduleAllRecordingsAdapter;
 import com.softrangers.sonarcloudmobile.adapters.ScheduledRecordsAdapter;
 import com.softrangers.sonarcloudmobile.models.Day;
-import com.softrangers.sonarcloudmobile.models.Group;
 import com.softrangers.sonarcloudmobile.models.Receiver;
 import com.softrangers.sonarcloudmobile.models.Recording;
 import com.softrangers.sonarcloudmobile.models.Request;
@@ -340,10 +337,22 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         }
     };
 
+
+    private static ArrayList<Schedule> allSchedules = new ArrayList<>();
+
     private void onSchedulesReceived(JSONObject response) {
-        ArrayList<Schedule> allSchedules = Schedule.build(response);
-        Schedule.sortScheduled(allSchedules, mDaysAdapter.getDays());
+        allSchedules = Schedule.build(response);
+//        Schedule.sortScheduled(allSchedules, mDaysAdapter.getDays());
+        Day day = mDaysAdapter.getDays().get(mDaysAdapter.getSelectedPostion());
+        sortSchedule(day, allSchedules);
         addSchedulesToList(mDaysAdapter.getDays().get(mDaysAdapter.getSelectedPostion()).getSchedules());
+    }
+
+    private void sortSchedule(Day day, ArrayList<Schedule> schedules) {
+        day.clearSchedules();
+        for (Schedule schedule : schedules) {
+            Schedule.sortAllSchedules(day, schedule, schedule.getRepeatOption());
+        }
     }
 
     private void onRecordingsReceived(JSONObject response) {
@@ -433,6 +442,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
 
     @Override
     public void onDayClick(Day day, int position) {
+        sortSchedule(day, allSchedules);
         addSchedulesToList(day.getSchedules());
     }
 }

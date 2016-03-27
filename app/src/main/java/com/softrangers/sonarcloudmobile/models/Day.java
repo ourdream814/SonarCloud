@@ -3,6 +3,8 @@ package com.softrangers.sonarcloudmobile.models;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
@@ -31,6 +33,10 @@ public class Day {
         for (int i = 1; i < 366; i++) {
             Day day = new Day();
             day.mCalendar.set(Calendar.DAY_OF_YEAR, i);
+            day.mCalendar.set(Calendar.HOUR, 0);
+            day.mCalendar.set(Calendar.MINUTE, 0);
+            day.mCalendar.set(Calendar.SECOND, 0);
+            day.mCalendar.set(Calendar.MILLISECOND, 0);
             Date date = new Date(day.mCalendar.getTimeInMillis());
             day.mDate = date;
             day.mMonthAndDay = day.getMonthAndDay(date);
@@ -72,10 +78,25 @@ public class Day {
     }
 
     public ArrayList<Schedule> getSchedules() {
+        Collections.sort(mSchedules, new Comparator<Schedule>() {
+            @Override
+            public int compare(Schedule lhs, Schedule rhs) {
+                return lhs.getComparatorDate().compareTo(rhs.getComparatorDate());
+            }
+        });
         return mSchedules;
     }
 
     public void addSchedules(Schedule schedule) {
         mSchedules.add(schedule);
+    }
+
+    public void addSchedules(ArrayList<Schedule> schedules) {
+//        mSchedules.clear();
+        mSchedules.addAll(schedules);
+    }
+
+    public void clearSchedules() {
+        mSchedules.clear();
     }
 }

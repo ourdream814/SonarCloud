@@ -63,5 +63,9 @@
     <string name="set">Set</string>
     <string name="repeat_until">Repeat until</string>
     <string name="edit_schedule">Edit Schedule</string>
+    <string name="live_stream">Live Stream</string>
+    <string name="tap_the_mic_to_start">Tap the MIC to start streaming.</string>
+    <string name="push_to_talk">Push To Talk</string>
+    <string name="touch_and_hold">Touch and hold while announcing.</string>
 
 </resources>

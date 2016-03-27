@@ -23,14 +23,15 @@
             android:id="@+id/records_selector_button"
             android:layout_width="100dp"
             android:layout_height="wrap_content"
+            android:layout_marginEnd="10dp"
             android:layout_marginRight="10dp"
             android:background="@drawable/button_blue_borders"
             android:button="@null"
             android:checked="true"
             android:gravity="center"
             android:padding="5dp"
-            android:textColor="@drawable/text_color"
-            android:text="@string/record"/>
+            android:text="@string/record"
+            android:textColor="@drawable/text_color"/>
 
         <RadioButton
             android:id="@+id/stream_selector_button"
@@ -42,24 +43,38 @@
             android:button="@null"
             android:gravity="center"
             android:padding="5dp"
-            android:textColor="@drawable/text_color"
-            android:text="@string/stream"/>
+            android:text="@string/stream"
+            android:textColor="@drawable/text_color"/>
 
         <RadioButton
             android:id="@+id/ptt_selector_button"
             android:layout_width="100dp"
             android:layout_height="wrap_content"
             android:layout_marginLeft="10dp"
+            android:layout_marginStart="10dp"
             android:background="@drawable/button_blue_borders"
             android:button="@null"
             android:gravity="center"
             android:padding="5dp"
-            android:textColor="@drawable/text_color"
-            android:text="@string/ptt"/>
+            android:text="@string/ptt"
+            android:textColor="@drawable/text_color"/>
     </RadioGroup>
 
-    <include layout="@layout/record_and_send"
-             android:layout_width="match_parent"
-             android:layout_height="match_parent"
-             android:layout_below="@+id/send_audio_type_selector"/>
+    <include
+        layout="@layout/ptt_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/send_audio_type_selector"/>
+
+    <include
+        layout="@layout/stream_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/send_audio_type_selector"/>
+
+    <include
+        layout="@layout/record_and_send"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@+id/send_audio_type_selector"/>
 </RelativeLayout>

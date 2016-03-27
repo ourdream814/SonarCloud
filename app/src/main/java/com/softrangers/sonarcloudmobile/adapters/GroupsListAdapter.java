@@ -47,6 +47,10 @@ public class GroupsListAdapter extends RecyclerView.Adapter<GroupsListAdapter.Vi
         if (lastSelectedPosition == position) {
             lastSelectedPosition = WAS_NOT_SELECTED;
         }
+
+        if (lastSelectedPosition == mGroups.size()) {
+            lastSelectedPosition = mGroups.size() - 1;
+        }
         notifyItemChanged(position);
         return group;
     }

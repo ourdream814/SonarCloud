@@ -13,6 +13,8 @@ import com.softrangers.sonarcloudmobile.models.Recording;
 import com.softrangers.sonarcloudmobile.models.Schedule;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 
 /**
@@ -50,19 +52,8 @@ public class ScheduledRecordsAdapter extends RecyclerView.Adapter<ScheduledRecor
     }
 
     public void addItems(ArrayList<Schedule> recordings) {
-        for (Schedule recording : recordings) {
-//            if (recording.getFormattedStartDate() == null) return;
-            if (mSchedules.size() == 0) mSchedules.add(recording);
-            boolean exists = false;
-            for (Schedule rec : mSchedules) {
-                if (rec.equals(recording)) {
-                    exists = true;
-                    break;
-                }
-            }
-            if (!exists) mSchedules.add(recording);
-            notifyItemInserted(mSchedules.size() - 1);
-        }
+        mSchedules.addAll(recordings);
+        notifyDataSetChanged();
     }
 
     public void clearList() {
@@ -96,7 +87,8 @@ public class ScheduledRecordsAdapter extends RecyclerView.Adapter<ScheduledRecor
                 mContext.getString(R.string.recording) + " " + holder.mSchedule.getRecordingID()
         );
 
-        Date date = holder.mSchedule.getScheduleTime();
+        Date date = holder.mSchedule.getScheduleTime() == null ?
+                holder.mSchedule.getScheduleDate() : holder.mSchedule.getScheduleTime();
 
         holder.mRecordLength.setText(holder.mSchedule.getRecording().getFromatedLength());
 

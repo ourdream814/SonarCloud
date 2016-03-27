@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                xmlns:tools="http://schemas.android.com/tools"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:id="@+id/ptt_layoutHolder"
+                android:visibility="gone"
+                tools:background="@drawable/gradient_background">
+
+    <TextView
+        android:id="@+id/push_to_talk_textView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:gravity="center"
+        android:padding="15dp"
+        android:text="@string/push_to_talk"
+        android:textColor="@android:color/white"
+        android:textSize="24sp"/>
+
+    <TextView
+        android:id="@+id/touch_and_hold_textView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:gravity="center"
+        android:padding="15dp"
+        android:text="@string/touch_and_hold"
+        android:textColor="@android:color/white"
+        android:textSize="17sp"/>
+
+    <ImageButton
+        android:id="@+id/push_to_talk_button"
+        style="@style/Base.Widget.AppCompat.ActionButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/touch_and_hold_textView"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentStart="true"
+        android:layout_below="@+id/push_to_talk_textView"
+        android:scaleType="fitCenter"
+        android:src="@mipmap/ic_button_ptt"/>
+
+    <com.softrangers.sonarcloudmobile.utils.widgets.MillisChronometer
+        android:id="@+id/ptt_chronometer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:visibility="invisible"
+        android:layout_below="@id/push_to_talk_textView"
+        android:textColor="@android:color/white"
+        android:textSize="20sp"/>
+</RelativeLayout>

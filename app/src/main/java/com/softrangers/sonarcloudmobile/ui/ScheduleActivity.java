@@ -17,9 +17,11 @@ import android.widget.DatePicker;
 import android.widget.NumberPicker;
 import android.widget.TextView;
 import android.widget.TimePicker;
+import android.widget.Toast;
 
 import com.softrangers.sonarcloudmobile.R;
 import com.softrangers.sonarcloudmobile.adapters.ScheduleEditAdapter;
+import com.softrangers.sonarcloudmobile.models.Recording;
 import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.models.Schedule;
 import com.softrangers.sonarcloudmobile.utils.BaseActivity;
@@ -41,6 +43,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
 
     public static final String ACTION_ADD_SCHEDULE = "com.softrangers.sonarcloudmobile.ACTION_ADD_SCHEDULE";
     public static final String ACTION_EDIT_SCHEDULE = "com.softrangers.sonarcloudmobile.ACTION_EDIT_SCHEDULE";
+    public static final String RECORD_BUNDLE = "key for record bundle";
     private static final String DATE = "Date";
     private static final String TIME = "Time";
     private static final String REPEAT = "Repeat";
@@ -51,6 +54,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
     private RecyclerView mRecyclerView;
     private ScheduleEditAdapter mAdapter;
     private static Schedule schedule;
+    private static Recording recording;
     private Request.Builder mRequestBuilder;
     private String mAction;
 
@@ -78,6 +82,8 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
             // User made a new record and want to schedule playing
             case ACTION_ADD_SCHEDULE:
                 schedule = new Schedule();
+                recording = intent.getExtras().getParcelable(RECORD_BUNDLE);
+                mAdapter = new ScheduleEditAdapter(buildAdaptersList(schedule));
                 break;
             // User opened an existing schedule
             case ACTION_EDIT_SCHEDULE:
@@ -95,9 +101,9 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                 mRequestBuilder.startDate(schedule.getServerFormatDate(new Date()));
                 mRequestBuilder.endDate(schedule.getEndDate());
                 mAdapter = new ScheduleEditAdapter(buildAdaptersList(schedule));
-                initializeList(mAdapter);
                 break;
         }
+        initializeList(mAdapter);
     }
 
     BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
@@ -153,8 +159,14 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
      */
     private ArrayList<Schedule> buildAdaptersList(final Schedule schedule) {
         ArrayList<Schedule> headerArrayList = new ArrayList<>();
-        Date date = schedule.getFormattedTime();
+        Date date = new Date();
+        if (mAction.equals(ACTION_EDIT_SCHEDULE)) {
+            if (schedule.getRepeatOption() > 0)
+                date = schedule.getScheduleDate();
+            else date = schedule.getScheduleTime();
+        }
         int repeatOption = schedule.getRepeatOption();
+        if (repeatOption > 0) date = schedule.getScheduleDate();
         // item for Date and Time title
         Schedule dateTimeTitle = new Schedule();
         dateTimeTitle.setRowType(Schedule.RowType.TITLE);
@@ -210,6 +222,10 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
 
     // Called when user press the save button on the top right
     public void saveSchedule(View view) {
+        if (mAction.equals(ACTION_ADD_SCHEDULE)) {
+            Toast.makeText(this, "Not working yet", Toast.LENGTH_SHORT).show();
+            return;
+        }
         if (schedule.getRepeatOption() > 0) schedule.setTime(null);
         if (schedule.getStartDate().equals("null")) {
             schedule.setStartDate(schedule.getServerFormatDate(new Date()));
@@ -250,10 +266,15 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         final SimpleDateFormat serverFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZZZZZ", Locale.getDefault());
         serverFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
         // obtain the date from schedule object
-        final Date date = schedule.getFormattedTime();
+        final Date date = new Date();
         // get a calendar instance and set the time
         final Calendar calendar = Calendar.getInstance();
         calendar.setTimeInMillis(date.getTime());
+        if (mAction.equals(ACTION_EDIT_SCHEDULE)) {
+            if (schedule.getRepeatOption() > 0)
+                calendar.setTimeInMillis(schedule.getScheduleDate().getTime());
+            else calendar.setTimeInMillis(schedule.getScheduleTime().getTime());
+        }
         switch (itemTitle) {
             case DATE: {
                 // if user selected date, create a date picker dialog set the minimum date for today and

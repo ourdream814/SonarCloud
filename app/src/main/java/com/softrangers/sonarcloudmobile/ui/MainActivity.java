@@ -108,6 +108,7 @@ public class MainActivity extends BaseActivity implements
                         break;
                 }
             } catch (Exception e) {
+                e.printStackTrace();
                 onErrorOccurred();
             }
         }
@@ -274,12 +275,8 @@ public class MainActivity extends BaseActivity implements
                 if (action.equals(ACTION_LOGIN)) {
                     onSocketConnected();
                 }
+                break;
         }
-    }
-
-    @Override
-    public void onBackPressed() {
-        super.onBackPressed();
     }
 
     @Override
@@ -308,7 +305,5 @@ public class MainActivity extends BaseActivity implements
             unregisterReceiver(mLoginReceiver);
         } catch (Exception e) {
         }
-        selectedGroup = null;
-        selectedReceivers.clear();
     }
 }
