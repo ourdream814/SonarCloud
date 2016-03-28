@@ -97,14 +97,14 @@ public class LoginActivity extends BaseActivity {
 
         // Check email field for null value
         if (email.equals("")) {
-            mEmail.setError("Please enter a valid email address");
+            mEmail.setError("Please left_to_right a valid email address");
             return;
         }
 
         // Check password field for null value
         String password = String.valueOf(mPassword.getText());
         if (password.equals("")) {
-            mPassword.setError("Please enter a valid password");
+            mPassword.setError("Please left_to_right a valid password");
             return;
         }
 

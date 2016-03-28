@@ -42,6 +42,18 @@ public class AnnouncementRecAdapter extends RecyclerView.Adapter<AnnouncementRec
         notifyDataSetChanged();
     }
 
+    public Recording removeItem(int position) {
+        Recording recording = mRecordings.get(position);
+        mRecordings.remove(position);
+        notifyItemRemoved(position);
+        return recording;
+    }
+
+    public void insertItem(int position, Recording recording) {
+        mRecordings.add(position, recording);
+        notifyItemInserted(position);
+    }
+
     @Override
     public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.announcement_recordings_list_item,

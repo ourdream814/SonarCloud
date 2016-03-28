@@ -406,11 +406,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
                             // the Snackbar was not dismissed by "Undo" button click
                             switch (event) {
                                 case DISMISS_EVENT_TIMEOUT:
-                                    deleteScheduleFromServer(schedule);
-                                    break;
                                 case DISMISS_EVENT_CONSECUTIVE:
-                                    deleteScheduleFromServer(schedule);
-                                    break;
                                 case DISMISS_EVENT_MANUAL:
                                     deleteScheduleFromServer(schedule);
                                     break;

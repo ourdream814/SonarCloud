@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest
-    package="com.softrangers.sonarcloudmobile"
-    xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest package="com.softrangers.sonarcloudmobile"
+          xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
 
     <application
         android:name=".utils.SonarCloudApp"
@@ -36,7 +35,6 @@
             android:name=".utils.api.SocketService"
             android:exported="false"/>
 
-
         <!-- Notifies when the socket is connected -->
         <receiver
             android:name=".utils.api.ConnectionReceiver"
@@ -52,6 +50,8 @@
         <activity android:name=".ui.SelectPASystemActivity">
         </activity>
         <activity android:name=".ui.ScheduleActivity">
+        </activity>
+        <activity android:name=".ui.LockAppActivity">
         </activity>
     </application>
 

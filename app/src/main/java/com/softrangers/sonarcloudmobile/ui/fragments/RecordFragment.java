@@ -11,6 +11,7 @@ import android.support.v4.app.Fragment;
 import android.support.v4.view.MotionEventCompat;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.helper.ItemTouchHelper;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -88,6 +89,8 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         mRecAdapter.setRecordInteraction(this);
         recordingsList.setLayoutManager(new LinearLayoutManager(mActivity));
         recordingsList.setAdapter(mRecAdapter);
+        ItemTouchHelper itemTouchHelper = new ItemTouchHelper(mSimpleCallback);
+        itemTouchHelper.attachToRecyclerView(recordingsList);
         TextView recordAndSendText = (TextView) view.findViewById(R.id.record_and_sendTextView);
         recordAndSendText.setTypeface(SonarCloudApp.avenirMedium);
         TextView tapRecordingText = (TextView) view.findViewById(R.id.tap_record_textView);
@@ -383,6 +386,49 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                 break;
         }
         return true;
+    }
+
+    ItemTouchHelper.SimpleCallback mSimpleCallback = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT) {
+        @Override
+        public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, RecyclerView.ViewHolder target) {
+            return false;
+        }
+
+        @Override
+        public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
+            final int position = viewHolder.getAdapterPosition();
+            final Recording recording = mRecAdapter.removeItem(position);
+            Snackbar.make(mRecordAndSend, mActivity.getString(R.string.record_deleted), Snackbar.LENGTH_SHORT)
+                    .setAction(mActivity.getString(R.string.undo), new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            mRecAdapter.insertItem(position, recording);
+                        }
+                    }).setActionTextColor(mActivity.getResources()
+                    .getColor(R.color.colorAlertAction))
+                    // add a callback to know when the Snackbar goes away
+                    .setCallback(new Snackbar.Callback() {
+                        @Override
+                        public void onDismissed(Snackbar snackbar, int event) {
+                            // check the event status and delete schedule from server if
+                            // the Snackbar was not dismissed by "Undo" button click
+                            switch (event) {
+                                case DISMISS_EVENT_TIMEOUT:
+                                case DISMISS_EVENT_CONSECUTIVE:
+                                case DISMISS_EVENT_MANUAL:
+                                    deleteRecord(recording);
+                                    break;
+                            }
+                        }
+                    }).show();
+        }
+    };
+
+    private void deleteRecord(Recording rec) {
+        File file = new File(rec.getFilePath());
+        if (file.delete()) {
+            mRecAdapter.refreshList(getRecordedFileList());
+        }
     }
 
     enum RecorderState {

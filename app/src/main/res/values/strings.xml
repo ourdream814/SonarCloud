@@ -67,5 +67,11 @@
     <string name="tap_the_mic_to_start">Tap the MIC to start streaming.</string>
     <string name="push_to_talk">Push To Talk</string>
     <string name="touch_and_hold">Touch and hold while announcing.</string>
+    <string name="security">SECURITY</string>
+    <string name="app_locking">App Locking</string>
+    <string name="back_to_settings">Back to settings</string>
+    <string name="enable_app_locking">Enable App Locking</string>
+    <string name="set_lock_pattern">Set Lock Pattern</string>
+    <string name="enable_touch_id">Enable Touch ID</string>
 
 </resources>
