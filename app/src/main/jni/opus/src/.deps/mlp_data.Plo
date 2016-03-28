@@ -1,0 +1,36 @@
+src/mlp_data.lo: src/mlp_data.c config.h src/mlp.h celt/arch.h \
+ include/opus_types.h \
+ /home/mike/deleteme/opus-android/toolchain-build/lib/gcc/arm-linux-androideabi/4.8/include/stdint.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/stdint.h \
+ /home/mike/deleteme/opus-android/toolchain-build/lib/gcc/arm-linux-androideabi/4.8/include/stddef.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/_types.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/machine/_types.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/_wchar_limits.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/android/api-level.h \
+ include/opus_defines.h include/opus_types.h
+
+config.h:
+
+src/mlp.h:
+
+celt/arch.h:
+
+include/opus_types.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/lib/gcc/arm-linux-androideabi/4.8/include/stdint.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/stdint.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/lib/gcc/arm-linux-androideabi/4.8/include/stddef.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/_types.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/machine/_types.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/_wchar_limits.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/android/api-level.h:
+
+include/opus_defines.h:
+
+include/opus_types.h:

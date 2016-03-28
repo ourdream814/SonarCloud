@@ -1,0 +1,156 @@
+src/opus_multistream_decoder.lo: src/opus_multistream_decoder.c config.h \
+ include/opus_multistream.h include/opus.h include/opus_types.h \
+ /home/mike/deleteme/opus-android/toolchain-build/lib/gcc/arm-linux-androideabi/4.8/include/stdint.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/stdint.h \
+ /home/mike/deleteme/opus-android/toolchain-build/lib/gcc/arm-linux-androideabi/4.8/include/stddef.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/_types.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/machine/_types.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/_wchar_limits.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/android/api-level.h \
+ include/opus_defines.h include/opus.h src/opus_private.h celt/arch.h \
+ include/opus_types.h include/opus_defines.h celt/celt.h \
+ include/opus_custom.h celt/entenc.h celt/entcode.h \
+ /home/mike/deleteme/opus-android/toolchain-build/lib/gcc/arm-linux-androideabi/4.8/include-fixed/limits.h \
+ /home/mike/deleteme/opus-android/toolchain-build/lib/gcc/arm-linux-androideabi/4.8/include-fixed/syslimits.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/limits.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/cdefs.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/cdefs_elf.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/limits.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/linux/limits.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/machine/internal_types.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/machine/limits.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/syslimits.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/asm/page.h \
+ celt/ecintrin.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/math.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/types.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/linux/posix_types.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/linux/stddef.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/linux/compiler.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/asm/posix_types.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/asm/types.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/linux/types.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/machine/kernel.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/sysmacros.h \
+ celt/arch.h celt/entdec.h celt/stack_alloc.h \
+ /home/mike/deleteme/opus-android/toolchain-build/lib/gcc/arm-linux-androideabi/4.8/include/stdarg.h \
+ celt/float_cast.h celt/os_support.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/string.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/malloc.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/stdio.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/stdlib.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/alloca.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/strings.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/memory.h
+
+config.h:
+
+include/opus_multistream.h:
+
+include/opus.h:
+
+include/opus_types.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/lib/gcc/arm-linux-androideabi/4.8/include/stdint.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/stdint.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/lib/gcc/arm-linux-androideabi/4.8/include/stddef.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/_types.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/machine/_types.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/_wchar_limits.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/android/api-level.h:
+
+include/opus_defines.h:
+
+include/opus.h:
+
+src/opus_private.h:
+
+celt/arch.h:
+
+include/opus_types.h:
+
+include/opus_defines.h:
+
+celt/celt.h:
+
+include/opus_custom.h:
+
+celt/entenc.h:
+
+celt/entcode.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/lib/gcc/arm-linux-androideabi/4.8/include-fixed/limits.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/lib/gcc/arm-linux-androideabi/4.8/include-fixed/syslimits.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/limits.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/cdefs.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/cdefs_elf.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/limits.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/linux/limits.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/machine/internal_types.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/machine/limits.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/syslimits.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/asm/page.h:
+
+celt/ecintrin.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/math.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/types.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/linux/posix_types.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/linux/stddef.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/linux/compiler.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/asm/posix_types.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/asm/types.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/linux/types.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/machine/kernel.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/sysmacros.h:
+
+celt/arch.h:
+
+celt/entdec.h:
+
+celt/stack_alloc.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/lib/gcc/arm-linux-androideabi/4.8/include/stdarg.h:
+
+celt/float_cast.h:
+
+celt/os_support.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/string.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/malloc.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/stdio.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/stdlib.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/alloca.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/strings.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/memory.h:

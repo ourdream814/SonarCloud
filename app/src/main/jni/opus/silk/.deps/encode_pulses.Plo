@@ -1,0 +1,162 @@
+silk/encode_pulses.lo: silk/encode_pulses.c config.h silk/main.h \
+ silk/SigProc_FIX.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/string.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/cdefs.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/cdefs_elf.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/android/api-level.h \
+ /home/mike/deleteme/opus-android/toolchain-build/lib/gcc/arm-linux-androideabi/4.8/include/stddef.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/malloc.h \
+ silk/typedef.h include/opus_types.h \
+ /home/mike/deleteme/opus-android/toolchain-build/lib/gcc/arm-linux-androideabi/4.8/include/stdint.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/stdint.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/_types.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/machine/_types.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/_wchar_limits.h \
+ include/opus_defines.h include/opus_types.h \
+ /home/mike/deleteme/opus-android/toolchain-build/lib/gcc/arm-linux-androideabi/4.8/include/float.h \
+ silk/resampler_structs.h silk/macros.h celt/ecintrin.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/math.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/types.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/linux/posix_types.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/linux/stddef.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/linux/compiler.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/asm/posix_types.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/asm/types.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/linux/types.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/machine/kernel.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/sysmacros.h \
+ /home/mike/deleteme/opus-android/toolchain-build/lib/gcc/arm-linux-androideabi/4.8/include-fixed/limits.h \
+ /home/mike/deleteme/opus-android/toolchain-build/lib/gcc/arm-linux-androideabi/4.8/include-fixed/syslimits.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/limits.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/limits.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/linux/limits.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/machine/internal_types.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/machine/limits.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/syslimits.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/asm/page.h \
+ celt/arch.h celt/cpu_support.h silk/Inlines.h silk/MacroCount.h \
+ /home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/stdio.h \
+ /home/mike/deleteme/opus-android/toolchain-build/lib/gcc/arm-linux-androideabi/4.8/include/stdarg.h \
+ silk/MacroDebug.h silk/define.h silk/errors.h silk/structs.h \
+ celt/entenc.h celt/entcode.h celt/ecintrin.h celt/entdec.h silk/tables.h \
+ silk/PLC.h silk/control.h silk/debug.h celt/stack_alloc.h
+
+config.h:
+
+silk/main.h:
+
+silk/SigProc_FIX.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/string.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/cdefs.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/cdefs_elf.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/android/api-level.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/lib/gcc/arm-linux-androideabi/4.8/include/stddef.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/malloc.h:
+
+silk/typedef.h:
+
+include/opus_types.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/lib/gcc/arm-linux-androideabi/4.8/include/stdint.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/stdint.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/_types.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/machine/_types.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/_wchar_limits.h:
+
+include/opus_defines.h:
+
+include/opus_types.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/lib/gcc/arm-linux-androideabi/4.8/include/float.h:
+
+silk/resampler_structs.h:
+
+silk/macros.h:
+
+celt/ecintrin.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/math.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/types.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/linux/posix_types.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/linux/stddef.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/linux/compiler.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/asm/posix_types.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/asm/types.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/linux/types.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/machine/kernel.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/sysmacros.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/lib/gcc/arm-linux-androideabi/4.8/include-fixed/limits.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/lib/gcc/arm-linux-androideabi/4.8/include-fixed/syslimits.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/limits.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/limits.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/linux/limits.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/machine/internal_types.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/machine/limits.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/sys/syslimits.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/asm/page.h:
+
+celt/arch.h:
+
+celt/cpu_support.h:
+
+silk/Inlines.h:
+
+silk/MacroCount.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/sysroot/usr/include/stdio.h:
+
+/home/mike/deleteme/opus-android/toolchain-build/lib/gcc/arm-linux-androideabi/4.8/include/stdarg.h:
+
+silk/MacroDebug.h:
+
+silk/define.h:
+
+silk/errors.h:
+
+silk/structs.h:
+
+celt/entenc.h:
+
+celt/entcode.h:
+
+celt/ecintrin.h:
+
+celt/entdec.h:
+
+silk/tables.h:
+
+silk/PLC.h:
+
+silk/control.h:
+
+silk/debug.h:
+
+celt/stack_alloc.h:

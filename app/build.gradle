@@ -1,25 +1,99 @@
-apply plugin: 'com.android.application'
+apply plugin: 'com.android.model.application'
 
-android {
-    compileSdkVersion 23
-    buildToolsVersion "23.0.2"
+model {
+    android {
+        compileSdkVersion = 23
+        buildToolsVersion = "23.0.2"
 
-    defaultConfig {
-        applicationId "com.softrangers.sonarcloudmobile"
-        minSdkVersion 11
-        targetSdkVersion 23
-        versionCode 1
-        versionName "1.0"
-    }
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        defaultConfig.with {
+            applicationId = "com.sonarcloud.mobile.sonarcloud"
+            minSdkVersion.apiLevel = 11
+            targetSdkVersion.apiLevel = 23
+            versionCode = 1
+            versionName = "1.0"
         }
     }
-    packagingOptions {
+
+    android.ndk {
+        moduleName = "AudioProcessor"
+        ldLibs.add( "log" )
+
+        cppFlags.add( "-funroll-loops" )
+        cppFlags.add( "-fomit-frame-pointer" )
+        cppFlags.add( "-fforce-addr" )
+        cppFlags.add( "-fprefetch-loop-arrays" )
+        cppFlags.add( "-std=c++0x" )
+        cppFlags.add( "-O2" )
+        cppFlags.add( "-DHAVE_CONFIG_H" )
+
+        cppFlags.add( "-I"+project.buildDir+"/../src/main/jni/opus" )
+        cppFlags.add( "-I"+project.buildDir+"/../src/main/jni/opus/include" )
+
+        cppFlags.add( "-I"+project.buildDir+"/../src/main/jni/opus/silk" )
+        cppFlags.add( "-I"+project.buildDir+"/../src/main/jni/opus/silk/arm" )
+        cppFlags.add( "-I"+project.buildDir+"/../src/main/jni/opus/silk/fixed" )
+
+        cppFlags.add( "-I"+project.buildDir+"/../src/main/jni/opus/celt" )
+        cppFlags.add( "-I"+project.buildDir+"/../src/main/jni/opus/celt/arm" )
+
+
+        CFlags.add( "-funroll-loops" )
+        CFlags.add( "-fomit-frame-pointer" )
+        CFlags.add( "-fforce-addr" )
+        CFlags.add( "-fprefetch-loop-arrays" )
+        CFlags.add( "-O2" )
+        CFlags.add( "-DHAVE_CONFIG_H" )
+
+        CFlags.add( "-I"+project.buildDir+"/../src/main/jni/opus" )
+        CFlags.add( "-I"+project.buildDir+"/../src/main/jni/opus/include" )
+
+        CFlags.add( "-I"+project.buildDir+"/../src/main/jni/opus/silk" )
+        CFlags.add( "-I"+project.buildDir+"/../src/main/jni/opus/silk/arm" )
+        CFlags.add( "-I"+project.buildDir+"/../src/main/jni/opus/silk/fixed" )
+
+        CFlags.add( "-I"+project.buildDir+"/../src/main/jni/opus/celt" )
+        CFlags.add( "-I"+project.buildDir+"/../src/main/jni/opus/celt/x86" )
+        CFlags.add( "-I"+project.buildDir+"/../src/main/jni/opus/celt/arm" )
+        CFlags.add( "-I"+project.buildDir+"/../src/main/jni/opus/celt/mips" )
+
+    }
+
+    android.productFlavors {
+        // for detailed abiFilter descriptions, refer to "Supported ABIs" @
+        // https://developer.android.com/ndk/guides/abis.html#sa
+        create("arm") {
+            ndk.abiFilters.add("armeabi")
+        }
+        create("arm7") {
+            ndk.abiFilters.add("armeabi-v7a")
+        }
+        create("arm8") {
+            ndk.abiFilters.add("arm64-v8a")
+        }
+        create("x86") {
+            ndk.abiFilters.add("x86")
+        }
+        create("x86-64") {
+            ndk.abiFilters.add("x86_64")
+        }
+        create("mips") {
+            ndk.abiFilters.add("mips")
+        }
+        create("mips-64") {
+            ndk.abiFilters.add("mips64")
+        }
+        // To include all cpu architectures, leaves abiFilters empty
+        create("all")
+    }
+
+    android.packagingOptions {
         exclude 'META-INF/LICENSE.txt'
         exclude 'META-INF/NOTICE.txt'
+    }
+
+    compileOptions.with {
+        sourceCompatibility = JavaVersion.VERSION_1_7
+        targetCompatibility = JavaVersion.VERSION_1_7
     }
 }
 
