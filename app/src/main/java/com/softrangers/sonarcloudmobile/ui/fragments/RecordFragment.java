@@ -26,8 +26,6 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.github.lassana.recorder.AudioRecorder;
-import com.github.lassana.recorder.AudioRecorderBuilder;
 import com.softrangers.sonarcloudmobile.R;
 import com.softrangers.sonarcloudmobile.adapters.AnnouncementRecAdapter;
 import com.softrangers.sonarcloudmobile.models.Recording;
@@ -37,8 +35,11 @@ import com.softrangers.sonarcloudmobile.utils.AudioProcessor;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.widgets.MillisChronometer;
 
+import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -55,6 +56,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
     private static final int ADD_SCHEDULE_REQUEST_CODE = 1813;
     private static final int SAMPLE_RATE = 16000;
+    private static final int CHANNEL = 1;
     private RelativeLayout mRecordAndSend;
     private RelativeLayout mStreamLayout;
     private RelativeLayout mPushToTalkLayout;
@@ -71,7 +73,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
     private MillisChronometer mRecordChronometer;
     private MillisChronometer mStreamingChronometer;
     private MillisChronometer mPTTChronometer;
-    private static AudioRecorder audioRecorder;
     private int recordingNumber;
 
     public RecordFragment() {
@@ -131,10 +132,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
             case R.id.start_pause_recording_button:
                 if (mRecorderState == RecorderState.STOPPED) {
                     startRecording();
-                } else if (mRecorderState == RecorderState.RECORDING) {
-                    pauseRecording();
-                } else if (mRecorderState == RecorderState.PAUSED) {
-                    resumeRecording();
                 }
                 break;
             case R.id.stop_recording_button:
@@ -173,72 +170,11 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
 
     private void startRecording() {
-        recordAudio();
-//        recordingNumber = SonarCloudApp.getInstance().getLastRecordingNumber() + 1;
-//        String recordName = mActivity.getString(R.string.recording) + " " + recordingNumber;
-//        String filePath = mActivity.getCacheDir().getAbsolutePath()
-//                + File.separator + recordName + ".mp4";
-//        audioRecorder = AudioRecorderBuilder.with(mActivity)
-//                .fileName(filePath)
-//                .config(AudioRecorder.MediaRecorderConfig.DEFAULT)
-//                .loggable()
-//                .build();
-//        audioRecorder.start(new AudioRecorder.OnStartListener() {
-//            @Override
-//            public void onStarted() {
-//                mRecorderState = RecorderState.RECORDING;
-//                invalidateRecordAndSendViews();
-//                SonarCloudApp.getInstance().addNewRecording(recordingNumber);
-//            }
-//
-//            @Override
-//            public void onException(Exception e) {
-//                Log.e(this.getClass().getSimpleName(), e.getMessage());
-//                Snackbar.make(mStartRecordingBtn, mActivity.getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
-//            }
-//        });
-    }
-
-    private void resumeRecording() {
-    }
-
-    private void pauseRecording() {
-        audioRecorder.pause(new AudioRecorder.OnPauseListener() {
-            @Override
-            public void onPaused(String activeRecordFileName) {
-                mRecorderState = RecorderState.PAUSED;
-                invalidateRecordAndSendViews();
-            }
-
-            @Override
-            public void onException(Exception e) {
-                Log.e(this.getClass().getSimpleName(), e.getMessage());
-                Snackbar.make(mStartRecordingBtn, mActivity.getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
-            }
-        });
-    }
-
-    private void stopRecording() {
-        audioRecorder.pause(new AudioRecorder.OnPauseListener() {
-            @Override
-            public void onPaused(String activeRecordFileName) {
-                mRecorderState = RecorderState.STOPPED;
-                audioRecorder = null;
-                mActivity.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        invalidateRecordAndSendViews();
-                        mRecAdapter.refreshList(getRecordedFileList());
-                    }
-                });
-            }
-
-            @Override
-            public void onException(Exception e) {
-                Log.e(this.getClass().getSimpleName(), e.getMessage());
-                Snackbar.make(mStartRecordingBtn, mActivity.getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
-            }
-        });
+        try {
+            recordAudio();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private void invalidateRecordAndSendViews() {
@@ -298,17 +234,8 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
     @Override
     public void onItemClick(Recording recording, int position, boolean isPlaying) {
         try {
-            if (!isPlaying) {
-                if (mMediaPlayer.isPlaying()) {
-                    mMediaPlayer.stop();
-                    mRecAdapter.notifyItemChanged(position);
-                }
-            } else {
-                if (mMediaPlayer.isPlaying()) mMediaPlayer.stop();
-                mMediaPlayer.reset();
-                mMediaPlayer.setDataSource(recording.getFilePath());
-                mMediaPlayer.prepareAsync();
-            }
+            recording.setIsPlaying(playAudio(recording));
+            mRecAdapter.notifyItemChanged(position);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -441,37 +368,30 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         }
     }
 
-    private void recordAudio() {
+    private void recordAudio() throws IOException {
         // We'll be throwing stuff here
         String recordName = mActivity.getString(R.string.recording) + " " + recordingNumber;
         String filePath = mActivity.getCacheDir().getAbsolutePath()
                 + File.separator + recordName;
-        SonarCloudApp.getInstance().addNewRecording(recordingNumber);
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         FileOutputStream fos = null;
         try {
             fos = new FileOutputStream(new File(filePath));
+            SonarCloudApp.getInstance().addNewRecording(recordingNumber);
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-        final int channel = 1;
-        int channelOption;
-
         // Processed bytes
         int bytesProcessed = 0;
-        int stopAfter = SAMPLE_RATE * channel * 2 * 5; // 5 seconds of recording
+//        int stopAfter = SAMPLE_RATE * CHANNEL * 2 * 5; // 5 seconds of recording
 
-
-        if (channel == 1)
-            channelOption = AudioFormat.CHANNEL_IN_MONO;
-        else
-            channelOption = AudioFormat.CHANNEL_IN_STEREO;
+        int channelOption = AudioFormat.CHANNEL_IN_MONO;
 
         int bufferSizeInBytes = 0;
 
         // Get our opus recorder
-        AudioProcessor audioProcessor = AudioProcessor.encoder(SAMPLE_RATE, channel, AudioProcessor.OPUS_APPLICATION_VOIP);
+        AudioProcessor audioProcessor = AudioProcessor.encoder(SAMPLE_RATE, CHANNEL, AudioProcessor.OPUS_APPLICATION_VOIP);
 
         // The buffer
         byte[] recordBuffer = new byte[audioProcessor.pcmBytes];
@@ -480,81 +400,82 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         Log.i("SonarCloud", "Buffer size got is " + bufferSizeInBytes);
         bufferSizeInBytes = AudioRecord.getMinBufferSize(SAMPLE_RATE, channelOption, AudioFormat.ENCODING_PCM_16BIT);
 
-        AudioRecord audioRecorder = new AudioRecord(
-                MediaRecorder.AudioSource.MIC,
-                SAMPLE_RATE,
-                channelOption,
-                AudioFormat.ENCODING_PCM_16BIT,
-                bufferSizeInBytes
-        );
+        AudioRecord audioRecorder = new AudioRecord(MediaRecorder.AudioSource.MIC, SAMPLE_RATE, channelOption,
+                AudioFormat.ENCODING_PCM_16BIT, bufferSizeInBytes);
 
         Log.i("SonarCloud", "Buffer size wanted is " + bufferSizeInBytes + " with " + SAMPLE_RATE
                 + "Hz - " + audioProcessor.pcmBytes);
 
         // Now
         audioRecorder.startRecording();
-
-        while (true) {
+        mRecorderState = RecorderState.RECORDING;
+        invalidateRecordAndSendViews();
+        Log.i("SonarCloud", "Recording started");
+        while (mRecorderState == RecorderState.RECORDING) {
             audioRecorder.read(recordBuffer, 0, recordBuffer.length);
 
             Log.i("SonarCloud", "Encoding " + recordBuffer.length + " bytes.");
 
             // Encode
-            int bytesWritten = audioProcessor.encodePCM(
-                    recordBuffer,
-                    0,
-                    encodeBuffer,
-                    0
-            );
+            int bytesWritten = audioProcessor.encodePCM(recordBuffer, 0, encodeBuffer, 0);
 
             outputStream.write(encodeBuffer, 0, bytesWritten);
-            try {
-                fos.write(encodeBuffer, 0, bytesWritten);
-            } catch (IOException e) {
-                e.printStackTrace();
+
+            if (fos != null) {
+                try {
+                    fos.write(encodeBuffer, 0, bytesWritten);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
 
             // Keep track of how much
             bytesProcessed += recordBuffer.length;
-            if (bytesProcessed >= stopAfter)
-                break;
+//            if (bytesProcessed >= stopAfter)
+//                break;
         }
-
         // Stop the recorder
         audioRecorder.stop();
         audioRecorder.release();
+        fos.flush();
+        fos.close();
 
         // Get rid
         audioProcessor.dealloc();
-
-        // Show the payload
-        playAudio(outputStream.toByteArray(), SAMPLE_RATE);
+        Log.i("SonarCloud", "Record stopped");
     }
 
-    private void playAudio(byte[] payloadBytes, int sampleRate) {
-        final int channel = 1;
+    private void stopRecording() {
+        mRecorderState = RecorderState.STOPPED;
+        invalidateRecordAndSendViews();
+        mRecAdapter.refreshList(getRecordedFileList());
+    }
+
+    private boolean playAudio(Recording recording) throws Exception {
         int channelOption;
 
-        if (channel == 1)
+        File file = new File(recording.getFilePath());
+        int size = (int) file.length();
+        byte[] bytes = new byte[size];
+        FileInputStream fis = new FileInputStream(new File(recording.getFilePath()));
+        BufferedInputStream bis = new BufferedInputStream(fis);
+        bis.read(bytes, 0, bytes.length);
+        bis.close();
             channelOption = AudioFormat.CHANNEL_OUT_MONO;
-        else
-            channelOption = AudioFormat.CHANNEL_OUT_STEREO;
-
-//                final int application = AudioProcessor.OPUS_APPLICATION_VOIP;
 
         AudioProcessor audioProcessor;
 
         try {
             // Get the decoder
-            audioProcessor = AudioProcessor.decoder(sampleRate, channel);
+            audioProcessor = AudioProcessor.decoder(SAMPLE_RATE, CHANNEL);
         } catch (Error e) {
             e.printStackTrace();
             Toast.makeText(mActivity, e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
-            return;
+            return false;
         }
 
         int minimumBufferSize = AudioTrack.getMinBufferSize(
-                sampleRate,
+                SAMPLE_RATE,
                 channelOption,
                 AudioFormat.ENCODING_PCM_16BIT
         );
@@ -568,14 +489,8 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         byte[] pcmBytes = new byte[audioProcessor.bufferSize];
         byte[] buffer = null;
 
-        AudioTrack mAudioTrack = new AudioTrack(
-                AudioManager.STREAM_MUSIC,
-                sampleRate,
-                channelOption,
-                AudioFormat.ENCODING_PCM_16BIT,
-                minimumBufferSize,
-                AudioTrack.MODE_STREAM
-        );
+        AudioTrack mAudioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, SAMPLE_RATE, channelOption,
+                AudioFormat.ENCODING_PCM_16BIT, minimumBufferSize, AudioTrack.MODE_STREAM);
 
         // Now figure our lives
         mAudioTrack.play();
@@ -583,9 +498,9 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         // Now decode in sequence
         while (true) {
             // Read more
-            if (payloadOffset < payloadBytes.length) {
+            if (payloadOffset < bytes.length) {
                 // Get the length
-                ByteBuffer wrapped = ByteBuffer.wrap(payloadBytes); // big-endian by default
+                ByteBuffer wrapped = ByteBuffer.wrap(bytes); // big-endian by default
                 int payloadSize = wrapped.getInt(payloadOffset);
 
                 // Did we run out?
@@ -598,17 +513,12 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
                 // Read more
                 // Decode us
-                int bytesWritten = audioProcessor.decodePayload(
-                        payloadBytes,
-                        payloadOffset,
-                        payloadSize,
-                        pcmBytes,
-                        0);
+                int bytesWritten = audioProcessor.decodePayload(bytes, payloadOffset, payloadSize, pcmBytes, 0);
 
                 // Now append
-                if (buffer == null)
+                if (buffer == null) {
                     buffer = Arrays.copyOf(pcmBytes, bytesWritten);
-                else {
+                } else {
                     byte[] aBuffer = new byte[buffer.length + bytesWritten];
                     System.arraycopy(buffer, 0, aBuffer, 0, buffer.length);
                     System.arraycopy(pcmBytes, 0, aBuffer, buffer.length, bytesWritten);
@@ -625,7 +535,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                 break;
             } else {
                 // Check if we have enough for our buffer or if we are done
-                if (buffer.length >= minimumBufferSize || payloadOffset >= payloadBytes.length) {
+                if (buffer.length >= minimumBufferSize || payloadOffset >= bytes.length) {
                     // Write the audio data in full
                     mAudioTrack.write(buffer, 0, buffer.length);
 
@@ -641,6 +551,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
         // Get rid of this
         audioProcessor.dealloc();
+        return false;
     }
 
     enum RecorderState {
