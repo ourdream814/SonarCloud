@@ -16,6 +16,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.RadioGroup;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
@@ -46,8 +47,9 @@ import java.util.ArrayList;
 public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheckedChangeListener,
         ScheduledRecordsAdapter.OnScheduleClickListener, DaysAdapter.OnDayClickListener {
 
+    public static final String RECEIVERS_ARGS = "receivers arguments key";
     private static RelativeLayout scheduledLayout;
-    private static LinearLayout allScheduleLayout;
+    private static RelativeLayout allScheduleLayout;
 
     private static TextView unselectedText;
     private static TextView noRecordsText;
@@ -59,10 +61,13 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     private static ScheduledRecordsAdapter scheduledRecordsAdapter;
     private MainActivity mActivity;
     private int clickedPosition;
+    private ProgressBar mAllRecordsProgress;
+    private ProgressBar mScheduledProgress;
 
     public ScheduleFragment() {
         // Required empty public constructor
     }
+
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -71,13 +76,13 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         View view = inflater.inflate(R.layout.fragment_schedule, container, false);
         // get a link to fragment activity
         mActivity = (MainActivity) getActivity();
-        mDaysAdapter = new DaysAdapter();
         IntentFilter intentFilter = new IntentFilter(Api.Command.RECORDINGS);
         intentFilter.addAction(Api.Command.SCHEDULES);
         intentFilter.addAction(Api.EXCEPTION);
         intentFilter.addAction(ScheduleActivity.ACTION_EDIT_SCHEDULE);
         intentFilter.addAction(ScheduleActivity.ACTION_ADD_SCHEDULE);
         mActivity.registerReceiver(mBroadcastReceiver, intentFilter);
+        mDaysAdapter = new DaysAdapter();
         // initialize adapters with empty lists
         ArrayList<Recording> recordings = new ArrayList<>();
         ArrayList<Schedule> schedules = new ArrayList<>();
@@ -85,6 +90,13 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         scheduledRecordsAdapter = new ScheduledRecordsAdapter(schedules, mActivity);
         // initialize all fragment views
         initializeViews(view);
+        ArrayList<Receiver> receivers = getArguments().getParcelableArrayList(RECEIVERS_ARGS);
+        if (receivers.size() > 0) {
+            getAllRecordingsFromServer(receivers);
+            getAllScheduledRecords(receivers);
+        } else {
+            clearLists();
+        }
         return view;
     }
 
@@ -104,9 +116,12 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         noRecordsText = (TextView) view.findViewById(R.id.schedule_fragment_no_recordsText);
         noRecordsText.setTypeface(SonarCloudApp.avenirBook);
 
+        mScheduledProgress = (ProgressBar) view.findViewById(R.id.scheduled_records_progressBar);
+        mAllRecordsProgress = (ProgressBar) view.findViewById(R.id.all_records_progressBar);
+
         // Layouts which are holding all lists, used to hide/show the lists on the screen
         scheduledLayout = (RelativeLayout) view.findViewById(R.id.scheduled_list_layout);
-        allScheduleLayout = (LinearLayout) view.findViewById(R.id.schedule_all_layout);
+        allScheduleLayout = (RelativeLayout) view.findViewById(R.id.schedule_all_layout);
 
         // initialize horizontal days list
         RecyclerView daysHorizontalList = (RecyclerView) view.findViewById(R.id.schedule_horizontal_list);
@@ -119,7 +134,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         int margin = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 30, mActivity.getResources().getDisplayMetrics());
         int screenWidht = mActivity.getWindow().getDecorView().getWidth() - margin;
         int selectedPosition = mDaysAdapter.getSelectedPostion();
-        addSchedulesToList(mDaysAdapter.getDays().get(selectedPosition).getSchedules());
+//        addSchedulesToList(mDaysAdapter.getDays().get(selectedPosition).getSchedules());
         layoutManager.scrollToPositionWithOffset(selectedPosition, screenWidht / 2);
 
         // initialize scheduled recordings list
@@ -145,23 +160,12 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
             case R.id.all_schedule_list_button:
                 // Change the selected status to know which button was selected
                 isScheduleSelected = false;
-                // check if the list is not empty
-                if (allRecordingsAdapter.getItemCount() > 0) {
-                    // if is not empty hide the no data texts
-                    unselectedText.setVisibility(View.GONE);
-                    noRecordsText.setVisibility(View.GONE);
-                } else {
-                    // else check if there are any receiver selected and if true get all recordings
-                    // for selected receiver
-                    if (MainActivity.selectedGroup != null) {
-                        getAllRecordingsFromServer(MainActivity.selectedGroup.getReceivers());
-                    } else if (MainActivity.selectedReceivers.size() > 0) {
-                        getAllRecordingsFromServer(MainActivity.selectedReceivers);
-                    }
-                }
                 // hide the scheduled layout and show the all recordings layout
                 scheduledLayout.setVisibility(View.GONE);
                 allScheduleLayout.setVisibility(View.VISIBLE);
+                if (allRecordingsAdapter.getItemCount() > 0)
+                    noRecordsText.setVisibility(View.GONE);
+                else noRecordsText.setVisibility(View.VISIBLE);
                 break;
             case R.id.scheduled_list_button:
                 // Change the selected status to know which button was selected
@@ -169,28 +173,11 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
                 // Hide the all recordings layout and show the scheduled layout
                 allScheduleLayout.setVisibility(View.GONE);
                 scheduledLayout.setVisibility(View.VISIBLE);
-                // check if there are any receiver selected
-                // if true then get all scheduled recordings for selected receivers
-                if (MainActivity.selectedGroup != null) {
-                    getAllScheduledRecords(MainActivity.selectedGroup.getReceivers());
-                } else if (MainActivity.selectedReceivers.size() > 0) {
-                    getAllScheduledRecords(MainActivity.selectedReceivers);
-                }
+                if (scheduledRecordsAdapter.getItemCount() > 0)
+                    noRecordsText.setVisibility(View.GONE);
+                else noRecordsText.setVisibility(View.VISIBLE);
                 break;
         }
-    }
-
-    /**
-     * Clear all adapters lists
-     */
-    public void clearList() {
-        // clear all recordings list
-        allRecordingsAdapter.clearList();
-        // clear scheduled recordings list
-        scheduledRecordsAdapter.clearList();
-        // show the unselected receiver text
-        unselectedText.setVisibility(View.VISIBLE);
-        noRecordsText.setVisibility(View.GONE);
     }
 
     /**
@@ -199,6 +186,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
      * @param receivers for which to get recordings
      */
     public void getAllScheduledRecords(ArrayList<Receiver> receivers) {
+        mScheduledProgress.setVisibility(View.VISIBLE);
         // hide the unselected text
         unselectedText.setVisibility(View.GONE);
         // clear current scheduled list
@@ -219,24 +207,18 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
      * @param receivers for which to get recordings
      */
     public void getAllRecordingsFromServer(ArrayList<Receiver> receivers) {
-        // check which button is selected
-        // if scheduled recordings is selected get scheduled recordings from server
-        // else get all recordings from server
-        if (isScheduleSelected) {
-            getAllScheduledRecords(receivers);
-        } else {
-            // hide the unselected text
-            unselectedText.setVisibility(View.GONE);
-            // clear current scheduled list
-            allRecordingsAdapter.clearList();
-            // build a request with provided receivers
-            Request.Builder builder = new Request.Builder();
-            builder.command(Api.Command.RECORDINGS);
-            for (Receiver receiver : receivers) {
-                builder.receiverId(receiver.getReceiverId());
-                // send request to server
-                SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
-            }
+        mAllRecordsProgress.setVisibility(View.VISIBLE);
+        // hide the unselected text
+        unselectedText.setVisibility(View.GONE);
+        // clear current scheduled list
+        allRecordingsAdapter.clearList();
+        // build a request with provided receivers
+        Request.Builder builder = new Request.Builder();
+        builder.command(Api.Command.RECORDINGS);
+        for (Receiver receiver : receivers) {
+            builder.receiverId(receiver.getReceiverId());
+            // send request to server
+            SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
         }
     }
 
@@ -246,8 +228,9 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
      * @param recordings list to add to adapter
      */
     private void addRecordingsToList(ArrayList<Recording> recordings) {
+        mAllRecordsProgress.setVisibility(View.GONE);
         // add recordings to adapter's list
-        allRecordingsAdapter.addItems(recordings);
+        allRecordingsAdapter.changeList(recordings);
         // check if there are any item in the list
         // if false then show the no data text and hide the list layout
         // else hide the no data text and show the list layout
@@ -266,17 +249,15 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
      * @param schedules list to add to adapter
      */
     private void addSchedulesToList(ArrayList<Schedule> schedules) {
+        mScheduledProgress.setVisibility(View.GONE);
         // add schedules to adapter's list
-        scheduledRecordsAdapter.clearList();
-        scheduledRecordsAdapter.addItems(schedules);
+        scheduledRecordsAdapter.changeList(schedules);
         // check if there are any item in the list
         // if false then show the no data text and hide the list layout
         // else hide the no data text and show the list layout
         if (scheduledRecordsAdapter.getItemCount() <= 0) {
-            if (MainActivity.selectedReceivers.size() > 0 || MainActivity.selectedGroup != null) {
-                if (scheduledLayout.getVisibility() == View.VISIBLE)
-                    noRecordsText.setVisibility(View.VISIBLE);
-            }
+            if (scheduledLayout.getVisibility() == View.VISIBLE)
+                noRecordsText.setVisibility(View.VISIBLE);
         } else {
             noRecordsText.setVisibility(View.GONE);
         }
@@ -337,6 +318,14 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         }
     };
 
+    public void clearLists() {
+        scheduledRecordsAdapter.clearList();
+        allRecordingsAdapter.clearList();
+        unselectedText.setVisibility(View.VISIBLE);
+        noRecordsText.setVisibility(View.GONE);
+        mAllRecordsProgress.setVisibility(View.GONE);
+        mScheduledProgress.setVisibility(View.GONE);
+    }
 
     private static ArrayList<Schedule> allSchedules = new ArrayList<>();
 
@@ -433,12 +422,20 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     @Override
     public void onDetach() {
         super.onDetach();
-        mActivity.unregisterReceiver(mBroadcastReceiver);
+        getContext().unregisterReceiver(mBroadcastReceiver);
     }
 
     @Override
     public void onDayClick(Day day, int position) {
         sortSchedule(day, allSchedules);
         addSchedulesToList(day.getSchedules());
+    }
+
+    enum ScheduledState {
+        EMPTY_RECEIVERS, NO_RECORDS, LOADING
+    }
+
+    enum AllState {
+        EMPTY_RECEIVERS, NO_RECORDS, LOADING
     }
 }

@@ -14,9 +14,14 @@ import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
 import android.support.design.widget.TabLayout;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AlertDialog;
 import android.view.View;
+import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -40,9 +45,11 @@ import com.softrangers.sonarcloudmobile.utils.api.ConnectionReceiver;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends BaseActivity implements
-        ConnectionReceiver.OnConnected, Observable<GroupObserver> {
+        ConnectionReceiver.OnConnected, Observable<GroupObserver>,
+        ReceiversFragment.OnRecordFragmentListener {
 
     private static final String USER_STATE = "user_state";
     public static final String ACTION_LOGIN = "ACTION_LOGIN";
@@ -53,9 +60,17 @@ public class MainActivity extends BaseActivity implements
     private Group mGroup;
 
     private TextView mToolbarTitle;
-    private TabLayout mTabLayout;
-    private ViewPager mViewPager;
-    private MainViewPagerAdapter mPagerAdapter;
+    private LinearLayout mMainBottomBar;
+    private ImageButton mReceiversSelector;
+    private ImageButton mAnnouncementsSelector;
+    private ImageButton mRecordingsSelector;
+    private ImageButton mSettingsSelector;
+    private SelectedFragment mSelectedFragment;
+
+    private ReceiversFragment mReceiversFragment;
+    private RecordFragment mRecordFragment;
+    private ScheduleFragment mScheduleFragment;
+    private SettingsFragment mSettingsFragment;
 
     // set selected items to send the record to them
     public static ArrayList<Receiver> selectedReceivers = new ArrayList<>();
@@ -70,22 +85,97 @@ public class MainActivity extends BaseActivity implements
         intentFilter.addAction(Api.EXCEPTION);
         registerReceiver(mLoginReceiver, intentFilter);
         observers = new ArrayList<>();
-        mPagerAdapter = new MainViewPagerAdapter(this, getSupportFragmentManager());
-        mViewPager = (ViewPager) findViewById(R.id.main_activity_viewPager);
-        mTabLayout = (TabLayout) findViewById(R.id.main_activity_tabLayout);
-        mToolbarTitle = (TextView) findViewById(R.id.main_activity_toolbarTitle);
+        // initialize bottom buttons
         assert mToolbarTitle != null;
+        mToolbarTitle = (TextView) findViewById(R.id.main_activity_toolbarTitle);
         mToolbarTitle.setTypeface(SonarCloudApp.avenirMedium);
-
         ConnectionReceiver.getInstance().addOnConnectedListener(this);
         if (SonarCloudApp.socketService != null) {
             SonarCloudApp.socketService.restartConnection();
         }
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
+    private void initializeBottomButtons() {
+        // instantiate fragments
+        mReceiversFragment = new ReceiversFragment();
+        mRecordFragment = new RecordFragment();
+        mSettingsFragment = new SettingsFragment();
+        //link bottom buttons
+        mMainBottomBar = (LinearLayout) findViewById(R.id.main_bottomBar);
+        mReceiversSelector = (ImageButton) findViewById(R.id.bottom_PASystems_selector);
+        mAnnouncementsSelector = (ImageButton) findViewById(R.id.bottom_announcements_selector);
+        mRecordingsSelector = (ImageButton) findViewById(R.id.bottom_recordings_selector);
+        mSettingsSelector = (ImageButton) findViewById(R.id.bottom_settings_selector);
+        // set first button selected and add fragment to container
+        mSelectedFragment = SelectedFragment.RECEIVERS;
+        changeFragment(mReceiversFragment);
+        invalidateViews();
+        if (!SonarCloudApp.getInstance().areRecordingPermissed()) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.RECORD_AUDIO)) {
+                new ExplainPermission().execute();
+            } else {
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, RECORD_AUDIO_PERM);
+            }
+        }
+    }
+
+    private void invalidateViews() {
+        switch (mSelectedFragment) {
+            case RECEIVERS:
+                mToolbarTitle.setText(getString(R.string.select_pa_system));
+                mReceiversSelector.setBackgroundResource(R.drawable.bottom_bright_gradient);
+                mAnnouncementsSelector.setBackgroundResource(android.R.color.transparent);
+                mRecordingsSelector.setBackgroundResource(android.R.color.transparent);
+                mSettingsSelector.setBackgroundResource(android.R.color.transparent);
+                break;
+            case ANNOUNCEMENTS:
+                mToolbarTitle.setText(getString(R.string.make_announcement));
+                mReceiversSelector.setBackgroundResource(android.R.color.transparent);
+                mAnnouncementsSelector.setBackgroundResource(R.drawable.bottom_bright_gradient);
+                mRecordingsSelector.setBackgroundResource(android.R.color.transparent);
+                mSettingsSelector.setBackgroundResource(android.R.color.transparent);
+                break;
+            case RECORDINGS:
+                mToolbarTitle.setText(getString(R.string.schedules));
+                mReceiversSelector.setBackgroundResource(android.R.color.transparent);
+                mAnnouncementsSelector.setBackgroundResource(android.R.color.transparent);
+                mRecordingsSelector.setBackgroundResource(R.drawable.bottom_bright_gradient);
+                mSettingsSelector.setBackgroundResource(android.R.color.transparent);
+                break;
+            case SETTINGS:
+                mToolbarTitle.setText(getString(R.string.settings));
+                mReceiversSelector.setBackgroundResource(android.R.color.transparent);
+                mAnnouncementsSelector.setBackgroundResource(android.R.color.transparent);
+                mRecordingsSelector.setBackgroundResource(android.R.color.transparent);
+                mSettingsSelector.setBackgroundResource(R.drawable.bottom_bright_gradient);
+                break;
+        }
+    }
+
+    public void onBottomButtonsClick(View view) {
+        switch (view.getId()) {
+            case R.id.bottom_PASystems_selector:
+                changeFragment(mReceiversFragment);
+                mSelectedFragment = SelectedFragment.RECEIVERS;
+                invalidateViews();
+                break;
+            case R.id.bottom_announcements_selector:
+                changeFragment(mRecordFragment);
+                mSelectedFragment = SelectedFragment.ANNOUNCEMENTS;
+                invalidateViews();
+                break;
+            case R.id.bottom_recordings_selector:
+                sendReceiversToScheduleFragment(selectedReceivers);
+                changeFragment(mScheduleFragment);
+                mSelectedFragment = SelectedFragment.RECORDINGS;
+                invalidateViews();
+                break;
+            case R.id.bottom_settings_selector:
+                changeFragment(mSettingsFragment);
+                mSelectedFragment = SelectedFragment.SETTINGS;
+                invalidateViews();
+                break;
+        }
     }
 
     BroadcastReceiver mLoginReceiver = new BroadcastReceiver() {
@@ -115,17 +205,17 @@ public class MainActivity extends BaseActivity implements
     public void onResponseSucceed(JSONObject response) {
         dismissLoading();
         SonarCloudApp.user = User.build(response);
-        setUpTabs();
+        initializeBottomButtons();
     }
 
     public void onCommandFailure(String message) {
         dismissLoading();
-        Snackbar.make(mViewPager, message, Snackbar.LENGTH_SHORT).show();
+        Snackbar.make(mMainBottomBar, message, Snackbar.LENGTH_SHORT).show();
     }
 
     public void onErrorOccurred() {
         dismissLoading();
-        Snackbar.make(mViewPager, getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
+        Snackbar.make(mMainBottomBar, getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
     }
 
     @Override
@@ -134,70 +224,62 @@ public class MainActivity extends BaseActivity implements
         outState.putParcelable(USER_STATE, SonarCloudApp.user);
     }
 
-    @TargetApi(Build.VERSION_CODES.M)
-    private void setUpTabs() {
-        if (mPagerAdapter.getCount() > 0) return;
-        mPagerAdapter.addFragment(new ReceiversFragment(), getString(R.string.select_pa_system));
-        mPagerAdapter.addFragment(new RecordFragment(), getString(R.string.make_announcement));
-
-        final ScheduleFragment scheduleFragment = new ScheduleFragment();
-        mPagerAdapter.addFragment(scheduleFragment, getString(R.string.schedule_announcement));
-        mPagerAdapter.addFragment(new SettingsFragment(), getString(R.string.settings));
-        mViewPager.setAdapter(mPagerAdapter);
-        mViewPager.setOffscreenPageLimit(5);
-        setToolbarTitle(mPagerAdapter.getTitle(0));
-        mViewPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
-            @Override
-            public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
-
-            }
-
-            @Override
-            public void onPageSelected(int position) {
-                if (mPagerAdapter.getItem(position) instanceof ScheduleFragment) {
-                    if (!statusChanged) return;
-                    if (selectedReceivers.size() > 0) {
-                        scheduleFragment.getAllRecordingsFromServer(selectedReceivers);
-                    } else if (selectedGroup != null) {
-                        scheduleFragment.getAllRecordingsFromServer(selectedGroup.getReceivers());
-                    } else {
-                        scheduleFragment.clearList();
-                    }
-                    statusChanged = false;
-                }
-                setToolbarTitle(mPagerAdapter.getTitle(position));
-            }
-
-            @Override
-            public void onPageScrollStateChanged(int state) {
-
-            }
-        });
-        mTabLayout.setupWithViewPager(mViewPager);
-        TabLayout.Tab receivers = mTabLayout.getTabAt(0);
-        TabLayout.Tab record = mTabLayout.getTabAt(1);
-        TabLayout.Tab schedule = mTabLayout.getTabAt(2);
-        TabLayout.Tab settings = mTabLayout.getTabAt(3);
-
-        assert receivers != null;
-        receivers.setIcon(R.mipmap.ic_receivers);
-
-        assert record != null;
-        record.setIcon(R.mipmap.ic_microphone);
-
-        assert schedule != null;
-        schedule.setIcon(R.mipmap.ic_record_play_schedule);
-
-        assert settings != null;
-        settings.setIcon(R.mipmap.ic_settings);
-
-        if (!SonarCloudApp.getInstance().areRecordingPermissed()) {
-            if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.RECORD_AUDIO)) {
-                new ExplainPermission().execute();
-            } else {
-                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, RECORD_AUDIO_PERM);
+    private void changeFragment(Fragment newFragment) {
+        FragmentManager fragmentManager = getSupportFragmentManager();
+        FragmentTransaction transaction = fragmentManager.beginTransaction();
+        Fragment old = fragmentManager.findFragmentByTag(newFragment.getClass().getSimpleName());
+        List<Fragment> fragments = fragmentManager.getFragments();
+        if (fragments != null) {
+            for (Fragment fragment : fragments) {
+                transaction.hide(fragment);
             }
         }
+        if (old != null && old.equals(newFragment)) {
+            transaction.show(old);
+        } else {
+            transaction.add(R.id.main_fragmentContainer, newFragment,
+                    newFragment.getClass().getSimpleName());
+        }
+        transaction.commit();
+    }
+
+    @Override
+    public void onReceiverClicked(Receiver receiver) {
+        selectedGroup = null;
+        if (receiver.isSelected()) {
+            selectedReceivers.add(receiver);
+        } else {
+            selectedReceivers.remove(receiver);
+        }
+    }
+
+    @Override
+    public void onGroupClicked(Group group) {
+        selectedReceivers.clear();
+        selectedGroup = group;
+        sendReceiversToScheduleFragment(group.getReceivers());
+    }
+
+    private void sendReceiversToScheduleFragment(ArrayList<Receiver> receivers) {
+        mScheduleFragment = (ScheduleFragment) getSupportFragmentManager()
+                .findFragmentByTag(ScheduleFragment.class.getSimpleName());
+        if (mScheduleFragment != null) {
+            if (receivers.size() <= 0) {
+                mScheduleFragment.clearLists();
+            } else {
+                mScheduleFragment.getAllRecordingsFromServer(receivers);
+                mScheduleFragment.getAllScheduledRecords(receivers);
+            }
+        } else {
+            mScheduleFragment = new ScheduleFragment();
+            Bundle bundle = new Bundle();
+            bundle.putParcelableArrayList(ScheduleFragment.RECEIVERS_ARGS, receivers);
+            mScheduleFragment.setArguments(bundle);
+        }
+    }
+
+    enum SelectedFragment {
+        RECEIVERS, ANNOUNCEMENTS, RECORDINGS, SETTINGS
     }
 
     class ExplainPermission extends AsyncTask<Void, Void, Void> {
@@ -217,10 +299,6 @@ public class MainActivity extends BaseActivity implements
             permissionDialog.show();
             return null;
         }
-    }
-
-    public void setToolbarTitle(@NonNull String title) {
-        mToolbarTitle.setText(title);
     }
 
     public void logout(View view) {

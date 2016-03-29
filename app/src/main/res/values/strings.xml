@@ -75,5 +75,9 @@
     <string name="enable_touch_id">Enable Touch ID</string>
     <string name="please_wait">Please wait untill sending will finish</string>
     <string name="audio_sent">Audio sent</string>
+    <string name="pa_list">PA systems list</string>
+    <string name="announcements">Announcements</string>
+    <string name="all_recordings">All recordings</string>
+    <string name="schedules">Schedules</string>
 
 </resources>

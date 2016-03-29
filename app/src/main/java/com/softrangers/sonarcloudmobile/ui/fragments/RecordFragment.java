@@ -140,6 +140,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
 
     //---------------- Common methods ----------------//
+
     /**
      * Handles clicks from all fragment buttons
      */
@@ -211,6 +212,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
 
     //---------------- Record and Send layout ----------------//
+
     /**
      * Called when a record from the list is clicked
      *
@@ -393,6 +395,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
 
     //---------------- Streaming layout ----------------//
+
     /**
      * Update views to inform user about changes
      */
@@ -421,6 +424,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
 
     //---------------- Push to talk layout ----------------//
+
     /**
      * Called when PTT button is either pressed or released
      */
@@ -482,6 +486,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
 
     //------------------ Recording process ---------------------//
+
     /**
      * Starts a new thread to record the audio
      */
@@ -744,6 +749,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
     /**
      * Start the sending process
+     *
      * @param recording which needs to be sent
      */
     private void startSendingAudioProcess(Recording recording, ProgressBar progressBar, ImageButton send) {
@@ -784,6 +790,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
     /**
      * Called when the key and id for record are received from server
+     *
      * @param response which contains "key" and "recordingID"
      * @throws JSONException
      */
@@ -839,13 +846,16 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
     /**
      * called when the command which is sent to server fails
+     *
      * @param message with the problem description
      */
     private void onCommandFailure(String message) {
         isSending = false;
-        mSendButton.setVisibility(View.VISIBLE);
-        mSendingProgress.setVisibility(View.GONE);
-        mSendButton.setClickable(true);
+        if (mSendButton != null && mSendingProgress != null) {
+            mSendButton.setVisibility(View.VISIBLE);
+            mSendingProgress.setVisibility(View.GONE);
+            mSendButton.setClickable(true);
+        }
         Snackbar.make(mRecordAndSend, message, Snackbar.LENGTH_SHORT).show();
     }
 
@@ -854,9 +864,11 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
      */
     private void onErrorOccurred() {
         isSending = false;
-        mSendButton.setVisibility(View.VISIBLE);
-        mSendingProgress.setVisibility(View.GONE);
-        mSendButton.setClickable(true);
+        if (mSendButton != null && mSendingProgress != null) {
+            mSendButton.setVisibility(View.VISIBLE);
+            mSendingProgress.setVisibility(View.GONE);
+            mSendButton.setClickable(true);
+        }
         Snackbar.make(mRecordAndSend, mActivity.getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
     }
 }

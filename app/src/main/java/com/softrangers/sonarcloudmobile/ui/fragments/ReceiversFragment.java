@@ -1,5 +1,6 @@
 package com.softrangers.sonarcloudmobile.ui.fragments;
 
+import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -59,9 +60,22 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
     private RecyclerView mGroupsRecyclerView;
     private ArrayList<PASystem> mPASystems;
     private ArrayList<Group> mGroups;
+    private OnRecordFragmentListener mFragmentListener;
 
     public ReceiversFragment() {
         // Required empty public constructor
+    }
+
+    @Override
+    public void onAttach(Activity activity) {
+        super.onAttach(activity);
+
+        try {
+            mFragmentListener = (OnRecordFragmentListener) activity;
+        } catch (Exception e) {
+            throw new ClassCastException(activity.toString()
+                    + " must implement OnRecordFragmentListener");
+        }
     }
 
     @Override
@@ -69,6 +83,7 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.fragment_receivers, container, false);
+        Log.i(this.getClass().getSimpleName(), "onCreateView()");
         mActivity = (MainActivity) getActivity();
         mActivity.addObserver(this);
         IntentFilter intentFilter = new IntentFilter(Api.Command.ORGANISATIONS);
@@ -208,14 +223,7 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
      */
     @Override
     public void onGroupClicked(Group group, int position) {
-        if (!group.isSelected())
-            MainActivity.selectedGroup = null;
-        else MainActivity.selectedGroup = group;
-
-        if (MainActivity.selectedReceivers.size() > 0)
-            MainActivity.selectedReceivers.clear();
-
-        MainActivity.statusChanged = true;
+        mFragmentListener.onGroupClicked(group);
         clearPASystemSelection();
     }
 
@@ -318,18 +326,11 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
     @Override
     public void onChildClick(Receiver receiver, int position) {
         receiver.setIsSelected(!receiver.isSelected());
+        mFragmentListener.onReceiverClicked(receiver);
         mReceiverListAdapter.notifyDataSetChanged();
 
         if (mGroups != null)
             clearGroupsSelection();
-
-        MainActivity.selectedGroup = null;
-
-        if (receiver.isSelected())
-            MainActivity.selectedReceivers.add(receiver);
-        else MainActivity.selectedReceivers.remove(receiver);
-
-        MainActivity.statusChanged = true;
     }
 
     /**
@@ -390,19 +391,6 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
         builder.receiverGroupID(group.getGroupID());
         SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
     }
-
-//    @Override
-//    public boolean onGroupClick(ExpandableListView parent, View v, int groupPosition, long id) {
-//        // We call collapseGroupWithAnimation(int) and
-//        // expandGroupWithAnimation(int) to animate group
-//        // expansion/collapse.
-//        if (parent.isGroupExpanded(groupPosition)) {
-//            mListView.collapseGroupWithAnimation(groupPosition);
-//        } else {
-//            mListView.expandGroupWithAnimation(groupPosition);
-//        }
-//        return true;
-//    }
 
     BroadcastReceiver mPAReceiver = new BroadcastReceiver() {
         @Override
@@ -483,5 +471,10 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
         mActivity.dismissLoading();
         mGroups = Group.build(response);
         setUpGroupsListView(mGroups);
+    }
+
+    public interface OnRecordFragmentListener {
+        void onReceiverClicked(Receiver receiver);
+        void onGroupClicked(Group group);
     }
 }
