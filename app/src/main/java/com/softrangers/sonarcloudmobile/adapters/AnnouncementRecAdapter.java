@@ -5,6 +5,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.softrangers.sonarcloudmobile.R;
@@ -46,7 +47,18 @@ public class AnnouncementRecAdapter extends RecyclerView.Adapter<AnnouncementRec
         Recording recording = mRecordings.get(position);
         mRecordings.remove(position);
         notifyItemRemoved(position);
+        if (lastPosition == getItemCount()) {
+            lastPosition = WAS_NOT_SELECTED;
+        }
         return recording;
+    }
+
+    public void removeItem(Recording recording) {
+        mRecordings.remove(recording);
+        notifyDataSetChanged();
+        if (lastPosition == getItemCount()) {
+            lastPosition = WAS_NOT_SELECTED;
+        }
     }
 
     public void insertItem(int position, Recording recording) {
@@ -81,6 +93,7 @@ public class AnnouncementRecAdapter extends RecyclerView.Adapter<AnnouncementRec
         final TextView mTitleText;
         final ImageButton mScheduleButton;
         final ImageButton mSendRecord;
+        final ProgressBar mSendingProgress;
         Recording mRecording;
 
         public ViewHolder(View itemView) {
@@ -88,6 +101,7 @@ public class AnnouncementRecAdapter extends RecyclerView.Adapter<AnnouncementRec
             itemView.setOnClickListener(this);
             mPlayButton = (ImageButton) itemView.findViewById(R.id.make_announcement_itemPlayBtn);
             mTitleText = (TextView) itemView.findViewById(R.id.make_announcement_itemTitle);
+            mSendingProgress = (ProgressBar) itemView.findViewById(R.id.sending_record_progressBar);
             mScheduleButton = (ImageButton) itemView.findViewById(R.id.make_announcement_scheduleRecording);
             mScheduleButton.setOnClickListener(this);
             mSendRecord = (ImageButton) itemView.findViewById(R.id.make_announcement_sendRecordingBtn);
@@ -105,7 +119,7 @@ public class AnnouncementRecAdapter extends RecyclerView.Adapter<AnnouncementRec
                     break;
                 case R.id.make_announcement_sendRecordingBtn:
                     if (mRecordInteraction != null) {
-                        mRecordInteraction.onSendRecordClick(mRecording, position);
+                        mRecordInteraction.onSendRecordClick(mRecording, position, mSendingProgress, mSendRecord);
                     }
                     break;
                 default:
@@ -127,6 +141,6 @@ public class AnnouncementRecAdapter extends RecyclerView.Adapter<AnnouncementRec
     public interface OnAnnouncementRecordInteraction {
         void onItemClick(Recording recording, int position, boolean isPlaying);
         void onScheduleClick(Recording recording, int position);
-        void onSendRecordClick(Recording recording, int position);
+        void onSendRecordClick(Recording recording, int position, ProgressBar progressBar, ImageButton send);
     }
 }

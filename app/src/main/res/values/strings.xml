@@ -73,5 +73,7 @@
     <string name="enable_app_locking">Enable App Locking</string>
     <string name="set_lock_pattern">Set Lock Pattern</string>
     <string name="enable_touch_id">Enable Touch ID</string>
+    <string name="please_wait">Please wait untill sending will finish</string>
+    <string name="audio_sent">Audio sent</string>
 
 </resources>

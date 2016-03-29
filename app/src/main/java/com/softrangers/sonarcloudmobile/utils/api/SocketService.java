@@ -6,7 +6,6 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.os.Looper;
 import android.support.annotation.Nullable;
-import android.util.Log;
 
 import org.json.JSONObject;
 
@@ -34,7 +33,8 @@ import javax.net.ssl.X509TrustManager;
  */
 public class SocketService extends Service {
 
-    public static SSLSocket sslSocket;
+    public static SSLSocket dataSocket;
+    public static SSLSocket audioSocket;
     private static SSLSocketFactory sslSocketFactory;
     public BufferedReader readIn;
     public BufferedWriter writeOut;
@@ -67,11 +67,38 @@ public class SocketService extends Service {
         new SendRequest(request);
     }
 
+    public void prepareServerForAudio(JSONObject request) {
+        new PrepareServer(request);
+    }
+
+    public boolean isAudioConnectionReady() {
+        return audioSocket != null && audioSocket.isConnected() && !audioSocket.isClosed();
+    }
+
+    public void setAudioConnection() {
+        new AudioConnection();
+    }
+
+    public void closeAudioConnection() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    if (audioSocket != null)
+                        audioSocket.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+
     /**
      * Send bytes from audio file encoded with "Opus" to server
+     *
      * @param audioBytes which needs to be sent
      */
-    public void sendAudio(byte[] audioBytes)  {
+    public void sendAudio(byte[] audioBytes) {
         new SendAudio(audioBytes);
     }
 
@@ -100,6 +127,25 @@ public class SocketService extends Service {
         return START_NOT_STICKY;
     }
 
+    class AudioConnection implements Runnable {
+
+        public AudioConnection() {
+            new Thread(this, this.getClass().getSimpleName()).start();
+        }
+
+        @Override
+        public void run() {
+            try {
+                Looper.prepare();
+                audioSocket = (SSLSocket) sslSocketFactory.createSocket(
+                        new Socket(Api.URL, Api.AUDIO_PORT), Api.M_URL, Api.AUDIO_PORT, true
+                );
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     /**
      * Runnable which will establish server connection in a new thread
      */
@@ -115,7 +161,7 @@ public class SocketService extends Service {
             try {
                 Looper.prepare();
                 // create a new instance of socket and connect it to server
-                sslSocket = (SSLSocket) sslSocketFactory.createSocket(
+                dataSocket = (SSLSocket) sslSocketFactory.createSocket(
                         new Socket(Api.URL, Api.PORT), Api.M_URL, Api.PORT, true
                 );
 
@@ -150,8 +196,8 @@ public class SocketService extends Service {
         @Override
         public void run() {
             try {
-                if (sslSocket != null && sslSocket.isConnected()) {
-                    sslSocket.close();
+                if (dataSocket != null && dataSocket.isConnected()) {
+                    dataSocket.close();
                     new Connection();
                 }
             } catch (Exception e) {
@@ -176,21 +222,67 @@ public class SocketService extends Service {
         public void run() {
             Looper.prepare();
             try {
-                if (sslSocket == null || !sslSocket.isConnected()) {
+                if (audioSocket == null || !audioSocket.isConnected()) {
+                    new AudioConnection();
+                }
+
+                if (audioSocket != null && audioSocket.isConnected()) {
+                    // Start socket handshake
+                    audioSocket.startHandshake();
+
+                    if (audioSocket.isClosed()) new AudioConnection();
+                    // Create a reader and writer from socket output and input streams
+                    mOutputStream = audioSocket.getOutputStream();
+                    mOutputStream.write(mBytes, 0, mBytes.length);
+                    mOutputStream.flush();
+                    readIn = new BufferedReader(new InputStreamReader(audioSocket.getInputStream()));
+                    // send the request to server through writer object
+                    new Thread(new ReceiveMessage(readIn)).start();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * Runnable which will send requests in a new thread
+     */
+    class PrepareServer implements Runnable {
+        JSONObject message;
+
+        /**
+         * Constructor
+         *
+         * @param message for server
+         */
+        public PrepareServer(JSONObject message) {
+            // give the message for server and socket object to current thread
+            this.message = message;
+            mLastRequest = message;
+            // send message to server
+            new Thread(this, this.getClass().getSimpleName()).start();
+        }
+
+        @Override
+        public void run() {
+            try {
+                Looper.prepare();
+                if (audioSocket == null || !audioSocket.isConnected()) {
                     new Connection();
                 }
 
-                if (sslSocket != null && sslSocket.isConnected()) {
+                if (audioSocket != null && audioSocket.isConnected()) {
                     // Start socket handshake
-                    sslSocket.startHandshake();
+                    audioSocket.startHandshake();
 
-                    if (sslSocket.isClosed()) new Connection();
+                    if (audioSocket.isClosed()) new Connection();
                     // Create a reader and writer from socket output and input streams
-                    mOutputStream = sslSocket.getOutputStream();
-                    mOutputStream.write(mBytes, 0, mBytes.length);
-                    mOutputStream.flush();
-                    readIn = new BufferedReader(new InputStreamReader(sslSocket.getInputStream()));
+                    writeOut = new BufferedWriter(new OutputStreamWriter(audioSocket.getOutputStream()));
+                    readIn = new BufferedReader(new InputStreamReader(audioSocket.getInputStream()));
                     // send the request to server through writer object
+                    writeOut.write(message.toString() + "\n");
+                    writeOut.flush();
                     new Thread(new ReceiveMessage(readIn)).start();
                 }
             } catch (Exception e) {
@@ -222,18 +314,18 @@ public class SocketService extends Service {
         public void run() {
             try {
                 Looper.prepare();
-                if (sslSocket == null || !sslSocket.isConnected()) {
+                if (dataSocket == null || !dataSocket.isConnected()) {
                     new Connection();
                 }
 
-                if (sslSocket != null && sslSocket.isConnected()) {
+                if (dataSocket != null && dataSocket.isConnected()) {
                     // Start socket handshake
-                    sslSocket.startHandshake();
+                    dataSocket.startHandshake();
 
-                    if (sslSocket.isClosed()) new Connection();
+                    if (dataSocket.isClosed()) new Connection();
                     // Create a reader and writer from socket output and input streams
-                    writeOut = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream()));
-                    readIn = new BufferedReader(new InputStreamReader(sslSocket.getInputStream()));
+                    writeOut = new BufferedWriter(new OutputStreamWriter(dataSocket.getOutputStream()));
+                    readIn = new BufferedReader(new InputStreamReader(dataSocket.getInputStream()));
                     // send the request to server through writer object
                     writeOut.write(message.toString() + "\n");
                     writeOut.flush();
@@ -284,12 +376,12 @@ public class SocketService extends Service {
     public void onDestroy() {
         super.onDestroy();
         try {
-            sslSocket.close();
+            dataSocket.close();
             isConnected = false;
         } catch (Exception e) {
             e.printStackTrace();
         }
-        sslSocket = null;
+        dataSocket = null;
     }
 
     /**

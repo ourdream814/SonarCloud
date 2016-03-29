@@ -1,7 +1,10 @@
 package com.softrangers.sonarcloudmobile.ui.fragments;
 
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioRecord;
@@ -20,6 +23,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
+import android.widget.ProgressBar;
 import android.widget.RadioGroup;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
@@ -27,12 +31,18 @@ import android.widget.Toast;
 
 import com.softrangers.sonarcloudmobile.R;
 import com.softrangers.sonarcloudmobile.adapters.AnnouncementRecAdapter;
+import com.softrangers.sonarcloudmobile.models.Receiver;
 import com.softrangers.sonarcloudmobile.models.Recording;
+import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.ui.MainActivity;
 import com.softrangers.sonarcloudmobile.ui.ScheduleActivity;
 import com.softrangers.sonarcloudmobile.utils.AudioProcessor;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
+import com.softrangers.sonarcloudmobile.utils.api.Api;
 import com.softrangers.sonarcloudmobile.utils.widgets.MillisChronometer;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -53,8 +63,11 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         RadioGroup.OnCheckedChangeListener, View.OnTouchListener {
 
     private static final int ADD_SCHEDULE_REQUEST_CODE = 1813;
-    private static final int SAMPLE_RATE = 16000;
+    private static final int SAMPLE_RATE = 48000;
+    private static final int BITRATE = 16000;
     private static final int CHANNEL = 1;
+    private static boolean isSending;
+    private static String sendAudioKey;
     private RelativeLayout mRecordAndSend;
     private RelativeLayout mStreamLayout;
     private RelativeLayout mPushToTalkLayout;
@@ -83,6 +96,11 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         View view = inflater.inflate(R.layout.fragment_record, container, false);
         // Obtain a link to activity
         mActivity = (MainActivity) getActivity();
+        // Register the receiver with intent filters
+        IntentFilter intentFilter = new IntentFilter(Api.Command.SEND_AUDIO);
+        intentFilter.addAction(Api.Command.SEND);
+        intentFilter.addAction(Api.EXCEPTION);
+        mActivity.registerReceiver(mAudioSendingReceiver, intentFilter);
         // set default states for all layouts included in current fragment
         mRecorderState = RecorderState.STOPPED;
         mStreamingState = StreamingState.WAITING;
@@ -128,6 +146,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
 
     //---------------- Common methods ----------------//
+
     /**
      * Handles clicks from all fragment buttons
      */
@@ -163,7 +182,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                     // TODO: 3/27/16 start streaming process
                     mStreamingState = StreamingState.STREAMING;
                     invalidateStreamViews();
-                // stop streaming process
+                    // stop streaming process
                 } else if (mStreamingState == StreamingState.STREAMING) {
                     // TODO: 3/27/16 stop streaming process
                     mStreamingState = StreamingState.WAITING;
@@ -199,6 +218,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
 
     //---------------- Record and Send layout ----------------//
+
     /**
      * Called when a record from the list is clicked
      *
@@ -245,13 +265,16 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
      * @param position  of the record in the list
      */
     @Override
-    public void onSendRecordClick(Recording recording, int position) {
+    public void onSendRecordClick(Recording recording, int position, ProgressBar progressBar, ImageButton send) {
         if (MainActivity.selectedReceivers.size() <= 0 && MainActivity.selectedGroup == null) {
             Toast.makeText(mActivity, mActivity.getString(R.string.please_select_pa), Toast.LENGTH_SHORT).show();
             return;
         }
-        Toast.makeText(mActivity, "Not working yet", Toast.LENGTH_SHORT).show();
-        // TODO: 3/23/16 send the audio file to server
+        if (isSending) {
+            Toast.makeText(mActivity, mActivity.getString(R.string.please_wait), Toast.LENGTH_SHORT).show();
+            return;
+        }
+        startSendingAudioProcess(recording, progressBar, send);
     }
 
     /**
@@ -378,6 +401,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
 
     //---------------- Streaming layout ----------------//
+
     /**
      * Update views to inform user about changes
      */
@@ -406,6 +430,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
 
     //---------------- Push to talk layout ----------------//
+
     /**
      * Called when PTT button is either pressed or released
      */
@@ -467,6 +492,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
 
     //------------------ Recording process ---------------------//
+
     /**
      * Starts a new thread to record the audio
      */
@@ -515,6 +541,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
     /**
      * Start recording the audio from device microphone
+     *
      * @param fileName to store the recording in app cache till it will be sent to server
      */
     private void recordAudio(String fileName) throws Exception {
@@ -572,8 +599,9 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
     /**
      * Plays the given file by reading bytes from it
+     *
      * @param recording which contains a file path
-     * @param position of the recording in the list, used to update UI
+     * @param position  of the recording in the list, used to update UI
      */
     private void playAudio(Recording recording, int position) throws Exception {
         int channelOption;
@@ -669,6 +697,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
     /**
      * Notifies recordings list adapter about playing state of a recording changes
+     *
      * @param position to notify adapter about
      */
     private void notifyRecordingsAdapter(final int position) {
@@ -678,5 +707,167 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                 mRecAdapter.notifyItemChanged(position);
             }
         });
+    }
+
+
+    //------------------ Send recording to server ---------------------//
+    // link to selected recording
+    private Recording mRecording;
+    private ProgressBar mSendingProgress;
+    private ImageButton mSendButton;
+
+    // receiver for server responses
+    BroadcastReceiver mAudioSendingReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            try {
+                String action = intent.getAction();
+                JSONObject jsonResponse = new JSONObject(intent.getExtras().getString(action));
+                boolean success = jsonResponse.optBoolean("success", false);
+                if (!success && !SonarCloudApp.socketService.isAudioConnectionReady()) {
+                    String message = jsonResponse.optString("message", getString(R.string.unknown_error));
+                    onCommandFailure(message);
+                    return;
+                } else if (SonarCloudApp.socketService.isAudioConnectionReady()) {
+                    onAudioSent();
+                    return;
+                }
+                switch (action) {
+                    case Api.Command.SEND_AUDIO:
+                        onKeyAndIDReceived(jsonResponse);
+                        break;
+                    case Api.EXCEPTION:
+                        String message = jsonResponse.optString("message");
+                        if (message.equalsIgnoreCase("Ready for data.")) {
+                            onServerReadyForData();
+                        } else {
+                            onErrorOccurred();
+                        }
+                        break;
+                }
+            } catch (Exception e) {
+                isSending = false;
+                onErrorOccurred();
+                e.printStackTrace();
+            }
+        }
+    };
+
+    /**
+     * Start the sending process
+     * @param recording which needs to be sent
+     */
+    private void startSendingAudioProcess(Recording recording, ProgressBar progressBar, ImageButton send) {
+        try {
+            mRecording = recording;
+            mSendingProgress = progressBar;
+            mSendButton = send;
+            mSendButton.setClickable(false);
+            mSendButton.setVisibility(View.INVISIBLE);
+            mSendingProgress.setVisibility(View.VISIBLE);
+            Request.Builder requestBuilder = new Request.Builder()
+                    .command(Api.Command.SEND_AUDIO)
+                    .bitrate(BITRATE)
+                    .channels(CHANNEL)
+                    .format(Api.FORMAT)
+                    .samplerate(SAMPLE_RATE);
+            if (MainActivity.selectedGroup != null) {
+                requestBuilder.groupId(String.valueOf(MainActivity.selectedGroup.getGroupID()));
+            } else if (MainActivity.selectedReceivers.size() > 0) {
+                ArrayList<Integer> selectedReceivers = new ArrayList<>();
+                for (Receiver receiver : MainActivity.selectedReceivers) {
+                    selectedReceivers.add(receiver.getReceiverId());
+                }
+                requestBuilder.receiversID(selectedReceivers);
+            }
+            JSONObject request = requestBuilder.build().toJSON();
+            request.put(Api.Options.PLAY_IMMEDIATELY, true).put(Api.Options.KEEP, false);
+            SonarCloudApp.socketService.sendRequest(request);
+        } catch (Exception e) {
+            isSending = false;
+            mSendButton.setVisibility(View.VISIBLE);
+            mSendingProgress.setVisibility(View.GONE);
+            mSendButton.setClickable(true);
+            onErrorOccurred();
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Called when the key and id for record are received from server
+     * @param response which contains "key" and "recordingID"
+     * @throws JSONException
+     */
+    private void onKeyAndIDReceived(JSONObject response) throws JSONException {
+        sendAudioKey = response.getString("key");
+        mRecording.setRecordingId(response.getInt("recordingID"));
+        Request.Builder requestBuilder = new Request.Builder();
+        requestBuilder.command(Api.Command.SEND).key(sendAudioKey);
+        SonarCloudApp.socketService.setAudioConnection();
+        while (!SonarCloudApp.socketService.isAudioConnectionReady()) {
+        }
+        SonarCloudApp.socketService.prepareServerForAudio(requestBuilder.build().toJSON());
+    }
+
+    /**
+     * Called when server says "Ready for data."
+     */
+    private void onServerReadyForData() {
+        try {
+            File file = new File(mRecording.getFilePath());
+            int size = (int) file.length();
+            byte[] bytes = new byte[size];
+            FileInputStream fis = new FileInputStream(new File(mRecording.getFilePath()));
+            BufferedInputStream bis = new BufferedInputStream(fis);
+            bis.read(bytes, 0, bytes.length);
+            bis.close();
+            SonarCloudApp.socketService.sendAudio(bytes);
+        } catch (Exception e) {
+            isSending = false;
+            mSendButton.setVisibility(View.VISIBLE);
+            mSendingProgress.setVisibility(View.GONE);
+            mSendButton.setClickable(true);
+            onErrorOccurred();
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Called when the data is sent
+     */
+    private void onAudioSent() {
+        mSendButton.setVisibility(View.VISIBLE);
+        mSendingProgress.setVisibility(View.GONE);
+        mSendButton.setClickable(true);
+        MainActivity.statusChanged = true;
+        SonarCloudApp.socketService.closeAudioConnection();
+        Snackbar.make(mRecordAndSend, mActivity.getString(R.string.audio_sent), Snackbar.LENGTH_SHORT).show();
+        File file = new File(mRecording.getFilePath());
+        if (file.delete()) {
+            mRecAdapter.removeItem(mRecording);
+        }
+    }
+
+    /**
+     * called when the command which is sent to server fails
+     * @param message with the problem description
+     */
+    private void onCommandFailure(String message) {
+        isSending = false;
+        mSendButton.setVisibility(View.VISIBLE);
+        mSendingProgress.setVisibility(View.GONE);
+        mSendButton.setClickable(true);
+        Snackbar.make(mRecordAndSend, message, Snackbar.LENGTH_SHORT).show();
+    }
+
+    /**
+     * Called when an exception occurs while sending the audio
+     */
+    private void onErrorOccurred() {
+        isSending = false;
+        mSendButton.setVisibility(View.VISIBLE);
+        mSendingProgress.setVisibility(View.GONE);
+        mSendButton.setClickable(true);
+        Snackbar.make(mRecordAndSend, mActivity.getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
     }
 }

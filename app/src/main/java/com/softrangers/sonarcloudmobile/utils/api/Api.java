@@ -12,6 +12,7 @@ public class Api {
     public static final String URL = "woodward.parentglue.com";
     public static final String M_URL = "maestro.parentglue.com";
     public static final int PORT = 6523;
+    public static final int AUDIO_PORT = 6524;
 
     //---------- Components used to build server requests ------------//
     public static final int ERROR = 0;
@@ -21,6 +22,8 @@ public class Api {
     public static final String COMMAND = "command";
     public static final String DEVICE = "device";
     public static final String METHOD = "method";
+
+    public static final String FORMAT = "opus";
 
     public static final String ACTION_ADD_GROUP = "com.softrangers.sonarcloudmobile.ADD_NEW_GROUP";
     public static final String ACTION_EDIT_GROUP = "com.softrangers.sonarcloudmobile.EDIT_GROUP";
@@ -55,6 +58,8 @@ public class Api {
         public static final String DELETE_SCHEDULE = "deleteSchedule";
         public static final String UPDATE_SCHEDULE = "updateSchedule";
         public static final String CREATE_SCHEDULE = "createSchedule";
+        public static final String SEND_AUDIO = "sendAudio";
+        public static final String SEND = "send";
     }
 
     /**
@@ -85,5 +90,7 @@ public class Api {
         public static final String USER_ID = "userID";
         public static final String ORGANISATION_ID = "organisationID";
         public static final String SEQ_FIELD = "seq";
+        public static final String PLAY_IMMEDIATELY = "playImmediately";
+        public static final String KEEP = "keep";
     }
 }

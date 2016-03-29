@@ -36,17 +36,23 @@ public class Request {
     private String wday;
     private String endDate;
     private String startDate;
+    private String format;
+    private int bitrate = UNSPECIFIED_INT;
     private int receiverGroupID = UNSPECIFIED_INT;
     private int loginID = UNSPECIFIED_INT;
     private int pin = UNSPECIFIED_INT;
+    private int samplerate = UNSPECIFIED_INT;
     private String action;
     private String userID;
+    private String key;
     private int deleteAfter;
     private int organizationID = UNSPECIFIED_INT;
     private int receiverID = UNSPECIFIED_INT;
     private int seq;
     private int scheduleID = UNSPECIFIED_INT;
+    private int channels = UNSPECIFIED_INT;
     private JSONArray receivers;
+    private JSONArray receiversID;
 
     private Request() {
 
@@ -74,8 +80,15 @@ public class Request {
             if (organizationID == UNSPECIFIED_INT) request.remove("organizationID");
             if (receiverID == UNSPECIFIED_INT) request.remove("receiverID");
             if (scheduleID == UNSPECIFIED_INT) request.remove("scheduleID");
+            if (bitrate == UNSPECIFIED_INT) request.remove("bitrate");
+            if (samplerate == UNSPECIFIED_INT) request.remove("samplerate");
+            if (channels == UNSPECIFIED_INT) request.remove("channels");
             if (!command.equalsIgnoreCase(Api.Command.UPDATE_SCHEDULE)) request.remove("deleteAfter");
             request.remove("UNSPECIFIED_INT");
+            request.remove("receiversID");
+            if (receiversID != null) {
+                request.put("receiverID", receiversID);
+            }
 
             request.put(Api.Options.SEQ_FIELD, seq);
             return request;
@@ -101,10 +114,11 @@ public class Request {
         private int mOrganisationId;
         private int mReceiverId = UNSPECIFIED_INT;
         private JSONArray mReceivers;
-        private boolean mPlayImmediately;
         private int mSeq;
         private int mReceiverGroupId = UNSPECIFIED_INT;
         private int mScheduleId = UNSPECIFIED_INT;
+        private int mSampleRate = UNSPECIFIED_INT;
+        private int mChannels = UNSPECIFIED_INT;
         private String time;
         private String minute;
         private String hour;
@@ -113,7 +127,12 @@ public class Request {
         private String wday;
         private String endDate;
         private String startDate;
+        private String mFormat;
+        private String mKey;
         private int deleteAfter;
+        private int mBitrate = UNSPECIFIED_INT;
+        private JSONArray mReceiversID;
+
 
         public Builder command(String command) {
             mCommand = command;
@@ -185,11 +204,6 @@ public class Request {
             return this;
         }
 
-        public Builder playImmediately(boolean playImmediately) {
-            mPlayImmediately = playImmediately;
-            return this;
-        }
-
         public Builder seq(int seq) {
             mSeq = seq;
             return this;
@@ -198,8 +212,20 @@ public class Request {
         public Builder receivers(ArrayList<Integer> receivers) {
             try {
                 mReceivers = new JSONArray();
-                for (Integer i : receivers) {
+                for (int i : receivers) {
                     mReceivers.put(i);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return this;
+        }
+
+        public Builder receiversID(ArrayList<Integer> receivers) {
+            try {
+                mReceiversID = new JSONArray();
+                for (int i : receivers) {
+                    mReceiversID.put(i);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -263,6 +289,31 @@ public class Request {
             return this;
         }
 
+        public Builder bitrate(int bitrate) {
+            mBitrate = bitrate;
+            return this;
+        }
+
+        public Builder samplerate(int sampleRate) {
+            mSampleRate = sampleRate;
+            return this;
+        }
+
+        public Builder channels(int channels) {
+            mChannels = channels;
+            return this;
+        }
+
+        public Builder format(String format) {
+            mFormat = format;
+            return this;
+        }
+
+        public Builder key(String sendAudioKey) {
+            mKey = sendAudioKey;
+            return this;
+        }
+
 
         public Request build() {
             Request request = new Request();
@@ -294,11 +345,15 @@ public class Request {
             request.startDate = startDate;
             request.endDate = endDate;
             request.scheduleID = mScheduleId;
-
+            request.bitrate = mBitrate;
+            request.samplerate = mSampleRate;
             if (mSeq != 0)
                 request.seq = mSeq;
-
+            request.channels = mChannels;
+            request.format = mFormat;
             request.receivers = mReceivers;
+            request.receiversID = mReceiversID;
+            request.key = mKey;
             return request;
         }
     }
