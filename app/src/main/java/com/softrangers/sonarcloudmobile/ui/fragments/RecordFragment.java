@@ -17,7 +17,6 @@ import android.support.v4.view.MotionEventCompat;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.helper.ItemTouchHelper;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -54,10 +53,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-
-/**
- * A simple {@link Fragment} subclass.
- */
 public class RecordFragment extends Fragment implements View.OnClickListener,
         AnnouncementRecAdapter.OnAnnouncementRecordInteraction,
         RadioGroup.OnCheckedChangeListener, View.OnTouchListener {
@@ -67,7 +62,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
     private static final int BITRATE = 16000;
     private static final int CHANNEL = 1;
     private static boolean isSending;
-    private static String sendAudioKey;
     private RelativeLayout mRecordAndSend;
     private RelativeLayout mStreamLayout;
     private RelativeLayout mPushToTalkLayout;
@@ -146,7 +140,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
 
     //---------------- Common methods ----------------//
-
     /**
      * Handles clicks from all fragment buttons
      */
@@ -218,7 +211,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
 
     //---------------- Record and Send layout ----------------//
-
     /**
      * Called when a record from the list is clicked
      *
@@ -401,7 +393,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
 
     //---------------- Streaming layout ----------------//
-
     /**
      * Update views to inform user about changes
      */
@@ -430,7 +421,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
 
     //---------------- Push to talk layout ----------------//
-
     /**
      * Called when PTT button is either pressed or released
      */
@@ -492,7 +482,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
 
     //------------------ Recording process ---------------------//
-
     /**
      * Starts a new thread to record the audio
      */
@@ -799,7 +788,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
      * @throws JSONException
      */
     private void onKeyAndIDReceived(JSONObject response) throws JSONException {
-        sendAudioKey = response.getString("key");
+        String sendAudioKey = response.getString("key");
         mRecording.setRecordingId(response.getInt("recordingID"));
         Request.Builder requestBuilder = new Request.Builder();
         requestBuilder.command(Api.Command.SEND).key(sendAudioKey);
