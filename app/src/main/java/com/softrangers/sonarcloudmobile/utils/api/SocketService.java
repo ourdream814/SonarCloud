@@ -13,6 +13,7 @@ import org.json.JSONObject;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.security.SecureRandom;
@@ -37,6 +38,7 @@ public class SocketService extends Service {
     private static SSLSocketFactory sslSocketFactory;
     public BufferedReader readIn;
     public BufferedWriter writeOut;
+    public OutputStream mOutputStream;
     public boolean isConnected;
     private JSONObject mLastRequest;
 
@@ -63,6 +65,14 @@ public class SocketService extends Service {
      */
     public void sendRequest(JSONObject request) {
         new SendRequest(request);
+    }
+
+    /**
+     * Send bytes from audio file encoded with "Opus" to server
+     * @param audioBytes which needs to be sent
+     */
+    public void sendAudio(byte[] audioBytes)  {
+        new SendAudio(audioBytes);
     }
 
 
@@ -120,10 +130,17 @@ public class SocketService extends Service {
         }
     }
 
+    /**
+     * Restart socket connection
+     */
     public void restartConnection() {
         new Reconnect();
     }
 
+    /**
+     * Runnable used to restart the connection, it will close the previous connection if the socket
+     * were connected and then will establish a new one
+     */
     class Reconnect implements Runnable {
 
         public Reconnect() {
@@ -136,6 +153,45 @@ public class SocketService extends Service {
                 if (sslSocket != null && sslSocket.isConnected()) {
                     sslSocket.close();
                     new Connection();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * Runnable used to send the audio file bytes to server
+     */
+    class SendAudio implements Runnable {
+
+        byte[] mBytes;
+
+        public SendAudio(byte[] bytes) {
+            mBytes = bytes;
+            new Thread(this, this.getClass().getSimpleName()).start();
+        }
+
+        @Override
+        public void run() {
+            Looper.prepare();
+            try {
+                if (sslSocket == null || !sslSocket.isConnected()) {
+                    new Connection();
+                }
+
+                if (sslSocket != null && sslSocket.isConnected()) {
+                    // Start socket handshake
+                    sslSocket.startHandshake();
+
+                    if (sslSocket.isClosed()) new Connection();
+                    // Create a reader and writer from socket output and input streams
+                    mOutputStream = sslSocket.getOutputStream();
+                    mOutputStream.write(mBytes, 0, mBytes.length);
+                    mOutputStream.flush();
+                    readIn = new BufferedReader(new InputStreamReader(sslSocket.getInputStream()));
+                    // send the request to server through writer object
+                    new Thread(new ReceiveMessage(readIn)).start();
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -201,12 +257,6 @@ public class SocketService extends Service {
         public void run() {
             Looper.prepare();
             try {
-                // Start reading each response line\
-//                String line;
-//                StringBuilder responseBuilder = new StringBuilder();
-//                while ((line = mReader.readLine()) != null) {
-//                    responseBuilder.append(line);
-//                }
                 String stringResponse = mReader.readLine();
                 if (stringResponse == null) {
                     stringResponse = "{\"success\":false}";

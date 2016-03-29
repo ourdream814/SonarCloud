@@ -110,7 +110,6 @@ public class AnnouncementRecAdapter extends RecyclerView.Adapter<AnnouncementRec
                     break;
                 default:
                     currentPosition = position;
-                    mRecording.setIsPlaying(!mRecording.isPlaying());
                     notifyItemChanged(currentPosition);
                     if (lastPosition != WAS_NOT_SELECTED && lastPosition != currentPosition) {
                         mRecordings.get(lastPosition).setIsPlaying(false);

@@ -6,7 +6,6 @@ import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.AudioTrack;
-import android.media.MediaPlayer;
 import android.media.MediaRecorder;
 import android.os.Bundle;
 import android.support.design.widget.Snackbar;
@@ -36,12 +35,11 @@ import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.widgets.MillisChronometer;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -52,7 +50,7 @@ import java.util.Arrays;
  */
 public class RecordFragment extends Fragment implements View.OnClickListener,
         AnnouncementRecAdapter.OnAnnouncementRecordInteraction,
-        MediaPlayer.OnPreparedListener, RadioGroup.OnCheckedChangeListener, View.OnTouchListener {
+        RadioGroup.OnCheckedChangeListener, View.OnTouchListener {
 
     private static final int ADD_SCHEDULE_REQUEST_CODE = 1813;
     private static final int SAMPLE_RATE = 16000;
@@ -69,31 +67,35 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
     private StreamingState mStreamingState;
     private PTTState mPTTState;
     private AnnouncementRecAdapter mRecAdapter;
-    private MediaPlayer mMediaPlayer;
     private MillisChronometer mRecordChronometer;
     private MillisChronometer mStreamingChronometer;
     private MillisChronometer mPTTChronometer;
     private int recordingNumber;
+    private AudioTrack mAudioTrack;
 
     public RecordFragment() {
         // Required empty public constructor
     }
 
-
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.fragment_record, container, false);
+        // Obtain a link to activity
         mActivity = (MainActivity) getActivity();
+        // set default states for all layouts included in current fragment
         mRecorderState = RecorderState.STOPPED;
         mStreamingState = StreamingState.WAITING;
         mPTTState = PTTState.RELEASED;
+        // Link all views and set listeners
+        // Record, Stream and PTT layouts
         mRecordAndSend = (RelativeLayout) view.findViewById(R.id.record_and_send_layoutHolder);
         mStreamLayout = (RelativeLayout) view.findViewById(R.id.stream_layoutHolder);
         mPushToTalkLayout = (RelativeLayout) view.findViewById(R.id.ptt_layoutHolder);
+        // Radio group which holds all buttons used to change the layouts visibility within this fragment
         RadioGroup layoutSelector = (RadioGroup) view.findViewById(R.id.send_audio_type_selector);
         layoutSelector.setOnCheckedChangeListener(this);
+        // Recordings list
         RecyclerView recordingsList = (RecyclerView) view.findViewById(R.id.make_announcement_recordingsList);
         mRecAdapter = new AnnouncementRecAdapter(getRecordedFileList());
         mRecAdapter.setRecordInteraction(this);
@@ -101,19 +103,16 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         recordingsList.setAdapter(mRecAdapter);
         ItemTouchHelper itemTouchHelper = new ItemTouchHelper(mSimpleCallback);
         itemTouchHelper.attachToRecyclerView(recordingsList);
+        // Record and send text views
         TextView recordAndSendText = (TextView) view.findViewById(R.id.record_and_sendTextView);
         recordAndSendText.setTypeface(SonarCloudApp.avenirMedium);
         TextView tapRecordingText = (TextView) view.findViewById(R.id.tap_record_textView);
         tapRecordingText.setTypeface(SonarCloudApp.avenirBook);
-
+        // Chronometers for each view
         mRecordChronometer = (MillisChronometer) view.findViewById(R.id.make_announcement_chronometer);
         mStreamingChronometer = (MillisChronometer) view.findViewById(R.id.streaming_chronometer);
         mPTTChronometer = (MillisChronometer) view.findViewById(R.id.ptt_chronometer);
-
-        mMediaPlayer = new MediaPlayer();
-        mMediaPlayer.setOnPreparedListener(this);
-        mMediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
-
+        // Buttons for all views
         mStartRecordingBtn = (ImageButton) view.findViewById(R.id.start_pause_recording_button);
         mStartRecordingBtn.setOnClickListener(this);
         mStopRecordingBtn = (ImageButton) view.findViewById(R.id.stop_recording_button);
@@ -122,30 +121,49 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         mStartStreamingBtn.setOnClickListener(this);
         mPTTButton = (ImageButton) view.findViewById(R.id.push_to_talk_button);
         mPTTButton.setOnTouchListener(this);
+        // set all views in default state
         invalidateRecordAndSendViews();
         return view;
     }
 
+
+    //---------------- Common methods ----------------//
+    /**
+     * Handles clicks from all fragment buttons
+     */
     @Override
     public void onClick(View v) {
         switch (v.getId()) {
             case R.id.start_pause_recording_button:
                 if (mRecorderState == RecorderState.STOPPED) {
+                    // start recording if it is stopped
                     startRecording();
+                } else if (mRecorderState == RecorderState.RECORDING) {
+                    // if the device is recording, pause it
+                    mRecorderState = RecorderState.PAUSED;
+                    invalidateRecordAndSendViews();
+                } else if (mRecorderState == RecorderState.PAUSED) {
+                    // if is paused then we should release the pause
+                    mRecorderState = RecorderState.RECORDING;
+                    invalidateRecordAndSendViews();
                 }
                 break;
             case R.id.stop_recording_button:
+                // stop recording
                 stopRecording();
                 break;
             case R.id.start_streaming_button:
+                // if the user did not select any receivers, inform about it and return
                 if (MainActivity.selectedReceivers.size() <= 0 && MainActivity.selectedGroup == null) {
                     Toast.makeText(mActivity, mActivity.getString(R.string.please_select_pa), Toast.LENGTH_SHORT).show();
                     return;
                 }
+                // start stream the audio to server
                 if (mStreamingState == StreamingState.WAITING) {
                     // TODO: 3/27/16 start streaming process
                     mStreamingState = StreamingState.STREAMING;
                     invalidateStreamViews();
+                // stop streaming process
                 } else if (mStreamingState == StreamingState.STREAMING) {
                     // TODO: 3/27/16 stop streaming process
                     mStreamingState = StreamingState.WAITING;
@@ -155,120 +173,9 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         }
     }
 
-    private ArrayList<Recording> getRecordedFileList() {
-        File cacheDir = mActivity.getCacheDir();
-        File[] recordings = cacheDir.listFiles();
-        ArrayList<Recording> recordingList = new ArrayList<>();
-        for (File file : recordings) {
-            Recording recording = new Recording();
-            recording.setFilePath(file.getAbsolutePath());
-            recording.setRecordName(file.getName().split("\\.")[0]);
-            recordingList.add(recording);
-        }
-        return recordingList;
-    }
-
-
-    private void startRecording() {
-        try {
-            recordAudio();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void invalidateRecordAndSendViews() {
-        switch (mRecorderState) {
-            case RECORDING:
-                mRecordChronometer.setVisibility(View.VISIBLE);
-                mStartRecordingBtn.setImageResource(R.mipmap.ic_button_pause);
-                mStartRecordingBtn.setClickable(false);
-                mStopRecordingBtn.setImageResource(R.mipmap.ic_button_stop);
-                mStopRecordingBtn.setActivated(true);
-                mStopRecordingBtn.setClickable(true);
-                mRecordChronometer.start();
-                break;
-            case PAUSED:
-                mStartRecordingBtn.setImageResource(R.mipmap.ic_button_record);
-                mRecordChronometer.stop();
-                break;
-            case STOPPED:
-                mStartRecordingBtn.setImageResource(R.mipmap.ic_button_record);
-                mStartRecordingBtn.setClickable(true);
-                mStopRecordingBtn.setImageResource(R.mipmap.ic_button_stop_deactivated);
-                mStopRecordingBtn.setActivated(false);
-                mStopRecordingBtn.setClickable(false);
-                mRecordChronometer.setVisibility(View.INVISIBLE);
-                mRecordChronometer.reset();
-                break;
-        }
-    }
-
-    private void invalidateStreamViews() {
-        switch (mStreamingState) {
-            case STREAMING:
-                mStartStreamingBtn.setImageResource(R.mipmap.ic_button_pause);
-                mStreamingChronometer.setVisibility(View.VISIBLE);
-                mStreamingChronometer.start();
-                break;
-            case WAITING:
-                mStartStreamingBtn.setImageResource(R.mipmap.ic_stream_microphone);
-                mStreamingChronometer.setVisibility(View.GONE);
-                mStreamingChronometer.stop();
-                mStreamingChronometer.reset();
-                break;
-        }
-    }
-
-    private void invalidatePTTViews() {
-        switch (mPTTState) {
-            case TAPPED:
-                mPTTButton.setImageResource(R.mipmap.ic_button_ptt_active);
-                break;
-            case RELEASED:
-                mPTTButton.setImageResource(R.mipmap.ic_button_ptt);
-                break;
-        }
-    }
-
-    @Override
-    public void onItemClick(Recording recording, int position, boolean isPlaying) {
-        try {
-            recording.setIsPlaying(playAudio(recording));
-            mRecAdapter.notifyItemChanged(position);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    @Override
-    public void onScheduleClick(Recording recording, int position) {
-        if (MainActivity.selectedReceivers.size() <= 0 && MainActivity.selectedGroup == null) {
-            Toast.makeText(mActivity, mActivity.getString(R.string.please_select_pa), Toast.LENGTH_SHORT).show();
-            return;
-        }
-        // TODO: 3/23/16 open schedule activity with add new schedule action
-        Intent addSchedule = new Intent(mActivity, ScheduleActivity.class);
-        addSchedule.setAction(ScheduleActivity.ACTION_ADD_SCHEDULE);
-        addSchedule.putExtra(ScheduleActivity.RECORD_BUNDLE, recording);
-        mActivity.startActivityForResult(addSchedule, ADD_SCHEDULE_REQUEST_CODE);
-    }
-
-    @Override
-    public void onSendRecordClick(Recording recording, int position) {
-        if (MainActivity.selectedReceivers.size() <= 0 && MainActivity.selectedGroup == null) {
-            Toast.makeText(mActivity, mActivity.getString(R.string.please_select_pa), Toast.LENGTH_SHORT).show();
-            return;
-        }
-        Toast.makeText(mActivity, "Not working yet", Toast.LENGTH_SHORT).show();
-        // TODO: 3/23/16 send the audio file to server
-    }
-
-    @Override
-    public void onPrepared(MediaPlayer mp) {
-        mp.start();
-    }
-
+    /**
+     * Handles chechk state changes for top radio buttons
+     */
     @Override
     public void onCheckedChanged(RadioGroup group, int checkedId) {
         switch (checkedId) {
@@ -290,41 +197,130 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         }
     }
 
+
+    //---------------- Record and Send layout ----------------//
+    /**
+     * Called when a record from the list is clicked
+     *
+     * @param recording which was clicked
+     * @param position  of the clicked record in the list
+     * @param isPlaying either true or false, depends on record playing state
+     */
     @Override
-    public boolean onTouch(View v, MotionEvent event) {
-        int action = MotionEventCompat.getActionMasked(event);
-        if (MainActivity.selectedReceivers.size() <= 0 && MainActivity.selectedGroup == null) {
-            Toast.makeText(mActivity, mActivity.getString(R.string.please_select_pa), Toast.LENGTH_SHORT).show();
-            return false;
+    public void onItemClick(Recording recording, int position, boolean isPlaying) {
+        try {
+            if (recording.isPlaying()) {
+                recording.setIsPlaying(false);
+            } else if (mAudioTrack == null) {
+                new PlayProcess(recording, position);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        switch (action) {
-            case MotionEvent.ACTION_DOWN:
-                // TODO: 3/27/16 start recording
-                mPTTChronometer.setVisibility(View.VISIBLE);
-                mPTTChronometer.start();
-                mPTTState = PTTState.TAPPED;
-                invalidatePTTViews();
-                break;
-            case MotionEvent.ACTION_UP:
-                // TODO: 3/27/16 stop recording and send the audio
-                Snackbar.make(mPushToTalkLayout, "Sending audio", Snackbar.LENGTH_LONG).setAction("Undo",
-                        new View.OnClickListener() {
-                            @Override
-                            public void onClick(View v) {
-                                Toast.makeText(mActivity, "Sending canceled", Toast.LENGTH_SHORT).show();
-                            }
-                        }).setActionTextColor(mActivity.getResources()
-                        .getColor(R.color.colorAlertAction)).show();
-                mPTTChronometer.setVisibility(View.GONE);
-                mPTTChronometer.stop();
-                mPTTChronometer.reset();
-                mPTTState = PTTState.RELEASED;
-                invalidatePTTViews();
-                break;
-        }
-        return true;
     }
 
+    /**
+     * Called when schedule button for a record within the list is clicked
+     *
+     * @param recording whom schedule button was clicked
+     * @param position  of the recording in the list
+     */
+    @Override
+    public void onScheduleClick(Recording recording, int position) {
+        if (MainActivity.selectedReceivers.size() <= 0 && MainActivity.selectedGroup == null) {
+            Toast.makeText(mActivity, mActivity.getString(R.string.please_select_pa), Toast.LENGTH_SHORT).show();
+            return;
+        }
+        // TODO: 3/23/16 open schedule activity with add new schedule action
+        Intent addSchedule = new Intent(mActivity, ScheduleActivity.class);
+        addSchedule.setAction(ScheduleActivity.ACTION_ADD_SCHEDULE);
+        addSchedule.putExtra(ScheduleActivity.RECORD_BUNDLE, recording);
+        mActivity.startActivityForResult(addSchedule, ADD_SCHEDULE_REQUEST_CODE);
+    }
+
+    /**
+     * Called when send button for a record within the list is clicked
+     *
+     * @param recording whom send button was clicked
+     * @param position  of the record in the list
+     */
+    @Override
+    public void onSendRecordClick(Recording recording, int position) {
+        if (MainActivity.selectedReceivers.size() <= 0 && MainActivity.selectedGroup == null) {
+            Toast.makeText(mActivity, mActivity.getString(R.string.please_select_pa), Toast.LENGTH_SHORT).show();
+            return;
+        }
+        Toast.makeText(mActivity, "Not working yet", Toast.LENGTH_SHORT).show();
+        // TODO: 3/23/16 send the audio file to server
+    }
+
+    /**
+     * Load recorded files from the application cache
+     *
+     * @return a list of recordings, each recording will contain a unique path to a file
+     */
+    private ArrayList<Recording> getRecordedFileList() {
+        File cacheDir = mActivity.getCacheDir();
+        File[] recordings = cacheDir.listFiles();
+        ArrayList<Recording> recordingList = new ArrayList<>();
+        for (File file : recordings) {
+            Recording recording = new Recording();
+            recording.setFilePath(file.getAbsolutePath());
+            recording.setRecordName(file.getName().split("\\.")[0]);
+            recordingList.add(recording);
+        }
+        return recordingList;
+    }
+
+    /**
+     * Fires the recording process
+     */
+    private void startRecording() {
+        recordingNumber = SonarCloudApp.getInstance().getLastRecordingNumber();
+        String recordName = mActivity.getString(R.string.recording) + " " + recordingNumber;
+        String filePath = mActivity.getCacheDir().getAbsolutePath()
+                + File.separator + recordName;
+        new RecordingProcess(filePath);
+    }
+
+    /**
+     * Update views to inform user about changes
+     */
+    private void invalidateRecordAndSendViews() {
+        mActivity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                switch (mRecorderState) {
+                    case RECORDING:
+                        mRecordChronometer.setVisibility(View.VISIBLE);
+                        mStartRecordingBtn.setImageResource(R.mipmap.ic_button_pause);
+//                        mStartRecordingBtn.setClickable(false);
+                        mStopRecordingBtn.setImageResource(R.mipmap.ic_button_stop);
+                        mStopRecordingBtn.setActivated(true);
+                        mStopRecordingBtn.setClickable(true);
+                        mRecordChronometer.start();
+                        break;
+                    case PAUSED:
+                        mStartRecordingBtn.setImageResource(R.mipmap.ic_button_record);
+                        mRecordChronometer.stop();
+                        break;
+                    case STOPPED:
+                        mStartRecordingBtn.setImageResource(R.mipmap.ic_button_record);
+                        mStartRecordingBtn.setClickable(true);
+                        mStopRecordingBtn.setImageResource(R.mipmap.ic_button_stop_deactivated);
+                        mStopRecordingBtn.setActivated(false);
+                        mStopRecordingBtn.setClickable(false);
+                        mRecordChronometer.setVisibility(View.INVISIBLE);
+                        mRecordChronometer.reset();
+                        break;
+                }
+            }
+        });
+    }
+
+    /**
+     * Used to implement swipe to delete function
+     */
     ItemTouchHelper.SimpleCallback mSimpleCallback = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT) {
         @Override
         public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, RecyclerView.ViewHolder target) {
@@ -361,6 +357,11 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         }
     };
 
+    /**
+     * Delete a recorded file from application cache and reload the list
+     *
+     * @param rec which needs to be deleted
+     */
     private void deleteRecord(Recording rec) {
         File file = new File(rec.getFilePath());
         if (file.delete()) {
@@ -368,24 +369,161 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         }
     }
 
-    private void recordAudio() throws IOException {
-        // We'll be throwing stuff here
-        String recordName = mActivity.getString(R.string.recording) + " " + recordingNumber;
-        String filePath = mActivity.getCacheDir().getAbsolutePath()
-                + File.separator + recordName;
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        FileOutputStream fos = null;
-        try {
-            fos = new FileOutputStream(new File(filePath));
-            SonarCloudApp.getInstance().addNewRecording(recordingNumber);
-        } catch (Exception e) {
-            e.printStackTrace();
+    /**
+     * Used to track the recording process state
+     */
+    enum RecorderState {
+        RECORDING, STOPPED, PAUSED
+    }
+
+
+    //---------------- Streaming layout ----------------//
+    /**
+     * Update views to inform user about changes
+     */
+    private void invalidateStreamViews() {
+        switch (mStreamingState) {
+            case STREAMING:
+                mStartStreamingBtn.setImageResource(R.mipmap.ic_button_pause);
+                mStreamingChronometer.setVisibility(View.VISIBLE);
+                mStreamingChronometer.start();
+                break;
+            case WAITING:
+                mStartStreamingBtn.setImageResource(R.mipmap.ic_stream_microphone);
+                mStreamingChronometer.setVisibility(View.GONE);
+                mStreamingChronometer.stop();
+                mStreamingChronometer.reset();
+                break;
+        }
+    }
+
+    /**
+     * Used to track the streaming process state
+     */
+    enum StreamingState {
+        STREAMING, WAITING
+    }
+
+
+    //---------------- Push to talk layout ----------------//
+    /**
+     * Called when PTT button is either pressed or released
+     */
+    @Override
+    public boolean onTouch(View v, MotionEvent event) {
+        int action = MotionEventCompat.getActionMasked(event);
+        if (MainActivity.selectedReceivers.size() <= 0 && MainActivity.selectedGroup == null) {
+            Toast.makeText(mActivity, mActivity.getString(R.string.please_select_pa), Toast.LENGTH_SHORT).show();
+            return false;
+        }
+        switch (action) {
+            case MotionEvent.ACTION_DOWN:
+                // TODO: 3/27/16 start recording
+                mPTTChronometer.setVisibility(View.VISIBLE);
+                mPTTChronometer.start();
+                mPTTState = PTTState.TAPPED;
+                invalidatePTTViews();
+                break;
+            case MotionEvent.ACTION_UP:
+                // TODO: 3/27/16 stop recording and send the audio
+                Snackbar.make(mPushToTalkLayout, "Sending audio", Snackbar.LENGTH_LONG).setAction("Undo",
+                        new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                Toast.makeText(mActivity, "Sending canceled", Toast.LENGTH_SHORT).show();
+                            }
+                        }).setActionTextColor(mActivity.getResources()
+                        .getColor(R.color.colorAlertAction)).show();
+                mPTTChronometer.setVisibility(View.GONE);
+                mPTTChronometer.stop();
+                mPTTChronometer.reset();
+                mPTTState = PTTState.RELEASED;
+                invalidatePTTViews();
+                break;
+        }
+        return true;
+    }
+
+    /**
+     * Update PTT layout views to infor user about changes
+     */
+    private void invalidatePTTViews() {
+        switch (mPTTState) {
+            case TAPPED:
+                mPTTButton.setImageResource(R.mipmap.ic_button_ptt_active);
+                break;
+            case RELEASED:
+                mPTTButton.setImageResource(R.mipmap.ic_button_ptt);
+                break;
+        }
+    }
+
+    /**
+     * Used to track ptt process state
+     */
+    enum PTTState {
+        TAPPED, RELEASED
+    }
+
+
+    //------------------ Recording process ---------------------//
+    /**
+     * Starts a new thread to record the audio
+     */
+    class RecordingProcess implements Runnable {
+
+        String mFileName;
+
+        public RecordingProcess(String fileName) {
+            mFileName = fileName;
+            new Thread(this, this.getClass().getSimpleName()).start();
         }
 
-        // Processed bytes
-        int bytesProcessed = 0;
-//        int stopAfter = SAMPLE_RATE * CHANNEL * 2 * 5; // 5 seconds of recording
+        @Override
+        public void run() {
+            try {
+                recordAudio(mFileName);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
 
+    /**
+     * Starts a new thread to play a recoded file
+     */
+    class PlayProcess implements Runnable {
+
+        Recording mRecording;
+        int mPosition;
+
+        public PlayProcess(Recording recording, int position) {
+            mRecording = recording;
+            mPosition = position;
+            new Thread(this, this.getClass().getSimpleName()).start();
+        }
+
+        @Override
+        public void run() {
+            try {
+                playAudio(mRecording, mPosition);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * Start recording the audio from device microphone
+     * @param fileName to store the recording in app cache till it will be sent to server
+     */
+    private void recordAudio(String fileName) throws Exception {
+        // We'll be throwing stuff here
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        FileOutputStream fos = new FileOutputStream(new File(fileName));
+        BufferedOutputStream bos = new BufferedOutputStream(fos);
+
+        SonarCloudApp.getInstance().addNewRecording(recordingNumber);
         int channelOption = AudioFormat.CHANNEL_IN_MONO;
 
         int bufferSizeInBytes = 0;
@@ -397,61 +535,47 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         byte[] recordBuffer = new byte[audioProcessor.pcmBytes];
         byte[] encodeBuffer = new byte[audioProcessor.bufferSize];
 
-        Log.i("SonarCloud", "Buffer size got is " + bufferSizeInBytes);
         bufferSizeInBytes = AudioRecord.getMinBufferSize(SAMPLE_RATE, channelOption, AudioFormat.ENCODING_PCM_16BIT);
 
         AudioRecord audioRecorder = new AudioRecord(MediaRecorder.AudioSource.MIC, SAMPLE_RATE, channelOption,
                 AudioFormat.ENCODING_PCM_16BIT, bufferSizeInBytes);
-
-        Log.i("SonarCloud", "Buffer size wanted is " + bufferSizeInBytes + " with " + SAMPLE_RATE
-                + "Hz - " + audioProcessor.pcmBytes);
-
-        // Now
         audioRecorder.startRecording();
         mRecorderState = RecorderState.RECORDING;
         invalidateRecordAndSendViews();
-        Log.i("SonarCloud", "Recording started");
-        while (mRecorderState == RecorderState.RECORDING) {
-            audioRecorder.read(recordBuffer, 0, recordBuffer.length);
-
-            Log.i("SonarCloud", "Encoding " + recordBuffer.length + " bytes.");
-
-            // Encode
-            int bytesWritten = audioProcessor.encodePCM(recordBuffer, 0, encodeBuffer, 0);
-
-            outputStream.write(encodeBuffer, 0, bytesWritten);
-
-            if (fos != null) {
-                try {
-                    fos.write(encodeBuffer, 0, bytesWritten);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+        while (mRecorderState == RecorderState.RECORDING || mRecorderState == RecorderState.PAUSED) {
+            if (mRecorderState != RecorderState.PAUSED) {
+                audioRecorder.read(recordBuffer, 0, recordBuffer.length);
+                // Encode
+                int bytesWritten = audioProcessor.encodePCM(recordBuffer, 0, encodeBuffer, 0);
+                outputStream.write(encodeBuffer, 0, bytesWritten);
+                bos.write(encodeBuffer, 0, bytesWritten);
             }
-
-            // Keep track of how much
-            bytesProcessed += recordBuffer.length;
-//            if (bytesProcessed >= stopAfter)
-//                break;
         }
         // Stop the recorder
         audioRecorder.stop();
         audioRecorder.release();
-        fos.flush();
-        fos.close();
+        bos.flush();
+        bos.close();
 
         // Get rid
         audioProcessor.dealloc();
-        Log.i("SonarCloud", "Record stopped");
     }
 
+    /**
+     * Stop the recording process if there are any
+     */
     private void stopRecording() {
         mRecorderState = RecorderState.STOPPED;
         invalidateRecordAndSendViews();
         mRecAdapter.refreshList(getRecordedFileList());
     }
 
-    private boolean playAudio(Recording recording) throws Exception {
+    /**
+     * Plays the given file by reading bytes from it
+     * @param recording which contains a file path
+     * @param position of the recording in the list, used to update UI
+     */
+    private void playAudio(Recording recording, int position) throws Exception {
         int channelOption;
 
         File file = new File(recording.getFilePath());
@@ -461,17 +585,15 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         BufferedInputStream bis = new BufferedInputStream(fis);
         bis.read(bytes, 0, bytes.length);
         bis.close();
-            channelOption = AudioFormat.CHANNEL_OUT_MONO;
-
+        channelOption = AudioFormat.CHANNEL_OUT_MONO;
         AudioProcessor audioProcessor;
-
         try {
             // Get the decoder
             audioProcessor = AudioProcessor.decoder(SAMPLE_RATE, CHANNEL);
         } catch (Error e) {
             e.printStackTrace();
             Toast.makeText(mActivity, e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
-            return false;
+            return;
         }
 
         int minimumBufferSize = AudioTrack.getMinBufferSize(
@@ -480,23 +602,21 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                 AudioFormat.ENCODING_PCM_16BIT
         );
 
-
-        int pcmBufferLength = 0;
         int payloadOffset = 0;
-
-        Log.w("SonarCloud", "Minimum buffer size is " + minimumBufferSize);
 
         byte[] pcmBytes = new byte[audioProcessor.bufferSize];
         byte[] buffer = null;
 
-        AudioTrack mAudioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, SAMPLE_RATE, channelOption,
+        mAudioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, SAMPLE_RATE, channelOption,
                 AudioFormat.ENCODING_PCM_16BIT, minimumBufferSize, AudioTrack.MODE_STREAM);
 
         // Now figure our lives
         mAudioTrack.play();
+        recording.setIsPlaying(true);
+        notifyRecordingsAdapter(position);
 
         // Now decode in sequence
-        while (true) {
+        while (recording.isPlaying()) {
             // Read more
             if (payloadOffset < bytes.length) {
                 // Get the length
@@ -505,16 +625,11 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
                 // Did we run out?
                 if (payloadSize < 0 || payloadSize > AudioProcessor.MAX_PACKET) {
-                    Log.e("Decoder", "Payload size for opus " + payloadSize + " is invalid.");
                     break;
                 }
-
                 payloadOffset += 4;
-
-                // Read more
                 // Decode us
                 int bytesWritten = audioProcessor.decodePayload(bytes, payloadOffset, payloadSize, pcmBytes, 0);
-
                 // Now append
                 if (buffer == null) {
                     buffer = Arrays.copyOf(pcmBytes, bytesWritten);
@@ -524,7 +639,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                     System.arraycopy(pcmBytes, 0, aBuffer, buffer.length, bytesWritten);
                     buffer = aBuffer; // Replace
                 }
-
                 // Offset more
                 payloadOffset += payloadSize;
             }
@@ -538,37 +652,31 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                 if (buffer.length >= minimumBufferSize || payloadOffset >= bytes.length) {
                     // Write the audio data in full
                     mAudioTrack.write(buffer, 0, buffer.length);
-
                     // We are done with our buffer
                     buffer = null;
                 } // Else fill more
             }
         }
 
-        Log.w("SonarCloud", "Audio track stopped.");
         mAudioTrack.stop();
         mAudioTrack.release();
-
+        mAudioTrack = null;
+        recording.setIsPlaying(false);
+        notifyRecordingsAdapter(position);
         // Get rid of this
         audioProcessor.dealloc();
-        return false;
     }
 
-    enum RecorderState {
-        RECORDING, STOPPED, PAUSED
-    }
-
-    enum StreamingState {
-        STREAMING, WAITING
-    }
-
-    enum PTTState {
-        TAPPED, RELEASED
-    }
-
-    @Override
-    public void onDetach() {
-        super.onDetach();
-        mMediaPlayer.release();
+    /**
+     * Notifies recordings list adapter about playing state of a recording changes
+     * @param position to notify adapter about
+     */
+    private void notifyRecordingsAdapter(final int position) {
+        mActivity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mRecAdapter.notifyItemChanged(position);
+            }
+        });
     }
 }
