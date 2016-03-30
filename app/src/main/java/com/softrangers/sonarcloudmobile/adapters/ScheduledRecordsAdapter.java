@@ -45,10 +45,8 @@ public class ScheduledRecordsAdapter extends RecyclerView.Adapter<ScheduledRecor
 
     public void changeList(ArrayList<Schedule> recordings) {
         mSchedules.clear();
-        for (int i = 0; i < recordings.size(); i++) {
-            mSchedules.add(recordings.get(i));
-            notifyItemInserted(i);
-        }
+        mSchedules.addAll(recordings);
+        notifyDataSetChanged();
     }
 
     public void addItems(ArrayList<Schedule> recordings) {
@@ -61,7 +59,7 @@ public class ScheduledRecordsAdapter extends RecyclerView.Adapter<ScheduledRecor
         notifyDataSetChanged();
     }
 
-    public void addItem( Schedule recording, int position) {
+    public void addItem(Schedule recording, int position) {
         mSchedules.add(position, recording);
         notifyItemInserted(position);
     }
@@ -112,6 +110,7 @@ public class ScheduledRecordsAdapter extends RecyclerView.Adapter<ScheduledRecor
         final TextView mMinutesAmPm;
         final ImageButton mPlayPauseBtn;
         Schedule mSchedule;
+
         public ViewHolder(View itemView) {
             super(itemView);
             itemView.setOnClickListener(this);
@@ -152,6 +151,7 @@ public class ScheduledRecordsAdapter extends RecyclerView.Adapter<ScheduledRecor
 
     public interface OnScheduleClickListener {
         void onScheduleClick(Schedule schedule, int position);
+
         void onSchedulePlayClick(Schedule schedule, Recording recording, int position);
     }
 }

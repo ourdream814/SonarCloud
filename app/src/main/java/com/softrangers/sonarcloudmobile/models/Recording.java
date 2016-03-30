@@ -216,17 +216,17 @@ public class Recording implements Parcelable {
             for (int i = 0; i < recordingsArray.length(); i++) {
                 JSONObject record = recordingsArray.getJSONObject(i);
                 Recording recording = new Recording();
-                recording.setRecordingId(record.getInt("recordingID"));
-                recording.setSendComplete(record.getBoolean("sendingComplete"));
-                recording.setBitrate(record.getInt("bitrate"));
-                recording.setSampleRate(record.getInt("samplerate"));
-                recording.setChannels(record.getInt("channels"));
-                recording.setFormat(record.getString("format"));
-                recording.setPlayImmediately(record.getBoolean("playImmediately"));
-                recording.setKeep(record.getBoolean("keep"));
-                recording.setCreated(record.getString("created"));
-                recording.setModified(record.getString("modified"));
-                recording.setLength(record.getInt("length"));
+                recording.setRecordingId(record.optInt("recordingID"));
+                recording.setSendComplete(record.optBoolean("sendingComplete"));
+                recording.setBitrate(record.optInt("bitrate"));
+                recording.setSampleRate(record.optInt("samplerate"));
+                recording.setChannels(record.optInt("channels"));
+                recording.setFormat(record.optString("format"));
+                recording.setPlayImmediately(record.optBoolean("playImmediately"));
+                recording.setKeep(record.optBoolean("keep"));
+                recording.setCreated(record.optString("created"));
+                recording.setModified(record.optString("modified"));
+                recording.setLength(record.optInt("length"));
                 recordings.add(recording);
             }
         } catch (Exception e) {
@@ -239,17 +239,17 @@ public class Recording implements Parcelable {
         Recording recording = new Recording();
         if (record == null) return recording;
         try {
-            recording.setRecordingId(record.getInt("recordingID"));
-            recording.setSendComplete(record.getBoolean("sendingComplete"));
-            recording.setBitrate(record.getInt("bitrate"));
-            recording.setSampleRate(record.getInt("samplerate"));
-            recording.setChannels(record.getInt("channels"));
-            recording.setFormat(record.getString("format"));
-            recording.setPlayImmediately(record.getBoolean("playImmediately"));
-            recording.setKeep(record.getBoolean("keep"));
-            recording.setCreated(record.getString("created"));
-            recording.setModified(record.getString("modified"));
-            recording.setLength(record.getInt("length"));
+            recording.setRecordingId(record.optInt("recordingID"));
+            recording.setSendComplete(record.optBoolean("sendingComplete"));
+            recording.setBitrate(record.optInt("bitrate"));
+            recording.setSampleRate(record.optInt("samplerate"));
+            recording.setChannels(record.optInt("channels"));
+            recording.setFormat(record.optString("format"));
+            recording.setPlayImmediately(record.optBoolean("playImmediately"));
+            recording.setKeep(record.optBoolean("keep"));
+            recording.setCreated(record.optString("created"));
+            recording.setModified(record.optString("modified"));
+            recording.setLength(record.optInt("length"));
         } catch (Exception e) {
             e.printStackTrace();
         }

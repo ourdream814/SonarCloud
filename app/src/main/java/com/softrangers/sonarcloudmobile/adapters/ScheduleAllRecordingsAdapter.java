@@ -43,10 +43,8 @@ public class ScheduleAllRecordingsAdapter extends RecyclerView.Adapter<ScheduleA
 
     public void changeList(ArrayList<Recording> recordings) {
         mRecordings.clear();
-        for (int i = 0; i < recordings.size(); i++) {
-            mRecordings.add(recordings.get(i));
-            notifyItemInserted(i);
-        }
+        mRecordings.addAll(recordings);
+        notifyDataSetChanged();
     }
 
     public void addItems(ArrayList<Recording> recordings) {

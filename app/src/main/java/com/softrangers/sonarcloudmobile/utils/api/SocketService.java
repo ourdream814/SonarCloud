@@ -6,11 +6,14 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.os.Looper;
 import android.support.annotation.Nullable;
+import android.util.Log;
 
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -18,6 +21,8 @@ import java.net.Socket;
 import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
@@ -41,6 +46,7 @@ public class SocketService extends Service {
     public OutputStream mOutputStream;
     public boolean isConnected;
     private JSONObject mLastRequest;
+    private ExecutorService mExecutorService;
 
     // Bind this service to application
     @Nullable
@@ -115,6 +121,7 @@ public class SocketService extends Service {
             SSLContext sslContext = SSLContext.getInstance("TLS");
             sslContext.init(null, getTrustManagers(), secureRandom);
             sslSocketFactory = sslContext.getSocketFactory();
+            mExecutorService = Executors.newFixedThreadPool(5);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -313,7 +320,6 @@ public class SocketService extends Service {
         @Override
         public void run() {
             try {
-                Looper.prepare();
                 if (dataSocket == null || !dataSocket.isConnected()) {
                     new Connection();
                 }
@@ -329,7 +335,7 @@ public class SocketService extends Service {
                     // send the request to server through writer object
                     writeOut.write(message.toString() + "\n");
                     writeOut.flush();
-                    new Thread(new ReceiveMessage(readIn)).start();
+                    mExecutorService.execute(new ReceiveMessage(readIn));
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -339,7 +345,7 @@ public class SocketService extends Service {
 
     class ReceiveMessage implements Runnable {
 
-        BufferedReader mReader;
+        final BufferedReader mReader;
 
         public ReceiveMessage(BufferedReader reader) {
             mReader = reader;
@@ -347,24 +353,38 @@ public class SocketService extends Service {
 
         @Override
         public void run() {
-            Looper.prepare();
-            try {
-                String stringResponse = mReader.readLine();
-                if (stringResponse == null) {
-                    stringResponse = "{\"success\":false}";
-                    restartConnection();
-                    sendRequest(mLastRequest);
+            synchronized (mReader) {
+                try {
+                    char[] buffer = new char[1024];
+                    StringBuilder builder = new StringBuilder();
+                    while (mReader.read(buffer, 0, buffer.length) != -1) {;
+                        builder.append(buffer);
+                        if (!mReader.ready()) break;
+                    }
+                    String stringResponse = builder.toString();
+                    Log.i(this.getClass().getSimpleName(), "Response: " + stringResponse);
+                    if (stringResponse == null) {
+                        stringResponse = "{\"success\":false}";
+                        restartConnection();
+                        sendRequest(mLastRequest);
+                    }
+                    JSONObject response = new JSONObject(stringResponse);
+                    String command = response.optString("originalCommand", Api.EXCEPTION);
+                    // send the response to ui
+                    Intent responseContainer = new Intent();
+                    responseContainer.setAction(command);
+                    responseContainer.putExtra(command, stringResponse);
+                    sendBroadcast(responseContainer);
+                    mLastRequest = null;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                } finally {
+                    try {
+                        mReader.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                 }
-                JSONObject response = new JSONObject(stringResponse);
-                String command = response.optString("originalCommand", Api.EXCEPTION);
-                // send the response to ui
-                Intent responseContainer = new Intent();
-                responseContainer.setAction(command);
-                responseContainer.putExtra(command, stringResponse);
-                sendBroadcast(responseContainer);
-                mLastRequest = null;
-            } catch (Exception e) {
-                e.printStackTrace();
             }
         }
     }
@@ -378,6 +398,7 @@ public class SocketService extends Service {
         try {
             dataSocket.close();
             isConnected = false;
+            mExecutorService.shutdown();
         } catch (Exception e) {
             e.printStackTrace();
         }

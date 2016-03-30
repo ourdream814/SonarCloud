@@ -95,6 +95,13 @@ public class MainActivity extends BaseActivity implements
         }
     }
 
+
+    //------------------- Fragment controls -------------------//
+    /**
+     * Initialize bottom buttons and set the {@link ReceiversFragment} as the first fragment in
+     * the activity
+     * @see {@link MainActivity#changeFragment(Fragment)}
+     */
     private void initializeBottomButtons() {
         // instantiate fragments
         mReceiversFragment = new ReceiversFragment();
@@ -119,6 +126,64 @@ public class MainActivity extends BaseActivity implements
         }
     }
 
+    /**
+     * Change the curent fragment with the given fragment.
+     * method firs check if the fragment is not already added to the list then it hides all other
+     * fragments and then either shows or add the given fragment into app backstack
+     * @param newFragment which you want to show on the screen
+     */
+    private void changeFragment(Fragment newFragment) {
+        FragmentManager fragmentManager = getSupportFragmentManager();
+        FragmentTransaction transaction = fragmentManager.beginTransaction();
+        Fragment old = fragmentManager.findFragmentByTag(newFragment.getClass().getSimpleName());
+        List<Fragment> fragments = fragmentManager.getFragments();
+        if (fragments != null) {
+            for (Fragment fragment : fragments) {
+                transaction.hide(fragment);
+            }
+        }
+        if (old != null && old.equals(newFragment)) {
+            transaction.show(old);
+        } else {
+            transaction.add(R.id.main_fragmentContainer, newFragment,
+                    newFragment.getClass().getSimpleName());
+        }
+        transaction.commit();
+    }
+
+    /**
+     * Called when on of the four bottom buttons is clicked
+     * @param view of the actual clicked button
+     */
+    public void onBottomButtonsClick(View view) {
+        switch (view.getId()) {
+            case R.id.bottom_PASystems_selector:
+                changeFragment(mReceiversFragment);
+                mSelectedFragment = SelectedFragment.RECEIVERS;
+                invalidateViews();
+                break;
+            case R.id.bottom_announcements_selector:
+                changeFragment(mRecordFragment);
+                mSelectedFragment = SelectedFragment.ANNOUNCEMENTS;
+                invalidateViews();
+                break;
+            case R.id.bottom_recordings_selector:
+                sendReceiversToScheduleFragment(selectedReceivers);
+                mSelectedFragment = SelectedFragment.RECORDINGS;
+                invalidateViews();
+                changeFragment(mScheduleFragment);
+                break;
+            case R.id.bottom_settings_selector:
+                changeFragment(mSettingsFragment);
+                mSelectedFragment = SelectedFragment.SETTINGS;
+                invalidateViews();
+                break;
+        }
+    }
+
+    /**
+     * Change buttons background and state, depends on {@link SelectedFragment}
+     */
     private void invalidateViews() {
         switch (mSelectedFragment) {
             case RECEIVERS:
@@ -152,32 +217,66 @@ public class MainActivity extends BaseActivity implements
         }
     }
 
-    public void onBottomButtonsClick(View view) {
-        switch (view.getId()) {
-            case R.id.bottom_PASystems_selector:
-                changeFragment(mReceiversFragment);
-                mSelectedFragment = SelectedFragment.RECEIVERS;
-                invalidateViews();
-                break;
-            case R.id.bottom_announcements_selector:
-                changeFragment(mRecordFragment);
-                mSelectedFragment = SelectedFragment.ANNOUNCEMENTS;
-                invalidateViews();
-                break;
-            case R.id.bottom_recordings_selector:
-                sendReceiversToScheduleFragment(selectedReceivers);
-                changeFragment(mScheduleFragment);
-                mSelectedFragment = SelectedFragment.RECORDINGS;
-                invalidateViews();
-                break;
-            case R.id.bottom_settings_selector:
-                changeFragment(mSettingsFragment);
-                mSelectedFragment = SelectedFragment.SETTINGS;
-                invalidateViews();
-                break;
+    /**
+     * Called when a receiver from the {@link ReceiversFragment#mListView} is clicked
+     * @see {@link ReceiversFragment#onChildClick(Receiver, int)}
+     * @param receiver which was clicked
+     */
+    @Override
+    public void onReceiverClicked(Receiver receiver) {
+        selectedGroup = null;
+        if (receiver.isSelected()) {
+            selectedReceivers.add(receiver);
+        } else {
+            selectedReceivers.remove(receiver);
         }
+        statusChanged = true;
     }
 
+    /**
+     * Called when a group from the {@link ReceiversFragment#mGroupsRecyclerView} is clicked
+     * @see {@link ReceiversFragment#onGroupClicked(Group, int)}
+     * @param group which was clicked
+     */
+    @Override
+    public void onGroupClicked(Group group) {
+        selectedReceivers.clear();
+        selectedGroup = group;
+        statusChanged = true;
+    }
+
+    private void sendReceiversToScheduleFragment(ArrayList<Receiver> receivers) {
+        mScheduleFragment = (ScheduleFragment) getSupportFragmentManager()
+                .findFragmentByTag(ScheduleFragment.class.getSimpleName());
+        if (mScheduleFragment != null && statusChanged) {
+            if (receivers.size() <= 0) {
+                mScheduleFragment.clearLists();
+            } else {
+                mScheduleFragment.getAllRecordingsFromServer(receivers);
+                mScheduleFragment.getAllScheduledRecords(receivers);
+            }
+        } else {
+            mScheduleFragment = new ScheduleFragment();
+            Bundle bundle = new Bundle();
+            bundle.putParcelableArrayList(ScheduleFragment.RECEIVERS_ARGS, receivers);
+            mScheduleFragment.setArguments(bundle);
+        }
+        statusChanged = false;
+    }
+
+    /**
+     * Helps to keep track of current selected fragment
+     */
+    enum SelectedFragment {
+        RECEIVERS, ANNOUNCEMENTS, RECORDINGS, SETTINGS
+    }
+
+
+
+    //------------------- Authentication -------------------//
+    /**
+     * Receive the response when a login request is sent to server
+     */
     BroadcastReceiver mLoginReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -202,86 +301,55 @@ public class MainActivity extends BaseActivity implements
         }
     };
 
+    /**
+     * Called when server has a successful response for us
+     * @param response json which is received from server
+     */
     public void onResponseSucceed(JSONObject response) {
         dismissLoading();
         SonarCloudApp.user = User.build(response);
         initializeBottomButtons();
     }
 
+    /**
+     * Called when server can't execute the command or it has sent an empty response
+     * @param message either {@link com.softrangers.sonarcloudmobile.R.string#unknown_error}
+     *                or a message from server
+     */
     public void onCommandFailure(String message) {
         dismissLoading();
         Snackbar.make(mMainBottomBar, message, Snackbar.LENGTH_SHORT).show();
     }
 
+    /**
+     * Called when a response occured during parsing response or any other local error
+     */
     public void onErrorOccurred() {
         dismissLoading();
         Snackbar.make(mMainBottomBar, getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
     }
 
+    /**
+     * Logout the current user and delete all personal data from the application
+     */
+    public void logout(View view) {
+        SonarCloudApp.getInstance().clearUserSession();
+        Intent intent = new Intent(this, LoginActivity.class);
+        startActivityForResult(intent, LOGIN_REQUEST_CODE);
+    }
+
+
+
+    //------------------- Helpers -------------------//
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putParcelable(USER_STATE, SonarCloudApp.user);
     }
 
-    private void changeFragment(Fragment newFragment) {
-        FragmentManager fragmentManager = getSupportFragmentManager();
-        FragmentTransaction transaction = fragmentManager.beginTransaction();
-        Fragment old = fragmentManager.findFragmentByTag(newFragment.getClass().getSimpleName());
-        List<Fragment> fragments = fragmentManager.getFragments();
-        if (fragments != null) {
-            for (Fragment fragment : fragments) {
-                transaction.hide(fragment);
-            }
-        }
-        if (old != null && old.equals(newFragment)) {
-            transaction.show(old);
-        } else {
-            transaction.add(R.id.main_fragmentContainer, newFragment,
-                    newFragment.getClass().getSimpleName());
-        }
-        transaction.commit();
-    }
-
-    @Override
-    public void onReceiverClicked(Receiver receiver) {
-        selectedGroup = null;
-        if (receiver.isSelected()) {
-            selectedReceivers.add(receiver);
-        } else {
-            selectedReceivers.remove(receiver);
-        }
-    }
-
-    @Override
-    public void onGroupClicked(Group group) {
-        selectedReceivers.clear();
-        selectedGroup = group;
-        sendReceiversToScheduleFragment(group.getReceivers());
-    }
-
-    private void sendReceiversToScheduleFragment(ArrayList<Receiver> receivers) {
-        mScheduleFragment = (ScheduleFragment) getSupportFragmentManager()
-                .findFragmentByTag(ScheduleFragment.class.getSimpleName());
-        if (mScheduleFragment != null) {
-            if (receivers.size() <= 0) {
-                mScheduleFragment.clearLists();
-            } else {
-                mScheduleFragment.getAllRecordingsFromServer(receivers);
-                mScheduleFragment.getAllScheduledRecords(receivers);
-            }
-        } else {
-            mScheduleFragment = new ScheduleFragment();
-            Bundle bundle = new Bundle();
-            bundle.putParcelableArrayList(ScheduleFragment.RECEIVERS_ARGS, receivers);
-            mScheduleFragment.setArguments(bundle);
-        }
-    }
-
-    enum SelectedFragment {
-        RECEIVERS, ANNOUNCEMENTS, RECORDINGS, SETTINGS
-    }
-
+    /**
+     * Class used to show a dialog with details about requested permission
+     */
     class ExplainPermission extends AsyncTask<Void, Void, Void> {
 
         @Override
@@ -301,17 +369,30 @@ public class MainActivity extends BaseActivity implements
         }
     }
 
-    public void logout(View view) {
-        SonarCloudApp.getInstance().clearUserSession();
-        Intent intent = new Intent(this, LoginActivity.class);
-        startActivityForResult(intent, LOGIN_REQUEST_CODE);
-    }
-
+    /**
+     * Called when lock button from {@link SettingsFragment} is clicked
+     */
     public void lockApplication(View view) {
         startActivity(new Intent(this, LockAppActivity.class));
         overridePendingTransition(R.anim.enter, R.anim.exit);
     }
 
+    /**
+     * Unregister broadcast receiver
+     */
+    @Override
+    protected void onStop() {
+        super.onStop();
+        try {
+            unregisterReceiver(mLoginReceiver);
+        } catch (Exception e) {
+        }
+    }
+
+    //------------------- Notifiers -------------------//
+    /**
+     * Called when socket connection is established to notify that we can start the login process
+     */
     @Override
     public void onSocketConnected() {
         if (SonarCloudApp.getInstance().isLoggedIn()) {
@@ -360,31 +441,33 @@ public class MainActivity extends BaseActivity implements
         }
     }
 
+    /**
+     * Add observers to the list
+     * @param observer which will be notified when add group activity sent the newly created group
+     */
     @Override
     public void addObserver(GroupObserver observer) {
         observers.add(observer);
     }
 
+    /**
+     * Remove observers from the list
+     * @param observer which you want to remove from the list
+     */
     @Override
     public void removeObserver(GroupObserver observer) {
         observers.remove(observer);
     }
 
+    /**
+     * Notify all registered observers
+     */
     @Override
     public void notifyObservers() {
         for (GroupObserver observer : observers) {
             if (observer != null) {
                 observer.update(mGroup);
             }
-        }
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        try {
-            unregisterReceiver(mLoginReceiver);
-        } catch (Exception e) {
         }
     }
 }
