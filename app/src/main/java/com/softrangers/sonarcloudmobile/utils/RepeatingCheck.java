@@ -39,7 +39,7 @@ public class RepeatingCheck {
 
     public static Schedule setRepeating(Schedule schedule, int repeatingOption) {
         Calendar calendar = Calendar.getInstance();
-        calendar.setTimeInMillis(schedule.getFormattedStartDate().getTime());
+        calendar.setTimeInMillis(schedule.getFormattedDate(schedule.getStartDate()).getTime());
         switch (repeatingOption) {
             case 1:
                 schedule.setMinute(String.valueOf(calendar.get(Calendar.MINUTE)));

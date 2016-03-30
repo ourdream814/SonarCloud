@@ -173,10 +173,14 @@ public class MainActivity extends BaseActivity implements
                 invalidateViews();
                 break;
             case R.id.bottom_recordings_selector:
-                if (selectedReceivers.size() > 0)
-                    sendReceiversToScheduleFragment(selectedReceivers);
-                else if (selectedGroup != null)
-                    sendReceiversToScheduleFragment(selectedGroup.getReceivers());
+                if (statusChanged) {
+                    if (selectedReceivers.size() > 0)
+                        sendReceiversToScheduleFragment(selectedReceivers);
+                    else if (selectedGroup != null)
+                        sendReceiversToScheduleFragment(selectedGroup.getReceivers());
+                    else
+                        sendReceiversToScheduleFragment(new ArrayList<Receiver>());
+                }
                 mSelectedFragment = SelectedFragment.RECORDINGS;
                 invalidateViews();
                 changeFragment(mScheduleFragment);
@@ -264,14 +268,16 @@ public class MainActivity extends BaseActivity implements
             } else {
                 mScheduleFragment.clearLists();
                 mScheduleFragment.getAllRecordingsFromServer(receivers);
-                mScheduleFragment.getAllScheduledRecords(receivers);
             }
-        } else if (statusChanged) {
+            return;
+        } else if (statusChanged){
             mScheduleFragment = new ScheduleFragment();
             Bundle bundle = new Bundle();
             bundle.putParcelableArrayList(ScheduleFragment.RECEIVERS_ARGS, receivers);
             mScheduleFragment.setArguments(bundle);
+            return;
         }
+        mScheduleFragment = new ScheduleFragment();
     }
 
     /**
@@ -439,8 +445,11 @@ public class MainActivity extends BaseActivity implements
                         onSocketConnected();
                         break;
                     case ScheduleActivity.ACTION_ADD_SCHEDULE:
+                        mRecordFragment.mRecAdapter.refreshList(mRecordFragment.getRecordedFileList());
+                        break;
                     case ScheduleActivity.ACTION_EDIT_SCHEDULE:
-                        sendBroadcast(data);
+                        if (selectedGroup != null) sendReceiversToScheduleFragment(selectedGroup.getReceivers());
+                        else sendReceiversToScheduleFragment(selectedReceivers);
                         break;
                 }
                 break;

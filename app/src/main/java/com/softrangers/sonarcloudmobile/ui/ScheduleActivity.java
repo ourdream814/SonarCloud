@@ -17,10 +17,10 @@ import android.widget.DatePicker;
 import android.widget.NumberPicker;
 import android.widget.TextView;
 import android.widget.TimePicker;
-import android.widget.Toast;
 
 import com.softrangers.sonarcloudmobile.R;
 import com.softrangers.sonarcloudmobile.adapters.ScheduleEditAdapter;
+import com.softrangers.sonarcloudmobile.models.Receiver;
 import com.softrangers.sonarcloudmobile.models.Recording;
 import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.models.Schedule;
@@ -32,6 +32,9 @@ import com.softrangers.sonarcloudmobile.utils.api.Api;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -48,7 +51,9 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
     private static final String TIME = "Time";
     private static final String REPEAT = "Repeat";
     private static final String REPEAT_UNTIL = "Repeat until";
-
+    private static final int SAMPLE_RATE = 48000;
+    private static final int BITRATE = 16000;
+    private static final int CHANNEL = 1;
     public static final String SCHEDULE_EXTRAS = "key for schedule extras";
 
     private RecyclerView mRecyclerView;
@@ -63,10 +68,14 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_schedule);
-        IntentFilter intentFilter = new IntentFilter(Api.Command.UPDATE_SCHEDULE);
-        intentFilter.addAction(Api.Command.CREATE_SCHEDULE);
-        intentFilter.addAction(Api.EXCEPTION);
-        registerReceiver(mBroadcastReceiver, intentFilter);
+        IntentFilter dataIntentFilter = new IntentFilter(Api.Command.UPDATE_SCHEDULE);
+        dataIntentFilter.addAction(Api.Command.CREATE_SCHEDULE);
+        dataIntentFilter.addAction(Api.Command.SEND_AUDIO);
+        dataIntentFilter.addAction(Api.EXCEPTION);
+        IntentFilter audioIntentFilter = new IntentFilter(Api.Command.SEND_AUDIO);
+        audioIntentFilter.addAction(Api.EXCEPTION);
+        registerReceiver(mAudioSendingReceiver, audioIntentFilter);
+        registerReceiver(mBroadcastReceiver, dataIntentFilter);
         mRequestBuilder = new Request.Builder();
         // instantiate all views for this activity
         mRecyclerView = (RecyclerView) findViewById(R.id.schedule_activity_recyclerView);
@@ -84,23 +93,15 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                 schedule = new Schedule();
                 recording = intent.getExtras().getParcelable(RECORD_BUNDLE);
                 mAdapter = new ScheduleEditAdapter(buildAdaptersList(schedule));
+                mRequestBuilder.command(Api.Command.SEND_AUDIO);
                 break;
             // User opened an existing schedule
             case ACTION_EDIT_SCHEDULE:
                 toolbarTitle.setText(getString(R.string.edit_schedule));
                 schedule = intent.getExtras().getParcelable(SCHEDULE_EXTRAS);
-                mRequestBuilder.command(Api.Command.UPDATE_SCHEDULE);
-                mRequestBuilder.time(schedule.getTime());
-                mRequestBuilder.scheduleId(schedule.getScheduleID());
-                mRequestBuilder.minute(schedule.getMinute());
-                mRequestBuilder.hour(schedule.getHour());
-                mRequestBuilder.day(schedule.getDay());
-                mRequestBuilder.month(schedule.getMonth());
-                mRequestBuilder.wday(schedule.getWday());
-                mRequestBuilder.deleteAfter(0); // TODO: 3/22/16 change this later
-                mRequestBuilder.startDate(schedule.getServerFormatDate(new Date()));
-                mRequestBuilder.endDate(schedule.getEndDate());
                 mAdapter = new ScheduleEditAdapter(buildAdaptersList(schedule));
+                mRequestBuilder.command(Api.Command.UPDATE_SCHEDULE);
+                mRequestBuilder.scheduleId(schedule.getScheduleID());
                 break;
         }
         initializeList(mAdapter);
@@ -133,20 +134,25 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
     };
 
     private void onResponseSucceed(JSONObject response) {
+        dismissLoading();
         Schedule schedule = Schedule.buildSingle(response);
         Intent intent = new Intent(this, MainActivity.class);
         intent.setAction(mAction);
         intent.putExtra(mAction, schedule);
         setResult(RESULT_OK, intent);
         unregisterReceiver(mBroadcastReceiver);
+        unregisterReceiver(mAudioSendingReceiver);
+        MainActivity.statusChanged = true;
         finish();
     }
 
     private void onCommandFailure(String message) {
+        dismissLoading();
         Snackbar.make(mRecyclerView, message, Snackbar.LENGTH_SHORT).show();
     }
 
     private void onErrorOccurred() {
+        dismissLoading();
         Snackbar.make(mRecyclerView, getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
     }
 
@@ -201,7 +207,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
             repeatUntil.setRowType(Schedule.RowType.ITEM);
             repeatUntil.setTitle(getString(R.string.repeat_until));
             String endDate = schedule.getEndDate();
-            if (!endDate.equals("null") && endDate != null && !endDate.contains("00:00:00.000Z")) {
+            if (!endDate.equals("null") && endDate != null) {
                 repeatUntil.setSubtitle(schedule.getStringDate(schedule.getFormattedEndDate()));
             }
             headerArrayList.add(repeatUntil);
@@ -222,25 +228,32 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
 
     // Called when user press the save button on the top right
     public void saveSchedule(View view) {
-        if (mAction.equals(ACTION_ADD_SCHEDULE)) {
-            Toast.makeText(this, "Not working yet", Toast.LENGTH_SHORT).show();
-            return;
+        showLoading();
+        switch (mAction) {
+            case ACTION_EDIT_SCHEDULE: {
+                if (schedule.getRepeatOption() > 0) schedule.setTime(null);
+                if (schedule.getStartDate() == null || schedule.getStartDate().equals("null")) {
+                    schedule.setStartDate(schedule.getServerFormatDate(new Date()));
+                }
+                if (schedule.getRepeatOption() > 0) {
+                    mRequestBuilder.minute(schedule.getMinute())
+                            .hour(schedule.getHour())
+                            .day(schedule.getDay())
+                            .month(schedule.getMonth())
+                            .wday(schedule.getWday())
+                            .startDate(schedule.getStartDate())
+                            .endDate(schedule.getEndDate());
+                } else {
+                    mRequestBuilder.time(schedule.getTime());
+                }
+                JSONObject request = mRequestBuilder.build().toJSON();
+                SonarCloudApp.socketService.sendRequest(request);
+                break;
+            }
+            case ACTION_ADD_SCHEDULE: {
+                startSendingAudioProcess();
+            }
         }
-        if (schedule.getRepeatOption() > 0) schedule.setTime(null);
-        if (schedule.getStartDate().equals("null")) {
-            schedule.setStartDate(schedule.getServerFormatDate(new Date()));
-        }
-        mRequestBuilder.minute(schedule.getMinute())
-                .hour(schedule.getHour())
-                .day(schedule.getDay())
-                .month(schedule.getMonth())
-                .wday(schedule.getWday())
-                .time(schedule.getTime())
-                .deleteAfter(schedule.getTime() == null ? 0 : 1)
-                .endDate(schedule.getEndDate().equals("null") ? null : schedule.getEndDate())
-                .startDate(schedule.getTime() == null ? schedule.getStartDate() : null);
-        JSONObject request = mRequestBuilder.build().toJSON();
-        SonarCloudApp.socketService.sendRequest(request);
     }
 
     // called when user press the cancel button on the top left
@@ -252,6 +265,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
     public void onBackPressed() {
         setResult(RESULT_CANCELED, new Intent(mAction));
         unregisterReceiver(mBroadcastReceiver);
+        unregisterReceiver(mAudioSendingReceiver);
         super.onBackPressed();
     }
 
@@ -263,7 +277,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
      */
     @Override
     public void onItemClickListener(String itemTitle, final int position) {
-        final SimpleDateFormat serverFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZZZZZ", Locale.getDefault());
+        final SimpleDateFormat serverFormat = new SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ssZZZZZ", Locale.getDefault());
         serverFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
         // obtain the date from schedule object
         final Date date = new Date();
@@ -288,8 +302,9 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                         calendar.set(Calendar.MONTH, monthOfYear);
                         calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth);
                         date.setTime(calendar.getTimeInMillis());
-                        // TODO: 3/22/16 user update schedule date, set it for schedule
-                        schedule.setStartDate(serverFormat.format(date));
+                        String dateString = serverFormat.format(date);
+                        schedule.setStartDate(dateString);
+                        schedule.setTime(dateString);
                         mRequestBuilder.startDate(serverFormat.format(date));
                         // update the interface
                         mAdapter.getItem(position).setSubtitle(schedule.getStringDate(date));
@@ -315,8 +330,9 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                                 calendar.set(Calendar.HOUR, hourOfDay);
                                 calendar.set(Calendar.MINUTE, minute);
                                 date.setTime(calendar.getTimeInMillis());
-                                // TODO: 3/22/16 user update the schedule time, set new time for schedule
-                                schedule.setStartDate(serverFormat.format(date));
+                                String dateString = serverFormat.format(date);
+                                schedule.setStartDate(dateString);
+                                schedule.setTime(dateString);
                                 mRequestBuilder.startDate(serverFormat.format(date));
                                 // update the interface
                                 mAdapter.getItem(position).setSubtitle(schedule.getStringTime(date));
@@ -375,12 +391,14 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                     @Override
                     public void onDateSet(android.widget.DatePicker view, int year, int monthOfYear, int dayOfMonth) {
                         // set the date user have selected
+                        calendar.setTimeInMillis(System.currentTimeMillis());
                         calendar.set(Calendar.YEAR, year);
                         calendar.set(Calendar.MONTH, monthOfYear);
                         calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth);
                         date.setTime(calendar.getTimeInMillis());
                         // update the interface
-                        schedule.setEndDate(serverFormat.format(date));
+                        String dateString = serverFormat.format(date);
+                        schedule.setEndDate(dateString);
                         mAdapter.getItem(position).setSubtitle(schedule.getStringDate(date));
                         mAdapter.notifyItemChanged(position);
                     }
@@ -394,5 +412,144 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                 pickerDialog.show();
                 break;
         }
+    }
+
+    // receiver for server responses
+    BroadcastReceiver mAudioSendingReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            try {
+                String action = intent.getAction();
+                JSONObject jsonResponse = new JSONObject(intent.getExtras().getString(action));
+                boolean success = jsonResponse.optBoolean("success", false);
+                if (!success && !SonarCloudApp.socketService.isAudioConnectionReady()) {
+                    String message = jsonResponse.optString("message", getString(R.string.unknown_error));
+                    onCommandFailure(message);
+                    return;
+                } else if (SonarCloudApp.socketService.isAudioConnectionReady()) {
+                    onAudioSent();
+                    return;
+                }
+                switch (action) {
+                    case Api.Command.SEND_AUDIO:
+                        onKeyAndIDReceived(jsonResponse);
+                        break;
+                    case Api.EXCEPTION:
+                        String message = jsonResponse.optString("message");
+                        if (message.equalsIgnoreCase("Ready for data.")) {
+                            onServerReadyForData();
+                        } else {
+                            onErrorOccurred();
+                        }
+                        break;
+                }
+            } catch (Exception e) {
+                onErrorOccurred();
+                e.printStackTrace();
+            }
+        }
+    };
+
+    private JSONObject buildScheduleObject() {
+        JSONObject scheduleJSON = new JSONObject();
+        try {
+            if (schedule.getRepeatOption() > 0) {
+                scheduleJSON.put("minute", schedule.getMinute());
+                scheduleJSON.put("hour", schedule.getHour());
+                scheduleJSON.put("day", schedule.getDay());
+                scheduleJSON.put("month", schedule.getMonth());
+                scheduleJSON.put("wday", schedule.getWday());
+                scheduleJSON.put("deleteAfter", false);
+            } else {
+                scheduleJSON.put("time", schedule.getTime());
+                scheduleJSON.put("deleteAfter", true);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return scheduleJSON;
+    }
+
+    /**
+     * Start the sending process
+     */
+    private void startSendingAudioProcess() {
+        try {
+            Request.Builder requestBuilder = new Request.Builder()
+                    .command(Api.Command.SEND_AUDIO)
+                    .bitrate(BITRATE)
+                    .channels(CHANNEL)
+                    .format(Api.FORMAT)
+                    .samplerate(SAMPLE_RATE)
+                    .schedule(buildScheduleObject());
+            if (MainActivity.selectedGroup != null) {
+                requestBuilder.groupId(String.valueOf(MainActivity.selectedGroup.getGroupID()));
+            } else if (MainActivity.selectedReceivers.size() > 0) {
+                ArrayList<Integer> selectedReceivers = new ArrayList<>();
+                for (Receiver receiver : MainActivity.selectedReceivers) {
+                    selectedReceivers.add(receiver.getReceiverId());
+                }
+                requestBuilder.receiversID(selectedReceivers);
+            }
+            JSONObject request = requestBuilder.build().toJSON();
+            request.put(Api.Options.PLAY_IMMEDIATELY, false).put(Api.Options.KEEP, schedule.getTime() == null);
+            SonarCloudApp.socketService.sendRequest(request);
+        } catch (Exception e) {
+            onErrorOccurred();
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Called when the key and id for record are received from server
+     *
+     * @param response which contains "key" and "recordingID"
+     * @throws JSONException
+     */
+    private void onKeyAndIDReceived(JSONObject response) throws JSONException {
+        String sendAudioKey = response.getString("key");
+        recording.setRecordingId(response.getInt("recordingID"));
+        Request.Builder requestBuilder = new Request.Builder();
+        requestBuilder.command(Api.Command.SEND).key(sendAudioKey);
+        SonarCloudApp.socketService.setAudioConnection();
+        while (!SonarCloudApp.socketService.isAudioConnectionReady()) {
+        }
+        SonarCloudApp.socketService.prepareServerForAudio(requestBuilder.build().toJSON());
+    }
+
+    /**
+     * Called when server says "Ready for data."
+     */
+    private void onServerReadyForData() {
+        try {
+            File file = new File(recording.getFilePath());
+            int size = (int) file.length();
+            byte[] bytes = new byte[size];
+            FileInputStream fis = new FileInputStream(new File(recording.getFilePath()));
+            BufferedInputStream bis = new BufferedInputStream(fis);
+            bis.read(bytes, 0, bytes.length);
+            bis.close();
+            SonarCloudApp.socketService.sendAudio(bytes);
+        } catch (Exception e) {
+            onErrorOccurred();
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Called when the data is sent
+     */
+    private void onAudioSent() {
+        MainActivity.statusChanged = true;
+        File file = new File(recording.getFilePath());
+        file.delete();
+        SonarCloudApp.socketService.closeAudioConnection();
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.setAction(mAction);
+        setResult(RESULT_OK, intent);
+        unregisterReceiver(mAudioSendingReceiver);
+        unregisterReceiver(mBroadcastReceiver);
+        MainActivity.statusChanged = true;
+        finish();
     }
 }

@@ -61,6 +61,8 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
     private static final int SAMPLE_RATE = 48000;
     private static final int BITRATE = 16000;
     private static final int CHANNEL = 1;
+    private static final String RECORDINGS = "recordings";
+    private static String PATH;
     private static boolean isSending;
     private RelativeLayout mRecordAndSend;
     private RelativeLayout mStreamLayout;
@@ -73,7 +75,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
     private RecorderState mRecorderState;
     private StreamingState mStreamingState;
     private PTTState mPTTState;
-    private AnnouncementRecAdapter mRecAdapter;
+    public AnnouncementRecAdapter mRecAdapter;
     private MillisChronometer mRecordChronometer;
     private MillisChronometer mStreamingChronometer;
     private MillisChronometer mPTTChronometer;
@@ -90,6 +92,8 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         View view = inflater.inflate(R.layout.fragment_record, container, false);
         // Obtain a link to activity
         mActivity = (MainActivity) getActivity();
+        PATH = mActivity.getCacheDir().getAbsolutePath()
+                + File.separator + RECORDINGS + File.separator;
         // Register the receiver with intent filters
         IntentFilter intentFilter = new IntentFilter(Api.Command.SEND_AUDIO);
         intentFilter.addAction(Api.Command.SEND);
@@ -276,15 +280,18 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
      *
      * @return a list of recordings, each recording will contain a unique path to a file
      */
-    private ArrayList<Recording> getRecordedFileList() {
-        File cacheDir = mActivity.getCacheDir();
+    public ArrayList<Recording> getRecordedFileList() {
+        File cacheDir = new File(PATH);
+        if (!cacheDir.exists()) cacheDir.mkdirs();
         File[] recordings = cacheDir.listFiles();
         ArrayList<Recording> recordingList = new ArrayList<>();
-        for (File file : recordings) {
-            Recording recording = new Recording();
-            recording.setFilePath(file.getAbsolutePath());
-            recording.setRecordName(file.getName().split("\\.")[0]);
-            recordingList.add(recording);
+        if (recordings != null) {
+            for (File file : recordings) {
+                Recording recording = new Recording();
+                recording.setFilePath(file.getAbsolutePath());
+                recording.setRecordName(file.getName().split("\\.")[0]);
+                recordingList.add(recording);
+            }
         }
         return recordingList;
     }
@@ -295,9 +302,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
     private void startRecording() {
         recordingNumber = SonarCloudApp.getInstance().getLastRecordingNumber();
         String recordName = mActivity.getString(R.string.recording) + " " + recordingNumber;
-        String filePath = mActivity.getCacheDir().getAbsolutePath()
-                + File.separator + recordName;
-        new RecordingProcess(filePath);
+        new RecordingProcess(recordName);
     }
 
     /**
@@ -486,14 +491,11 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
 
     //------------------ Recording process ---------------------//
-
     /**
      * Starts a new thread to record the audio
      */
     class RecordingProcess implements Runnable {
-
         String mFileName;
-
         public RecordingProcess(String fileName) {
             mFileName = fileName;
             new Thread(this, this.getClass().getSimpleName()).start();
@@ -541,7 +543,10 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
     private void recordAudio(String fileName) throws Exception {
         // We'll be throwing stuff here
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        FileOutputStream fos = new FileOutputStream(new File(fileName));
+        File path = new File(PATH);
+        if (!path.exists()) path.mkdirs();
+        File file = new File(path, fileName);
+        FileOutputStream fos = new FileOutputStream(file);
         BufferedOutputStream bos = new BufferedOutputStream(fos);
 
         SonarCloudApp.getInstance().addNewRecording(recordingNumber);

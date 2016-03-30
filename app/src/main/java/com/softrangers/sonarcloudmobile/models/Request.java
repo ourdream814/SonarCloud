@@ -53,6 +53,7 @@ public class Request {
     private int channels = UNSPECIFIED_INT;
     private JSONArray receivers;
     private JSONArray receiversID;
+    private JSONObject schedule;
 
     private Request() {
 
@@ -132,6 +133,7 @@ public class Request {
         private int deleteAfter;
         private int mBitrate = UNSPECIFIED_INT;
         private JSONArray mReceiversID;
+        private JSONObject mSchedule;
 
 
         public Builder command(String command) {
@@ -314,6 +316,11 @@ public class Request {
             return this;
         }
 
+        public Builder schedule(JSONObject scheduleObject) {
+            mSchedule = scheduleObject;
+            return this;
+        }
+
 
         public Request build() {
             Request request = new Request();
@@ -354,6 +361,7 @@ public class Request {
             request.receivers = mReceivers;
             request.receiversID = mReceiversID;
             request.key = mKey;
+            request.schedule = mSchedule;
             return request;
         }
     }

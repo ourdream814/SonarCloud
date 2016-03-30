@@ -61,8 +61,6 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     private static ScheduledRecordsAdapter scheduledRecordsAdapter;
     private MainActivity mActivity;
     private int clickedPosition;
-    private ProgressBar mAllRecordsProgress;
-    private ProgressBar mScheduledProgress;
     private ArrayList<Receiver> mReceivers;
 
     public ScheduleFragment() {
@@ -91,12 +89,14 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         scheduledRecordsAdapter = new ScheduledRecordsAdapter(schedules, mActivity);
         // initialize all fragment views
         initializeViews(view);
-        mReceivers = getArguments().getParcelableArrayList(RECEIVERS_ARGS);
-        if (mReceivers.size() > 0 && MainActivity.statusChanged) {
-            clearLists();
-            getAllRecordingsFromServer(mReceivers);
-        } else if (MainActivity.statusChanged) {
-            clearLists();
+        if (getArguments() != null) {
+            mReceivers = getArguments().getParcelableArrayList(RECEIVERS_ARGS);
+            if (mReceivers.size() > 0 && MainActivity.statusChanged) {
+                clearLists();
+                getAllRecordingsFromServer(mReceivers);
+            } else if (MainActivity.statusChanged) {
+                clearLists();
+            }
         }
         return view;
     }
@@ -116,9 +116,6 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         unselectedText.setTypeface(SonarCloudApp.avenirBook);
         mScheduledNoRecords = (TextView) view.findViewById(R.id.scheduled_noRecordsText);
         mScheduledNoRecords.setTypeface(SonarCloudApp.avenirBook);
-
-        mScheduledProgress = (ProgressBar) view.findViewById(R.id.scheduled_records_progressBar);
-        mAllRecordsProgress = (ProgressBar) view.findViewById(R.id.all_records_progressBar);
 
         // Layouts which are holding all lists, used to hide/show the lists on the screen
         scheduledLayout = (RelativeLayout) view.findViewById(R.id.scheduled_list_layout);
@@ -163,9 +160,6 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
                 // hide the scheduled layout and show the all recordings layout
                 scheduledLayout.setVisibility(View.GONE);
                 allScheduleLayout.setVisibility(View.VISIBLE);
-                if (allRecordingsAdapter.getItemCount() > 0)
-                    mScheduledNoRecords.setVisibility(View.GONE);
-                else mScheduledNoRecords.setVisibility(View.VISIBLE);
                 break;
             case R.id.scheduled_list_button:
                 // Change the selected status to know which button was selected
@@ -173,6 +167,14 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
                 // Hide the all recordings layout and show the scheduled layout
                 allScheduleLayout.setVisibility(View.GONE);
                 scheduledLayout.setVisibility(View.VISIBLE);
+                if (scheduledRecordsAdapter.getItemCount() <= 0
+                        && MainActivity.selectedReceivers.size() <= 0
+                        && MainActivity.selectedGroup == null
+                        && unselectedText.getVisibility() != View.VISIBLE) {
+                    mScheduledNoRecords.setVisibility(View.VISIBLE);
+                } else {
+                    mScheduledNoRecords.setVisibility(View.GONE);
+                }
                 break;
         }
     }
@@ -183,7 +185,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
      * @param receivers for which to get recordings
      */
     public void getAllScheduledRecords(ArrayList<Receiver> receivers) {
-        mScheduledProgress.setVisibility(View.VISIBLE);
+        if (receivers == null) receivers = new ArrayList<>();
         // hide the unselected text
         unselectedText.setVisibility(View.GONE);
         // clear current scheduled list
@@ -204,12 +206,13 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
      * @param receivers for which to get recordings
      */
     public void getAllRecordingsFromServer(ArrayList<Receiver> receivers) {
-        mAllRecordsProgress.setVisibility(View.VISIBLE);
+        if (receivers == null) receivers = new ArrayList<>();
         // hide the unselected text
         unselectedText.setVisibility(View.GONE);
         // build a request with provided receivers
         Request.Builder builder = new Request.Builder();
         builder.command(Api.Command.RECORDINGS);
+        mActivity.showLoading();
         for (Receiver receiver : receivers) {
             builder.receiverId(receiver.getReceiverId());
             // send request to server
@@ -223,24 +226,24 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
      * @param recordings list to add to adapter
      */
     private void addRecordingsToList(final ArrayList<Recording> recordings) {
-        mAllRecordsProgress.setVisibility(View.GONE);
         // add recordings to adapter's list
         mActivity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 allRecordingsAdapter.addItems(recordings);
+                // check if there are any item in the list
+                // if false then show the no data text and hide the list layout
+                // else hide the no data text and show the list layout
+                mActivity.dismissLoading();
+                if (allRecordingsAdapter.getItemCount() <= 0) {
+                    mScheduledNoRecords.setVisibility(View.VISIBLE);
+                    allScheduleLayout.setVisibility(View.GONE);
+                } else {
+                    mScheduledNoRecords.setVisibility(View.GONE);
+                    allScheduleLayout.setVisibility(View.VISIBLE);
+                }
             }
         });
-        // check if there are any item in the list
-        // if false then show the no data text and hide the list layout
-        // else hide the no data text and show the list layout
-        if (allRecordingsAdapter.getItemCount() <= 0) {
-            mScheduledNoRecords.setVisibility(View.VISIBLE);
-            allScheduleLayout.setVisibility(View.GONE);
-        } else {
-            mScheduledNoRecords.setVisibility(View.GONE);
-            allScheduleLayout.setVisibility(View.VISIBLE);
-        }
         MainActivity.statusChanged = false;
     }
 
@@ -250,23 +253,24 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
      * @param schedules list to add to adapter
      */
     private void addSchedulesToList(final ArrayList<Schedule> schedules) {
-        mScheduledProgress.setVisibility(View.GONE);
         // add schedules to adapter's list
         mActivity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 scheduledRecordsAdapter.changeList(schedules);
+                mActivity.dismissLoading();
+                // check if there are any item in the list
+                // if false then show the no data text and hide the list layout
+                // else hide the no data text and show the list layout
+                if (scheduledRecordsAdapter.getItemCount() <= 0) {
+                    if (scheduledLayout.getVisibility() == View.VISIBLE
+                            && unselectedText.getVisibility() != View.VISIBLE)
+                        mScheduledNoRecords.setVisibility(View.VISIBLE);
+                } else {
+                    mScheduledNoRecords.setVisibility(View.GONE);
+                }
             }
         });
-        // check if there are any item in the list
-        // if false then show the no data text and hide the list layout
-        // else hide the no data text and show the list layout
-        if (scheduledRecordsAdapter.getItemCount() <= 0) {
-            if (scheduledLayout.getVisibility() == View.VISIBLE)
-                mScheduledNoRecords.setVisibility(View.VISIBLE);
-        } else {
-            mScheduledNoRecords.setVisibility(View.GONE);
-        }
         MainActivity.statusChanged = false;
     }
 
@@ -332,10 +336,9 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
             public void run() {
                 scheduledRecordsAdapter.clearList();
                 allRecordingsAdapter.clearList();
+                allSchedules.clear();
                 unselectedText.setVisibility(View.VISIBLE);
                 mScheduledNoRecords.setVisibility(View.GONE);
-                mAllRecordsProgress.setVisibility(View.GONE);
-                mScheduledProgress.setVisibility(View.GONE);
             }
         });
     }
@@ -343,7 +346,6 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     private static ArrayList<Schedule> allSchedules = new ArrayList<>();
 
     private void onSchedulesReceived(JSONObject response) {
-        mScheduledProgress.setVisibility(View.GONE);
         allSchedules.addAll(Schedule.build(response));
         Day day = mDaysAdapter.getDays().get(mDaysAdapter.getSelectedPostion());
         sortSchedule(day, allSchedules);
@@ -364,11 +366,13 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
 
     @Override
     public void onCommandFailure(String message) {
+        mActivity.dismissLoading();
         Snackbar.make(allScheduleLayout, message, Snackbar.LENGTH_SHORT).show();
     }
 
     @Override
     public void onErrorOccurred() {
+        mActivity.dismissLoading();
         Snackbar.make(allScheduleLayout,
                 mActivity.getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
     }
@@ -431,12 +435,6 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         builder.scheduleId(schedule.getScheduleID());
         // send request to server
         SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
-    }
-
-    @Override
-    public void onDetach() {
-        super.onDetach();
-        getContext().unregisterReceiver(mBroadcastReceiver);
     }
 
     @Override

@@ -18,14 +18,6 @@
         android:layout_height="match_parent"
         android:layout_below="@+id/schedule_horizontal_list"/>
 
-    <ProgressBar
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:visibility="gone"
-        android:id="@+id/scheduled_records_progressBar"
-        android:layout_centerVertical="true"
-        android:layout_centerHorizontal="true"/>
-
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
