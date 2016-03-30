@@ -97,9 +97,11 @@ public class MainActivity extends BaseActivity implements
 
 
     //------------------- Fragment controls -------------------//
+
     /**
      * Initialize bottom buttons and set the {@link ReceiversFragment} as the first fragment in
      * the activity
+     *
      * @see {@link MainActivity#changeFragment(Fragment)}
      */
     private void initializeBottomButtons() {
@@ -107,6 +109,7 @@ public class MainActivity extends BaseActivity implements
         mReceiversFragment = new ReceiversFragment();
         mRecordFragment = new RecordFragment();
         mSettingsFragment = new SettingsFragment();
+        mScheduleFragment = new ScheduleFragment();
         //link bottom buttons
         mMainBottomBar = (LinearLayout) findViewById(R.id.main_bottomBar);
         mReceiversSelector = (ImageButton) findViewById(R.id.bottom_PASystems_selector);
@@ -130,6 +133,7 @@ public class MainActivity extends BaseActivity implements
      * Change the curent fragment with the given fragment.
      * method firs check if the fragment is not already added to the list then it hides all other
      * fragments and then either shows or add the given fragment into app backstack
+     *
      * @param newFragment which you want to show on the screen
      */
     private void changeFragment(Fragment newFragment) {
@@ -153,6 +157,7 @@ public class MainActivity extends BaseActivity implements
 
     /**
      * Called when on of the four bottom buttons is clicked
+     *
      * @param view of the actual clicked button
      */
     public void onBottomButtonsClick(View view) {
@@ -168,7 +173,10 @@ public class MainActivity extends BaseActivity implements
                 invalidateViews();
                 break;
             case R.id.bottom_recordings_selector:
-                sendReceiversToScheduleFragment(selectedReceivers);
+                if (selectedReceivers.size() > 0)
+                    sendReceiversToScheduleFragment(selectedReceivers);
+                else if (selectedGroup != null)
+                    sendReceiversToScheduleFragment(selectedGroup.getReceivers());
                 mSelectedFragment = SelectedFragment.RECORDINGS;
                 invalidateViews();
                 changeFragment(mScheduleFragment);
@@ -219,8 +227,9 @@ public class MainActivity extends BaseActivity implements
 
     /**
      * Called when a receiver from the {@link ReceiversFragment#mListView} is clicked
-     * @see {@link ReceiversFragment#onChildClick(Receiver, int)}
+     *
      * @param receiver which was clicked
+     * @see {@link ReceiversFragment#onChildClick(Receiver, int)}
      */
     @Override
     public void onReceiverClicked(Receiver receiver) {
@@ -235,8 +244,9 @@ public class MainActivity extends BaseActivity implements
 
     /**
      * Called when a group from the {@link ReceiversFragment#mGroupsRecyclerView} is clicked
-     * @see {@link ReceiversFragment#onGroupClicked(Group, int)}
+     *
      * @param group which was clicked
+     * @see {@link ReceiversFragment#onGroupClicked(Group, int)}
      */
     @Override
     public void onGroupClicked(Group group) {
@@ -252,16 +262,16 @@ public class MainActivity extends BaseActivity implements
             if (receivers.size() <= 0) {
                 mScheduleFragment.clearLists();
             } else {
+                mScheduleFragment.clearLists();
                 mScheduleFragment.getAllRecordingsFromServer(receivers);
                 mScheduleFragment.getAllScheduledRecords(receivers);
             }
-        } else {
+        } else if (statusChanged) {
             mScheduleFragment = new ScheduleFragment();
             Bundle bundle = new Bundle();
             bundle.putParcelableArrayList(ScheduleFragment.RECEIVERS_ARGS, receivers);
             mScheduleFragment.setArguments(bundle);
         }
-        statusChanged = false;
     }
 
     /**
@@ -270,7 +280,6 @@ public class MainActivity extends BaseActivity implements
     enum SelectedFragment {
         RECEIVERS, ANNOUNCEMENTS, RECORDINGS, SETTINGS
     }
-
 
 
     //------------------- Authentication -------------------//
@@ -303,6 +312,7 @@ public class MainActivity extends BaseActivity implements
 
     /**
      * Called when server has a successful response for us
+     *
      * @param response json which is received from server
      */
     public void onResponseSucceed(JSONObject response) {
@@ -313,6 +323,7 @@ public class MainActivity extends BaseActivity implements
 
     /**
      * Called when server can't execute the command or it has sent an empty response
+     *
      * @param message either {@link com.softrangers.sonarcloudmobile.R.string#unknown_error}
      *                or a message from server
      */
@@ -337,7 +348,6 @@ public class MainActivity extends BaseActivity implements
         Intent intent = new Intent(this, LoginActivity.class);
         startActivityForResult(intent, LOGIN_REQUEST_CODE);
     }
-
 
 
     //------------------- Helpers -------------------//
@@ -390,6 +400,7 @@ public class MainActivity extends BaseActivity implements
     }
 
     //------------------- Notifiers -------------------//
+
     /**
      * Called when socket connection is established to notify that we can start the login process
      */
@@ -443,6 +454,7 @@ public class MainActivity extends BaseActivity implements
 
     /**
      * Add observers to the list
+     *
      * @param observer which will be notified when add group activity sent the newly created group
      */
     @Override
@@ -452,6 +464,7 @@ public class MainActivity extends BaseActivity implements
 
     /**
      * Remove observers from the list
+     *
      * @param observer which you want to remove from the list
      */
     @Override

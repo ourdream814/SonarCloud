@@ -38,6 +38,7 @@ import com.softrangers.sonarcloudmobile.utils.api.Api;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 
 
 /**
@@ -62,6 +63,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     private int clickedPosition;
     private ProgressBar mAllRecordsProgress;
     private ProgressBar mScheduledProgress;
+    private ArrayList<Receiver> mReceivers;
 
     public ScheduleFragment() {
         // Required empty public constructor
@@ -89,11 +91,11 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         scheduledRecordsAdapter = new ScheduledRecordsAdapter(schedules, mActivity);
         // initialize all fragment views
         initializeViews(view);
-        ArrayList<Receiver> receivers = getArguments().getParcelableArrayList(RECEIVERS_ARGS);
-        if (receivers.size() > 0) {
-            getAllRecordingsFromServer(receivers);
-            getAllScheduledRecords(receivers);
-        } else {
+        mReceivers = getArguments().getParcelableArrayList(RECEIVERS_ARGS);
+        if (mReceivers.size() > 0 && MainActivity.statusChanged) {
+            clearLists();
+            getAllRecordingsFromServer(mReceivers);
+        } else if (MainActivity.statusChanged) {
             clearLists();
         }
         return view;
@@ -171,9 +173,6 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
                 // Hide the all recordings layout and show the scheduled layout
                 allScheduleLayout.setVisibility(View.GONE);
                 scheduledLayout.setVisibility(View.VISIBLE);
-                if (scheduledRecordsAdapter.getItemCount() > 0)
-                    mScheduledNoRecords.setVisibility(View.GONE);
-                else mScheduledNoRecords.setVisibility(View.VISIBLE);
                 break;
         }
     }
@@ -229,7 +228,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         mActivity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                allRecordingsAdapter.changeList(recordings);
+                allRecordingsAdapter.addItems(recordings);
             }
         });
         // check if there are any item in the list
@@ -242,6 +241,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
             mScheduledNoRecords.setVisibility(View.GONE);
             allScheduleLayout.setVisibility(View.VISIBLE);
         }
+        MainActivity.statusChanged = false;
     }
 
     /**
@@ -267,6 +267,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         } else {
             mScheduledNoRecords.setVisibility(View.GONE);
         }
+        MainActivity.statusChanged = false;
     }
 
     @Override
@@ -319,24 +320,31 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
                         break;
                 }
             } catch (Exception e) {
+                e.printStackTrace();
                 onErrorOccurred();
             }
         }
     };
 
     public void clearLists() {
-        scheduledRecordsAdapter.clearList();
-        allRecordingsAdapter.clearList();
-        unselectedText.setVisibility(View.VISIBLE);
-        mScheduledNoRecords.setVisibility(View.GONE);
-        mAllRecordsProgress.setVisibility(View.GONE);
-        mScheduledProgress.setVisibility(View.GONE);
+        mActivity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                scheduledRecordsAdapter.clearList();
+                allRecordingsAdapter.clearList();
+                unselectedText.setVisibility(View.VISIBLE);
+                mScheduledNoRecords.setVisibility(View.GONE);
+                mAllRecordsProgress.setVisibility(View.GONE);
+                mScheduledProgress.setVisibility(View.GONE);
+            }
+        });
     }
 
     private static ArrayList<Schedule> allSchedules = new ArrayList<>();
 
     private void onSchedulesReceived(JSONObject response) {
-        allSchedules = Schedule.build(response);
+        mScheduledProgress.setVisibility(View.GONE);
+        allSchedules.addAll(Schedule.build(response));
         Day day = mDaysAdapter.getDays().get(mDaysAdapter.getSelectedPostion());
         sortSchedule(day, allSchedules);
         addSchedulesToList(mDaysAdapter.getDays().get(mDaysAdapter.getSelectedPostion()).getSchedules());
@@ -351,6 +359,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
 
     private void onRecordingsReceived(JSONObject response) {
         addRecordingsToList(Recording.build(response));
+        getAllScheduledRecords(mReceivers);
     }
 
     @Override
@@ -434,13 +443,5 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     public void onDayClick(Day day, int position) {
         sortSchedule(day, allSchedules);
         addSchedulesToList(day.getSchedules());
-    }
-
-    enum ScheduledState {
-        EMPTY_RECEIVERS, NO_RECORDS, LOADING
-    }
-
-    enum AllState {
-        EMPTY_RECEIVERS, NO_RECORDS, LOADING
     }
 }

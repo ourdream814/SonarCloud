@@ -92,7 +92,6 @@ public class Day {
     }
 
     public void addSchedules(ArrayList<Schedule> schedules) {
-//        mSchedules.clear();
         mSchedules.addAll(schedules);
     }
 

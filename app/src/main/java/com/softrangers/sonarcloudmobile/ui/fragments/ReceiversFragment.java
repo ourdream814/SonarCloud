@@ -270,6 +270,7 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
     @Override
     public void update(Group group) {
         int position = -1;
+        clearPASystemSelection();
         for (int i = 0; i < mGroups.size(); i++) {
             Group g = mGroups.get(i);
             if (g.getGroupID() == group.getGroupID()) {
@@ -288,6 +289,7 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
         MainActivity.selectedGroup = group;
         MainActivity.statusChanged = true;
         mGroupsListAdapter.notifyDataSetChanged();
+
     }
 
 

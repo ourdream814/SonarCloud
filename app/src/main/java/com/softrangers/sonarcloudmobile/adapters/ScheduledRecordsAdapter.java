@@ -45,7 +45,13 @@ public class ScheduledRecordsAdapter extends RecyclerView.Adapter<ScheduledRecor
 
     public void changeList(ArrayList<Schedule> recordings) {
         mSchedules.clear();
-        mSchedules.addAll(recordings);
+
+        for (Schedule schedule : recordings) {
+            if (mSchedules.size() == 0) mSchedules.add(schedule);
+            for (Schedule old : mSchedules) {
+                if (!schedule.equals(old)) mSchedules.add(schedule);
+            }
+        }
         notifyDataSetChanged();
     }
 

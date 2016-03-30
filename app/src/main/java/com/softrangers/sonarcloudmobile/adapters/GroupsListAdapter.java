@@ -122,7 +122,7 @@ public class GroupsListAdapter extends RecyclerView.Adapter<GroupsListAdapter.Vi
                     break;
                 default:
                     currentSelectedPosition = getAdapterPosition();
-                    mGroup.setIsSelected(!mGroup.isSelected());
+                    mGroup.setIsSelected(true);
                     if (lastSelectedPosition != WAS_NOT_SELECTED &&
                             lastSelectedPosition != currentSelectedPosition) {
                         mGroups.get(lastSelectedPosition).setIsSelected(false);
