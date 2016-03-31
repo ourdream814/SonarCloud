@@ -89,13 +89,13 @@ public class MainActivity extends BaseActivity implements
         assert mToolbarTitle != null;
         mToolbarTitle = (TextView) findViewById(R.id.main_activity_toolbarTitle);
         mToolbarTitle.setTypeface(SonarCloudApp.avenirMedium);
-        ConnectionReceiver.getInstance().addOnConnectedListener(this);
         if (!SonarCloudApp.getInstance().isLoggedIn()) {
             Intent intent = new Intent(this, LoginActivity.class);
             startActivityForResult(intent, LOGIN_REQUEST_CODE);
             return;
         }
 
+        ConnectionReceiver.getInstance().addOnConnectedListener(this);
         if (SonarCloudApp.socketService != null) {
             SonarCloudApp.socketService.restartConnection();
         }

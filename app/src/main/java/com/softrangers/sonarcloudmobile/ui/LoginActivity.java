@@ -203,16 +203,6 @@ public class LoginActivity extends BaseActivity {
     }
 
     private void onIdentifierReady(JSONObject response) {
-        // hide loading ui
-//        runOnUiThread(new Runnable() {
-//            @Override
-//            public void run() {
-//                mProgressBar.setVisibility(View.GONE);
-//                mSignIn.setEnabled(true);
-//                mSignIn.setVisibility(View.VISIBLE);
-//            }
-//        });
-
         try {
             // Save identifier and secret to app preferences
             SonarCloudApp.getInstance().saveIdentifier(response.getString(Api.IDENTIFIER));
@@ -229,6 +219,7 @@ public class LoginActivity extends BaseActivity {
             Intent main = new Intent(LoginActivity.this, MainActivity.class);
             main.setAction(MainActivity.ACTION_LOGIN);
             setResult(RESULT_OK, main);
+            SonarCloudApp.getInstance().startKeepingConnection();
             finish();
         } catch (Exception e) {
             Snackbar.make(mSignIn, getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();

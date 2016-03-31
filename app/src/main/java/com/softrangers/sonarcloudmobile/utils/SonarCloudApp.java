@@ -64,17 +64,23 @@ public class SonarCloudApp extends Application {
         avenirMedium = Typeface.createFromAsset(getAssets(), "fonts/avenir_lt_65_medium_0.ttf");
         // initialize a preferences object
         preferences = getSharedPreferences(LOGIN_RESULT, MODE_PRIVATE);
-        mAlarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
-        mIntent = new Intent(this, ConnectionKeeper.class);
-        mIntent.setAction(Api.KEEP_CONNECTION);
-        mPendingIntent = PendingIntent.getBroadcast(this, 0, mIntent, 0);
-        mAlarmManager.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), 50000, mPendingIntent);
+        startKeepingConnection();
         // start socket service and connect to server
         Intent socketIntent = new Intent(this, SocketService.class);
         startService(socketIntent);
 
         // bind current class to the SocketService
         bindService(new Intent(this, SocketService.class), mServiceConnection, Context.BIND_AUTO_CREATE);
+    }
+
+    public void startKeepingConnection() {
+        if (isLoggedIn()) {
+            mAlarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
+            mIntent = new Intent(this, ConnectionKeeper.class);
+            mIntent.setAction(Api.KEEP_CONNECTION);
+            mPendingIntent = PendingIntent.getBroadcast(this, 0, mIntent, 0);
+            mAlarmManager.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), 50000, mPendingIntent);
+        }
     }
 
     // needed to bind SocketService to current class
