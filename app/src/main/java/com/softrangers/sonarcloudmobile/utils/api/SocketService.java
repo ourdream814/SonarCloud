@@ -10,11 +10,9 @@ import android.util.Log;
 
 import org.json.JSONObject;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -48,7 +46,8 @@ public class SocketService extends Service {
     public OutputStream mOutputStream;
     public boolean isConnected;
     private JSONObject mLastRequest;
-    private ExecutorService mExecutorService;
+    private ExecutorService mResponseExecutor;
+    private ExecutorService mRequestExecutor;
 
     ServerSocket mServerSocket;
 
@@ -74,7 +73,7 @@ public class SocketService extends Service {
      * @param request to send
      */
     public void sendRequest(JSONObject request) {
-        new SendRequest(request);
+        mRequestExecutor.execute(new SendRequest(request));
     }
 
     public void prepareServerForAudio(JSONObject request) {
@@ -126,7 +125,8 @@ public class SocketService extends Service {
             sslContext.init(null, getTrustManagers(), secureRandom);
             sslSocketFactory = sslContext.getSocketFactory();
             mServerSocket = new ServerSocket(Api.PORT);
-            mExecutorService = Executors.newFixedThreadPool(5);
+            mResponseExecutor = Executors.newFixedThreadPool(5);
+            mRequestExecutor = Executors.newFixedThreadPool(5);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -139,6 +139,9 @@ public class SocketService extends Service {
         return START_NOT_STICKY;
     }
 
+    /**
+     * Connect a new socket to server data port
+     */
     class AudioConnection implements Runnable {
 
         public AudioConnection() {
@@ -318,8 +321,6 @@ public class SocketService extends Service {
             // give the message for server and socket object to current thread
             this.message = message;
             mLastRequest = message;
-            // send message to server
-            new Thread(this, this.getClass().getSimpleName()).start();
         }
 
         @Override
@@ -328,11 +329,9 @@ public class SocketService extends Service {
                 if (dataSocket == null || !dataSocket.isConnected()) {
                     new Connection();
                 }
-
                 if (dataSocket != null && dataSocket.isConnected()) {
                     // Start socket handshake
                     dataSocket.startHandshake();
-
                     if (dataSocket.isClosed()) new Connection();
                     // Create a reader and writer from socket output and input streams
                     writeOut = new BufferedWriter(new OutputStreamWriter(dataSocket.getOutputStream()));
@@ -340,8 +339,7 @@ public class SocketService extends Service {
                     writeOut.write(message.toString() + "\n");
                     writeOut.flush();
                     readIn = new BufferedReader(new InputStreamReader(dataSocket.getInputStream()));
-                    Thread.sleep(1000);
-                    mExecutorService.execute(new ReceiveMessage(readIn));
+                    mResponseExecutor.execute(new ReceiveMessage(readIn));
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -349,7 +347,9 @@ public class SocketService extends Service {
         }
     }
 
-
+    /**
+     * Receives and read message obtained from server
+     */
     class ReceiveMessage implements Runnable {
 
         final BufferedReader mReader;
@@ -360,6 +360,8 @@ public class SocketService extends Service {
 
         @Override
         public void run() {
+            JSONObject response = null;
+            String stringResponse = null;
             try {
                 char[] buffer = new char[1024];
                 StringBuilder builder = new StringBuilder();
@@ -369,23 +371,28 @@ public class SocketService extends Service {
                     builder.append(buffer);
                 }
 
-                String stringResponse = builder.toString();
+                stringResponse = builder.toString();
                 Log.i(this.getClass().getSimpleName(), "Response: " + stringResponse);
-                if (stringResponse == null) {
+                if (stringResponse == null || stringResponse.equals("null")) {
                     stringResponse = "{\"success\":false}";
                     restartConnection();
                     sendRequest(mLastRequest);
+                    Log.e(this.getClass().getSimpleName(), "Request sent again: " + mLastRequest.toString());
                 }
-                JSONObject response = new JSONObject(stringResponse);
-                String command = response.optString("originalCommand", Api.EXCEPTION);
-                // send the response to ui
-                Intent responseContainer = new Intent();
-                responseContainer.setAction(command);
-                responseContainer.putExtra(command, stringResponse);
-                sendBroadcast(responseContainer);
-                mLastRequest = null;
+                response = new JSONObject(stringResponse);
             } catch (Exception e) {
                 e.printStackTrace();
+            } finally {
+                String command = Api.EXCEPTION;
+                if (response != null) {
+                    command = response.optString("originalCommand", Api.EXCEPTION);
+                }
+                // send the response to ui
+                Intent responseContainer = new Intent(command);
+                responseContainer.putExtra(command, stringResponse);
+                sendBroadcast(responseContainer);
+                Log.i(this.getClass().getSimpleName(), "Broadcast sent. Message: " + response.toString());
+                mLastRequest = null;
             }
         }
     }
@@ -399,7 +406,8 @@ public class SocketService extends Service {
         try {
             dataSocket.close();
             isConnected = false;
-            mExecutorService.shutdown();
+            mResponseExecutor.shutdown();
+            mRequestExecutor.shutdown();
         } catch (Exception e) {
             e.printStackTrace();
         }

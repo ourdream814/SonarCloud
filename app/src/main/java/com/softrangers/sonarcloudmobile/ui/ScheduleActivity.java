@@ -107,6 +107,11 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         initializeList(mAdapter);
     }
 
+    //---------------------------- Update schedule ----------------------------//
+    /**
+     * Receives the server response, check the status and then call the appropriate method
+     * for that status
+     */
     BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -133,6 +138,10 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         }
     };
 
+    /**
+     * Called by {@link ScheduleActivity#mBroadcastReceiver} when the response is successful
+     * @param response as JSON which is received from server
+     */
     private void onResponseSucceed(JSONObject response) {
         dismissLoading();
         Schedule schedule = Schedule.buildSingle(response);
@@ -146,11 +155,20 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         finish();
     }
 
+    /**
+     * Called by {@link ScheduleActivity#mBroadcastReceiver} when the server can't execute the
+     * command for some reasons and the response status is false
+     * @param message either message from server or {@link com.softrangers.sonarcloudmobile.R.string#unknown_error}
+     */
     private void onCommandFailure(String message) {
         dismissLoading();
         Snackbar.make(mRecyclerView, message, Snackbar.LENGTH_SHORT).show();
     }
 
+    /**
+     * Called by {@link ScheduleActivity#mBroadcastReceiver} when an error occurs during receiving
+     * response from server, it is used to notify the user if something went wrong
+     */
     private void onErrorOccurred() {
         dismissLoading();
         Snackbar.make(mRecyclerView, getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
@@ -226,7 +244,9 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         mRecyclerView.setAdapter(adapter);
     }
 
-    // Called when user press the save button on the top right
+    /**
+     * Called when user click on save button from the toolbar
+     */
     public void saveSchedule(View view) {
         showLoading();
         switch (mAction) {
@@ -256,7 +276,9 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         }
     }
 
-    // called when user press the cancel button on the top left
+    /**
+     * Called when user click on cancel button from the toolbar
+     */
     public void cancelEditSchedule(View view) {
         onBackPressed();
     }
@@ -414,7 +436,9 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         }
     }
 
-    // receiver for server responses
+    /**
+     * Receives and parse the response from an audio request
+     */
     BroadcastReceiver mAudioSendingReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -450,6 +474,10 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         }
     };
 
+    /**
+     * Convert the {@link ScheduleActivity#schedule} into a JSON object for adding a new schedule
+     * @return a JSON object from schedule object
+     */
     private JSONObject buildScheduleObject() {
         JSONObject scheduleJSON = new JSONObject();
         try {
@@ -501,7 +529,8 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
     }
 
     /**
-     * Called when the key and id for record are received from server
+     * Called by {@link ScheduleActivity#mAudioSendingReceiver} when the key
+     * and id for record are received from server
      *
      * @param response which contains "key" and "recordingID"
      * @throws JSONException
@@ -518,7 +547,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
     }
 
     /**
-     * Called when server says "Ready for data."
+     * Called by {@link ScheduleActivity#mAudioSendingReceiver} when server says "Ready for data."
      */
     private void onServerReadyForData() {
         try {

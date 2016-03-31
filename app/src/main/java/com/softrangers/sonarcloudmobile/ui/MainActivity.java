@@ -90,6 +90,12 @@ public class MainActivity extends BaseActivity implements
         mToolbarTitle = (TextView) findViewById(R.id.main_activity_toolbarTitle);
         mToolbarTitle.setTypeface(SonarCloudApp.avenirMedium);
         ConnectionReceiver.getInstance().addOnConnectedListener(this);
+        if (!SonarCloudApp.getInstance().isLoggedIn()) {
+            Intent intent = new Intent(this, LoginActivity.class);
+            startActivityForResult(intent, LOGIN_REQUEST_CODE);
+            return;
+        }
+
         if (SonarCloudApp.socketService != null) {
             SonarCloudApp.socketService.restartConnection();
         }
@@ -270,7 +276,7 @@ public class MainActivity extends BaseActivity implements
                 mScheduleFragment.getAllRecordingsFromServer(receivers);
             }
             return;
-        } else if (statusChanged){
+        } else if (statusChanged) {
             mScheduleFragment = new ScheduleFragment();
             Bundle bundle = new Bundle();
             bundle.putParcelableArrayList(ScheduleFragment.RECEIVERS_ARGS, receivers);
@@ -334,8 +340,12 @@ public class MainActivity extends BaseActivity implements
      *                or a message from server
      */
     public void onCommandFailure(String message) {
-        dismissLoading();
-        Snackbar.make(mMainBottomBar, message, Snackbar.LENGTH_SHORT).show();
+        if (message.equalsIgnoreCase("Invalid identifier and secret combination.")) {
+            logout(null);
+        } else {
+            dismissLoading();
+            Snackbar.make(mToolbarTitle, message, Snackbar.LENGTH_SHORT).show();
+        }
     }
 
     /**
@@ -343,7 +353,7 @@ public class MainActivity extends BaseActivity implements
      */
     public void onErrorOccurred() {
         dismissLoading();
-        Snackbar.make(mMainBottomBar, getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
+        Snackbar.make(mToolbarTitle, getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
     }
 
     /**
@@ -412,19 +422,14 @@ public class MainActivity extends BaseActivity implements
      */
     @Override
     public void onSocketConnected() {
-        if (SonarCloudApp.getInstance().isLoggedIn()) {
-            if (SonarCloudApp.socketService != null) {
-                registerReceiver(mLoginReceiver, intentFilter);
-                Request.Builder builder = new Request.Builder();
-                builder.command(Api.Command.AUTHENTICATE);
-                builder.device(Api.Device.CLIENT).method(Api.Method.IDENTIFIER).identifier(SonarCloudApp.getInstance().getIdentifier())
-                        .secret(SonarCloudApp.getInstance().getSavedData()).seq(SonarCloudApp.SEQ_VALUE);
-                SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
-                showLoading();
-            }
-        } else {
-            Intent intent = new Intent(this, LoginActivity.class);
-            startActivityForResult(intent, LOGIN_REQUEST_CODE);
+        if (SonarCloudApp.socketService != null) {
+            registerReceiver(mLoginReceiver, intentFilter);
+            Request.Builder builder = new Request.Builder();
+            builder.command(Api.Command.AUTHENTICATE);
+            builder.device(Api.Device.CLIENT).method(Api.Method.IDENTIFIER).identifier(SonarCloudApp.getInstance().getIdentifier())
+                    .secret(SonarCloudApp.getInstance().getSavedData()).seq(SonarCloudApp.SEQ_VALUE);
+            SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
+            showLoading();
         }
     }
 
@@ -448,14 +453,15 @@ public class MainActivity extends BaseActivity implements
                         mRecordFragment.mRecAdapter.refreshList(mRecordFragment.getRecordedFileList());
                         break;
                     case ScheduleActivity.ACTION_EDIT_SCHEDULE:
-                        if (selectedGroup != null) sendReceiversToScheduleFragment(selectedGroup.getReceivers());
+                        if (selectedGroup != null)
+                            sendReceiversToScheduleFragment(selectedGroup.getReceivers());
                         else sendReceiversToScheduleFragment(selectedReceivers);
                         break;
                 }
                 break;
             case RESULT_CANCELED:
                 if (action.equals(ACTION_LOGIN)) {
-                    onSocketConnected();
+                    finish();
                 }
                 break;
         }

@@ -1,14 +1,14 @@
 <LinearLayout
     android:id="@+id/pa_list_linearLayout"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="match_parent"
     android:layout_below="@id/pa_list_selector"
     xmlns:android="http://schemas.android.com/apk/res/android">
 
     <com.softrangers.sonarcloudmobile.utils.widgets.AnimatedExpandableListView
         android:id="@+id/receivers_expandableListView"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:background="@color/colorSecondary"
         android:childDivider="@color/colorSecondary"
         android:childIndicator="@null"

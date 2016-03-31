@@ -7,7 +7,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
 import android.support.design.widget.Snackbar;
-import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.helper.ItemTouchHelper;
@@ -15,8 +14,8 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ExpandableListView;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.RadioGroup;
 import android.widget.RelativeLayout;
 
@@ -41,7 +40,6 @@ import java.util.ArrayList;
 
 
 public class ReceiversFragment extends BaseFragment implements RadioGroup.OnCheckedChangeListener,
-        SwipeRefreshLayout.OnRefreshListener,
         ReceiverListAdapter.OnItemClickListener,
         GroupsListAdapter.OnGroupClickListener, GroupObserver {
 
@@ -61,6 +59,7 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
     private ArrayList<PASystem> mPASystems;
     private ArrayList<Group> mGroups;
     private OnRecordFragmentListener mFragmentListener;
+    private ProgressBar mReceiversLoading;
 
     public ReceiversFragment() {
         // Required empty public constructor
@@ -101,9 +100,7 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
         addGroupButton.setOnClickListener(mAddNewGroup);
         // Obtain a link to the SwipeRefreshLayout which holds the list view
         mGroupsLayout = (RelativeLayout) view.findViewById(R.id.groups_relativeLayout);
-//        mRefreshLayout = (SwipeRefreshLayout) view.findViewById(R.id.receivers_swipe_refreshLayout);
         mReceiversLayout = (LinearLayout) view.findViewById(R.id.pa_list_linearLayout);
-//        mRefreshLayout.setOnRefreshListener(this);
 
         // Obtain a link to the top buttons (PAs and Groups) and customize them, setting PAs button
         // as the selected one
@@ -114,7 +111,8 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
 
         // Initialize PAs list
         mPASystems = new ArrayList<>();
-//        setUpReceiversListView(mPASystems);
+
+        mReceiversLoading = (ProgressBar) view.findViewById(R.id.receivers_loadingProgress);
 
         if (savedInstanceState != null) {
             mPASystems = savedInstanceState.getParcelableArrayList(PA_LIST_STATE);
@@ -122,16 +120,36 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
             setUpGroupsListView(mGroups);
             setUpReceiversListView(mPASystems);
         } else {
+            showLoading();
             // build a request
             Request.Builder requestBuilder = new Request.Builder();
             requestBuilder.command(Api.Command.ORGANISATIONS);
             requestBuilder.userId(SonarCloudApp.getInstance().userId());
             requestBuilder.seq(SonarCloudApp.SEQ_VALUE);
             // send request to server
-            SonarCloudApp.socketService.sendRequest(requestBuilder.build().toJSON());
-            mActivity.showLoading();
+            if (SonarCloudApp.socketService != null) {
+                SonarCloudApp.socketService.sendRequest(requestBuilder.build().toJSON());
+            }
         }
         return view;
+    }
+
+    private void showLoading() {
+        mActivity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mReceiversLoading.setVisibility(View.VISIBLE);
+            }
+        });
+    }
+
+    private void hideLoading() {
+        mActivity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mReceiversLoading.setVisibility(View.GONE);
+            }
+        });
     }
 
     @Override
@@ -199,11 +217,11 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
         mGroupsLayout.bringToFront();
         // Build a request for getting groups
         if (always || mGroups == null) {
+            showLoading();
             Request.Builder builder = new Request.Builder()
                     .command(Api.Command.RECEIVER_GROUPS)
                     .userId(SonarCloudApp.user.getId());
             SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
-            mActivity.showLoading();
         }
     }
 
@@ -311,13 +329,6 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
                 Snackbar.LENGTH_SHORT).show();
     }
 
-    /**
-     * Called when user swipe down to refresh the list
-     */
-    @Override
-    public void onRefresh() {
-//        mRefreshLayout.setRefreshing(false);
-    }
 
     /**
      * Called when a receiver is clicked in the PAs list
@@ -446,7 +457,7 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
     }
 
     private void onReceiversReceived(JSONObject response) {
-        mActivity.dismissLoading();
+        hideLoading();
         try {
             // Parse the response and build an receivers array list
             ArrayList<Receiver> receivers = Receiver.build(response);
@@ -470,13 +481,14 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
     }
 
     private void onGroupsReceived(JSONObject response) {
-        mActivity.dismissLoading();
+        hideLoading();
         mGroups = Group.build(response);
         setUpGroupsListView(mGroups);
     }
 
     public interface OnRecordFragmentListener {
         void onReceiverClicked(Receiver receiver);
+
         void onGroupClicked(Group group);
     }
 }

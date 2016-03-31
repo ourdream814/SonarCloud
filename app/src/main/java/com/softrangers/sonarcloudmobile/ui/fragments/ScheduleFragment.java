@@ -7,7 +7,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
 import android.support.design.widget.Snackbar;
-import android.support.v4.app.Fragment;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.helper.ItemTouchHelper;
@@ -38,12 +37,8 @@ import com.softrangers.sonarcloudmobile.utils.api.Api;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 
 
-/**
- * A simple {@link Fragment} subclass.
- */
 public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheckedChangeListener,
         ScheduledRecordsAdapter.OnScheduleClickListener, DaysAdapter.OnDayClickListener {
 
@@ -62,6 +57,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     private MainActivity mActivity;
     private int clickedPosition;
     private ArrayList<Receiver> mReceivers;
+    private ProgressBar mLoadingProgress;
 
     public ScheduleFragment() {
         // Required empty public constructor
@@ -120,6 +116,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         // Layouts which are holding all lists, used to hide/show the lists on the screen
         scheduledLayout = (RelativeLayout) view.findViewById(R.id.scheduled_list_layout);
         allScheduleLayout = (RelativeLayout) view.findViewById(R.id.schedule_all_layout);
+        mLoadingProgress = (ProgressBar) view.findViewById(R.id.schedules_loadingProgress);
 
         // initialize horizontal days list
         RecyclerView daysHorizontalList = (RecyclerView) view.findViewById(R.id.schedule_horizontal_list);
@@ -158,23 +155,33 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
                 // Change the selected status to know which button was selected
                 isScheduleSelected = false;
                 // hide the scheduled layout and show the all recordings layout
-                scheduledLayout.setVisibility(View.GONE);
-                allScheduleLayout.setVisibility(View.VISIBLE);
+                mActivity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        scheduledLayout.setVisibility(View.GONE);
+                        allScheduleLayout.setVisibility(View.VISIBLE);
+                    }
+                });
                 break;
             case R.id.scheduled_list_button:
                 // Change the selected status to know which button was selected
                 isScheduleSelected = true;
                 // Hide the all recordings layout and show the scheduled layout
-                allScheduleLayout.setVisibility(View.GONE);
-                scheduledLayout.setVisibility(View.VISIBLE);
-                if (scheduledRecordsAdapter.getItemCount() <= 0
-                        && MainActivity.selectedReceivers.size() <= 0
-                        && MainActivity.selectedGroup == null
-                        && unselectedText.getVisibility() != View.VISIBLE) {
-                    mScheduledNoRecords.setVisibility(View.VISIBLE);
-                } else {
-                    mScheduledNoRecords.setVisibility(View.GONE);
-                }
+                mActivity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        allScheduleLayout.setVisibility(View.GONE);
+                        scheduledLayout.setVisibility(View.VISIBLE);
+                        if (scheduledRecordsAdapter.getItemCount() <= 0
+                                && MainActivity.selectedReceivers.size() <= 0
+                                && MainActivity.selectedGroup == null
+                                && unselectedText.getVisibility() != View.VISIBLE) {
+                            mScheduledNoRecords.setVisibility(View.VISIBLE);
+                        } else {
+                            mScheduledNoRecords.setVisibility(View.GONE);
+                        }
+                    }
+                });
                 break;
         }
     }
@@ -187,7 +194,12 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     public void getAllScheduledRecords(ArrayList<Receiver> receivers) {
         if (receivers == null) receivers = new ArrayList<>();
         // hide the unselected text
-        unselectedText.setVisibility(View.GONE);
+        mActivity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                unselectedText.setVisibility(View.GONE);
+            }
+        });
         // clear current scheduled list
         scheduledRecordsAdapter.clearList();
         // build a request with provided receivers
@@ -197,6 +209,11 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
             builder.receiverId(receiver.getReceiverId());
             // send request to server
             SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -207,16 +224,27 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
      */
     public void getAllRecordingsFromServer(ArrayList<Receiver> receivers) {
         if (receivers == null) receivers = new ArrayList<>();
+        showLoading();
         // hide the unselected text
-        unselectedText.setVisibility(View.GONE);
+        mActivity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                unselectedText.setVisibility(View.GONE);
+            }
+        });
         // build a request with provided receivers
         Request.Builder builder = new Request.Builder();
         builder.command(Api.Command.RECORDINGS);
-        mActivity.showLoading();
+//        mActivity.showLoading();
         for (Receiver receiver : receivers) {
             builder.receiverId(receiver.getReceiverId());
             // send request to server
             SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -234,7 +262,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
                 // check if there are any item in the list
                 // if false then show the no data text and hide the list layout
                 // else hide the no data text and show the list layout
-                mActivity.dismissLoading();
+                hideLoading();
                 if (allRecordingsAdapter.getItemCount() <= 0) {
                     mScheduledNoRecords.setVisibility(View.VISIBLE);
                     allScheduleLayout.setVisibility(View.GONE);
@@ -377,6 +405,12 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
                 mActivity.getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
     }
 
+    @Override
+    public void onDetach() {
+        super.onDetach();
+        mActivity.unregisterReceiver(mBroadcastReceiver);
+    }
+
     /**
      * Swipe to delete implementation
      */
@@ -441,5 +475,23 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     public void onDayClick(Day day, int position) {
         sortSchedule(day, allSchedules);
         addSchedulesToList(day.getSchedules());
+    }
+
+    private void showLoading() {
+        mActivity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mLoadingProgress.setVisibility(View.VISIBLE);
+            }
+        });
+    }
+
+    private void hideLoading() {
+        mActivity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mLoadingProgress.setVisibility(View.GONE);
+            }
+        });
     }
 }

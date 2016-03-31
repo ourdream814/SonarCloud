@@ -144,7 +144,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
 
     //---------------- Common methods ----------------//
-
     /**
      * Handles clicks from all fragment buttons
      */
@@ -216,7 +215,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
 
     //---------------- Record and Send layout ----------------//
-
     /**
      * Called when a record from the list is clicked
      *
@@ -800,14 +798,16 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
      * @throws JSONException
      */
     private void onKeyAndIDReceived(JSONObject response) throws JSONException {
-        String sendAudioKey = response.getString("key");
-        mRecording.setRecordingId(response.getInt("recordingID"));
-        Request.Builder requestBuilder = new Request.Builder();
-        requestBuilder.command(Api.Command.SEND).key(sendAudioKey);
-        SonarCloudApp.socketService.setAudioConnection();
-        while (!SonarCloudApp.socketService.isAudioConnectionReady()) {
+        if (mRecording != null) {
+            String sendAudioKey = response.getString("key");
+            mRecording.setRecordingId(response.getInt("recordingID"));
+            Request.Builder requestBuilder = new Request.Builder();
+            requestBuilder.command(Api.Command.SEND).key(sendAudioKey);
+            SonarCloudApp.socketService.setAudioConnection();
+            while (!SonarCloudApp.socketService.isAudioConnectionReady()) {
+            }
+            SonarCloudApp.socketService.prepareServerForAudio(requestBuilder.build().toJSON());
         }
-        SonarCloudApp.socketService.prepareServerForAudio(requestBuilder.build().toJSON());
     }
 
     /**
@@ -837,15 +837,17 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
      * Called when the data is sent
      */
     private void onAudioSent() {
-        mSendButton.setVisibility(View.VISIBLE);
-        mSendingProgress.setVisibility(View.GONE);
-        mSendButton.setClickable(true);
-        MainActivity.statusChanged = true;
-        SonarCloudApp.socketService.closeAudioConnection();
-        Snackbar.make(mRecordAndSend, mActivity.getString(R.string.audio_sent), Snackbar.LENGTH_SHORT).show();
-        File file = new File(mRecording.getFilePath());
-        if (file.delete()) {
-            mRecAdapter.removeItem(mRecording);
+        if (mRecording != null) {
+            mSendButton.setVisibility(View.VISIBLE);
+            mSendingProgress.setVisibility(View.GONE);
+            mSendButton.setClickable(true);
+            MainActivity.statusChanged = true;
+            SonarCloudApp.socketService.closeAudioConnection();
+            Snackbar.make(mRecordAndSend, mActivity.getString(R.string.audio_sent), Snackbar.LENGTH_SHORT).show();
+            File file = new File(mRecording.getFilePath());
+            if (file.delete()) {
+                mRecAdapter.removeItem(mRecording);
+            }
         }
     }
 
@@ -875,5 +877,15 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
             mSendButton.setClickable(true);
         }
         Snackbar.make(mRecordAndSend, mActivity.getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onDetach() {
+        super.onDetach();
+        mActivity.unregisterReceiver(mAudioSendingReceiver);
+    }
+
+    enum SelectedLayout {
+        RECORDING, STREAMING, PTT
     }
 }
