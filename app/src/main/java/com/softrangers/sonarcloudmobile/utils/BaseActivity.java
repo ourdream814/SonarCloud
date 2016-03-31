@@ -55,7 +55,9 @@ public class BaseActivity extends AppCompatActivity {
                 .setCancelable(false)
                 .create();
         mLoadingDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-        mLoadingDialog.show();
+        try {
+            mLoadingDialog.show();
+        } catch (Exception e){}
     }
 
     public void dismissLoading() {

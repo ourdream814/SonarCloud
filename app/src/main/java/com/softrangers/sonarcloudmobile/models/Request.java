@@ -1,5 +1,6 @@
 package com.softrangers.sonarcloudmobile.models;
 
+import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
 
 import org.json.JSONArray;
@@ -115,7 +116,7 @@ public class Request {
         private int mOrganisationId;
         private int mReceiverId = UNSPECIFIED_INT;
         private JSONArray mReceivers;
-        private int mSeq;
+        private int mSeq = SonarCloudApp.SEQ_VALUE++;
         private int mReceiverGroupId = UNSPECIFIED_INT;
         private int mScheduleId = UNSPECIFIED_INT;
         private int mSampleRate = UNSPECIFIED_INT;

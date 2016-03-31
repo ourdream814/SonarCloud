@@ -55,6 +55,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
     private static final int BITRATE = 16000;
     private static final int CHANNEL = 1;
     public static final String SCHEDULE_EXTRAS = "key for schedule extras";
+    private static SimpleDateFormat serverFormat;
 
     private RecyclerView mRecyclerView;
     private ScheduleEditAdapter mAdapter;
@@ -86,11 +87,16 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         // get the intent and check action
         Intent intent = getIntent();
         if (intent == null) return;
+        serverFormat = new SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ssZZZZZ", Locale.getDefault());
+        serverFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
         mAction = intent.getAction();
         switch (mAction) {
             // User made a new record and want to schedule playing
             case ACTION_ADD_SCHEDULE:
                 schedule = new Schedule();
+                Date date = new Date();
+                schedule.setTime(serverFormat.format(date));
+                schedule.setStartDate(serverFormat.format(date));
                 recording = intent.getExtras().getParcelable(RECORD_BUNDLE);
                 mAdapter = new ScheduleEditAdapter(buildAdaptersList(schedule));
                 mRequestBuilder.command(Api.Command.SEND_AUDIO);
@@ -299,8 +305,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
      */
     @Override
     public void onItemClickListener(String itemTitle, final int position) {
-        final SimpleDateFormat serverFormat = new SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ssZZZZZ", Locale.getDefault());
-        serverFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+
         // obtain the date from schedule object
         final Date date = new Date();
         // get a calendar instance and set the time
@@ -481,7 +486,9 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
     private JSONObject buildScheduleObject() {
         JSONObject scheduleJSON = new JSONObject();
         try {
+            scheduleJSON.put("startDate", schedule.getStartDate());
             if (schedule.getRepeatOption() > 0) {
+                schedule.setTime(null);
                 scheduleJSON.put("minute", schedule.getMinute());
                 scheduleJSON.put("hour", schedule.getHour());
                 scheduleJSON.put("day", schedule.getDay());

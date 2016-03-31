@@ -439,6 +439,7 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
         // Build a list of organisations
         mPASystems = PASystem.build(response);
         // Start getting receivers for each organisation
+        String lastRequest = null;
         for (PASystem system : mPASystems) {
             // increment manually the seq value because the response will return later
             // and it will not increment on each response
@@ -450,7 +451,10 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
             Request request = new Request.Builder().command(Api.Command.RECEIVERS)
                     .organisationId(system.getOrganisationId()).seq(system.getSeqValue()).build();
             // Send the request to server
-            SonarCloudApp.socketService.sendRequest(request.toJSON());
+            if (lastRequest == null || !lastRequest.equals(request.toJSON().toString())) {
+                lastRequest = request.toJSON().toString();
+                SonarCloudApp.socketService.sendRequest(request.toJSON());
+            }
         }
 
         setUpReceiversListView(mPASystems);

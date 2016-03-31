@@ -45,6 +45,15 @@
             </intent-filter>
         </receiver>
 
+        <receiver android:name=".utils.api.ConnectionKeeper"
+                  android:enabled="true"
+                  android:exported="false">
+            <intent-filter>
+                <action android:name="ACTION_KEEP_CONNECTION"/>
+                <action android:name="noop"/>
+            </intent-filter>
+        </receiver>
+
         <activity android:name=".ui.AddGroupActivity">
         </activity>
         <activity android:name=".ui.SelectPASystemActivity">

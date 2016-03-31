@@ -391,7 +391,6 @@ public class SocketService extends Service {
                 Intent responseContainer = new Intent(command);
                 responseContainer.putExtra(command, stringResponse);
                 sendBroadcast(responseContainer);
-                Log.i(this.getClass().getSimpleName(), "Broadcast sent. Message: " + response.toString());
                 mLastRequest = null;
             }
         }

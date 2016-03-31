@@ -39,6 +39,7 @@ public class Api {
     public static final String IDENTIFIER = "identifier";
     public static final String ACTION = "action";
     public static final String SECRET = "secret";
+    public static final String KEEP_CONNECTION = "ACTION_KEEP_CONNECTION";
 
 
     /**
@@ -60,6 +61,7 @@ public class Api {
         public static final String CREATE_SCHEDULE = "createSchedule";
         public static final String SEND_AUDIO = "sendAudio";
         public static final String SEND = "send";
+        public static final String NOOP = "noop";
     }
 
     /**

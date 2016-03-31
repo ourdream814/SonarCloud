@@ -56,7 +56,6 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     private static ScheduledRecordsAdapter scheduledRecordsAdapter;
     private MainActivity mActivity;
     private int clickedPosition;
-    private ArrayList<Receiver> mReceivers;
     private ProgressBar mLoadingProgress;
 
     public ScheduleFragment() {
@@ -86,10 +85,10 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         // initialize all fragment views
         initializeViews(view);
         if (getArguments() != null) {
-            mReceivers = getArguments().getParcelableArrayList(RECEIVERS_ARGS);
-            if (mReceivers.size() > 0 && MainActivity.statusChanged) {
+            ArrayList<Receiver> receivers = getArguments().getParcelableArrayList(RECEIVERS_ARGS);
+            if (receivers.size() > 0 && MainActivity.statusChanged) {
                 clearLists();
-                getAllRecordingsFromServer(mReceivers);
+                getAllRecordingsFromServer(receivers);
             } else if (MainActivity.statusChanged) {
                 clearLists();
             }
@@ -205,6 +204,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         // build a request with provided receivers
         Request.Builder builder = new Request.Builder();
         builder.command(Api.Command.SCHEDULES);
+        int requestCounter;
         for (Receiver receiver : receivers) {
             builder.receiverId(receiver.getReceiverId());
             // send request to server
@@ -224,7 +224,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
      */
     public void getAllRecordingsFromServer(ArrayList<Receiver> receivers) {
         if (receivers == null) receivers = new ArrayList<>();
-        showLoading();
+        getAllScheduledRecords(receivers);
         // hide the unselected text
         mActivity.runOnUiThread(new Runnable() {
             @Override
@@ -235,11 +235,11 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         // build a request with provided receivers
         Request.Builder builder = new Request.Builder();
         builder.command(Api.Command.RECORDINGS);
-//        mActivity.showLoading();
         for (Receiver receiver : receivers) {
             builder.receiverId(receiver.getReceiverId());
             // send request to server
             SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
+            showLoading();
             try {
                 Thread.sleep(500);
             } catch (InterruptedException e) {
@@ -389,7 +389,6 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
 
     private void onRecordingsReceived(JSONObject response) {
         addRecordingsToList(Recording.build(response));
-        getAllScheduledRecords(mReceivers);
     }
 
     @Override

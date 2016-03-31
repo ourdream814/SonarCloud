@@ -450,7 +450,9 @@ public class MainActivity extends BaseActivity implements
                         onSocketConnected();
                         break;
                     case ScheduleActivity.ACTION_ADD_SCHEDULE:
-                        mRecordFragment.mRecAdapter.refreshList(mRecordFragment.getRecordedFileList());
+                        if (mRecordFragment != null && mRecordFragment.mRecAdapter != null) {
+                            mRecordFragment.mRecAdapter.refreshList(mRecordFragment.getRecordedFileList());
+                        }
                         break;
                     case ScheduleActivity.ACTION_EDIT_SCHEDULE:
                         if (selectedGroup != null)
