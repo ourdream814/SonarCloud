@@ -139,6 +139,10 @@ public class SocketService extends Service {
         return START_NOT_STICKY;
     }
 
+    public OutputStream getAudioOutPutStream() throws IOException {
+        return audioSocket.getOutputStream();
+    }
+
     /**
      * Connect a new socket to server data port
      */
