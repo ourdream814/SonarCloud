@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">SonarCloud Mobile</string>
+    <string name="app_name">Sonarcloud</string>
     <string name="email">Email</string>
     <string name="password">Password</string>
     <string name="sign_in">Sign in</string>
@@ -13,7 +13,7 @@
     <string name="login_error">Log-in error</string>
     <string name="unknown_error">Something went wrong, please try again</string>
     <string name="error">Error</string>
-    <string name="loading">Loading…</string>
+    <string name="loading">Connecting…</string>
     <string name="receivers">PAs</string>
     <string name="groups">Groups</string>
     <string name="sign_out">Sign Out</string>

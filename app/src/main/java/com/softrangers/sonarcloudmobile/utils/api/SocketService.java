@@ -84,6 +84,10 @@ public class SocketService extends Service {
         return audioSocket != null && audioSocket.isConnected() && !audioSocket.isClosed();
     }
 
+    public SSLSocket getAudioSocket() {
+        return audioSocket;
+    }
+
     public void setAudioConnection() {
         new AudioConnection();
     }
@@ -137,10 +141,6 @@ public class SocketService extends Service {
         // Connect socket to server through TLS protocol
         new Connection();
         return START_NOT_STICKY;
-    }
-
-    public OutputStream getAudioOutPutStream() throws IOException {
-        return audioSocket.getOutputStream();
     }
 
     /**
@@ -254,9 +254,9 @@ public class SocketService extends Service {
                     mOutputStream = audioSocket.getOutputStream();
                     mOutputStream.write(mBytes, 0, mBytes.length);
                     mOutputStream.flush();
-                    readIn = new BufferedReader(new InputStreamReader(audioSocket.getInputStream()));
-                    // send the request to server through writer object
-                    new Thread(new ReceiveMessage(readIn)).start();
+                    Log.i(this.getClass().getSimpleName(), "Audio data sent: " + mBytes.length);
+                    Intent responseContainer = new Intent(Api.AUDIO_DATA_RESULT);
+                    sendBroadcast(responseContainer);
                 }
             } catch (Exception e) {
                 e.printStackTrace();

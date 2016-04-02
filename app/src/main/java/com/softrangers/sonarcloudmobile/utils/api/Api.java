@@ -23,6 +23,7 @@ public class Api {
     public static final String DEVICE = "device";
     public static final String METHOD = "method";
 
+    public static final String AUDIO_DATA_RESULT = "sending audio result";
     public static final String FORMAT = "opus";
 
     public static final String ACTION_ADD_GROUP = "com.softrangers.sonarcloudmobile.ADD_NEW_GROUP";

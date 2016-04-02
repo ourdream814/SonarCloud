@@ -199,6 +199,20 @@ public class MainActivity extends BaseActivity implements
         }
     }
 
+    public void disableBottomButtons() {
+        mReceiversSelector.setEnabled(false);
+        mRecordingsSelector.setEnabled(false);
+        mSettingsSelector.setEnabled(false);
+        mAnnouncementsSelector.setEnabled(false);
+    }
+
+    public void enableBottomButtons() {
+        mReceiversSelector.setEnabled(true);
+        mRecordingsSelector.setEnabled(true);
+        mSettingsSelector.setEnabled(true);
+        mAnnouncementsSelector.setEnabled(true);
+    }
+
     /**
      * Change buttons background and state, depends on {@link SelectedFragment}
      */

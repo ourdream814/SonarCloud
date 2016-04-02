@@ -31,6 +31,7 @@ import com.softrangers.sonarcloudmobile.models.Schedule;
 import com.softrangers.sonarcloudmobile.ui.MainActivity;
 import com.softrangers.sonarcloudmobile.ui.ScheduleActivity;
 import com.softrangers.sonarcloudmobile.utils.BaseFragment;
+import com.softrangers.sonarcloudmobile.utils.OpusPlayer;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
 
@@ -40,7 +41,8 @@ import java.util.ArrayList;
 
 
 public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheckedChangeListener,
-        ScheduledRecordsAdapter.OnScheduleClickListener, DaysAdapter.OnDayClickListener {
+        ScheduledRecordsAdapter.OnScheduleClickListener, DaysAdapter.OnDayClickListener,
+        ScheduleAllRecordingsAdapter.OnRecordClickListener, OpusPlayer.OnPlayListener {
 
     public static final String RECEIVERS_ARGS = "receivers arguments key";
     private static RelativeLayout scheduledLayout;
@@ -57,6 +59,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     private MainActivity mActivity;
     private int clickedPosition;
     private ProgressBar mLoadingProgress;
+    private OpusPlayer mOpusPlayer;
 
     public ScheduleFragment() {
         // Required empty public constructor
@@ -77,10 +80,13 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         intentFilter.addAction(ScheduleActivity.ACTION_ADD_SCHEDULE);
         mActivity.registerReceiver(mBroadcastReceiver, intentFilter);
         mDaysAdapter = new DaysAdapter();
+        mOpusPlayer = new OpusPlayer();
+        mOpusPlayer.setOnPlayListener(this);
         // initialize adapters with empty lists
         ArrayList<Recording> recordings = new ArrayList<>();
         ArrayList<Schedule> schedules = new ArrayList<>();
         allRecordingsAdapter = new ScheduleAllRecordingsAdapter(recordings, mActivity);
+        allRecordingsAdapter.setOnRecordClickListener(this);
         scheduledRecordsAdapter = new ScheduledRecordsAdapter(schedules, mActivity);
         // initialize all fragment views
         initializeViews(view);
@@ -490,6 +496,37 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
             @Override
             public void run() {
                 mLoadingProgress.setVisibility(View.GONE);
+            }
+        });
+    }
+
+    @Override
+    public void onItemClick(Recording recording, int position) {
+//        mOpusPlayer.play(recording, position);
+        recording.setIsPlaying(!recording.isPlaying());
+        notifyAllRecordAdapter(position);
+    }
+
+    @Override
+    public void onStartPlayback(Recording recording, int position) {
+        notifyAllRecordAdapter(position);
+    }
+
+    @Override
+    public void onStopPlayback(Recording recording, int position) {
+        notifyAllRecordAdapter(position);
+    }
+
+    @Override
+    public void onPlaybackError(Recording recording, int position) {
+        notifyAllRecordAdapter(position);
+    }
+
+    private void notifyAllRecordAdapter(final int position) {
+        mActivity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                allRecordingsAdapter.notifyItemChanged(position);
             }
         });
     }

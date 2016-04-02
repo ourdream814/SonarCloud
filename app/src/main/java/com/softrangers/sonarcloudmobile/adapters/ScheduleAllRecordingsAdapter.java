@@ -111,6 +111,7 @@ public class ScheduleAllRecordingsAdapter extends RecyclerView.Adapter<ScheduleA
         final TextView mRecordTitle;
         final TextView mRecordLength;
         Recording mRecording;
+
         public ViewHolder(View itemView) {
             super(itemView);
             itemView.setOnClickListener(this);
@@ -123,31 +124,20 @@ public class ScheduleAllRecordingsAdapter extends RecyclerView.Adapter<ScheduleA
 
         @Override
         public void onClick(View v) {
-            switch (v.getId()) {
-                case R.id.schedule_all_record_item_playButton:
-                    currentSelectedItem = getAdapterPosition();
-                    mRecording.setIsPlaying(!mRecording.isPlaying());
-                    if (lastSelectedItem != WAS_NOT_SELECTED) {
-                       mRecordings.get(lastSelectedItem).setIsPlaying(false);
-                        notifyItemChanged(lastSelectedItem);
-                    }
-                    notifyItemChanged(currentSelectedItem);
-                    lastSelectedItem = currentSelectedItem;
-                    if (mOnRecordClickListener != null) {
-                        mOnRecordClickListener.onItemPlayClick(mRecording, currentSelectedItem);
-                    }
-                    break;
-                default:
-                    if (mOnRecordClickListener != null) {
-                        mOnRecordClickListener.onItemClick(mRecording, getAdapterPosition());
-                    }
-                    break;
+            currentSelectedItem = getAdapterPosition();
+            notifyItemChanged(currentSelectedItem);
+            if (lastSelectedItem != WAS_NOT_SELECTED && lastSelectedItem != currentSelectedItem) {
+                mRecordings.get(lastSelectedItem).setIsPlaying(false);
+                notifyItemChanged(lastSelectedItem);
+            }
+            lastSelectedItem = currentSelectedItem;
+            if (mOnRecordClickListener != null) {
+                mOnRecordClickListener.onItemClick(mRecording, getAdapterPosition());
             }
         }
     }
 
     public interface OnRecordClickListener {
         void onItemClick(Recording recording, int position);
-        void onItemPlayClick(Recording recording, int position);
     }
 }
