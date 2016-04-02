@@ -16,6 +16,7 @@ model {
 
     android.ndk {
         moduleName = "AudioProcessor"
+        platformVersion = "19"
         ldLibs.add( "log" )
 
         cppFlags.add( "-funroll-loops" )
