@@ -36,6 +36,8 @@ public class SonarCloudApp extends Application {
     private static final String USER_IDENTIFIER = "identifier";
     private static final String USER_ID = "id";
     private static final String USER_DATA = "user_server_data";
+    private static final String USER_EMAIL = "user_email";
+    private static final String USER_PASS = "user_password";
 
     public static final String NO_IDENTIFIER = "no identifier";
     public static final String NO_DATA = "no_user_server_data";
@@ -73,6 +75,10 @@ public class SonarCloudApp extends Application {
         bindService(new Intent(this, SocketService.class), mServiceConnection, Context.BIND_AUTO_CREATE);
     }
 
+    /**
+     * Start an AlarmManager which will be fired every 50 seconds to send a noop command for server
+     * used to keep connection active while app is started
+     */
     public void startKeepingConnection() {
         if (isLoggedIn()) {
             mAlarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
@@ -98,29 +104,30 @@ public class SonarCloudApp extends Application {
         }
     };
 
-    public boolean areRecordingPermissed() {
+    /**
+     * Check if application has permissions to use microphone
+     */
+    public boolean canUseMicrophone() {
         return ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
                 == PackageManager.PERMISSION_GRANTED;
     }
 
-    public void setIsFirstLaunch(boolean isFirstLaunch) {
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putBoolean(IS_FIRST_LAUNCH, isFirstLaunch);
-        editor.apply();
-    }
-
+    /**
+     * Add a new recording number, called when a new audio file is recorded
+     * @param recordingNumber for current file and it is incremented by one
+     */
     public void addNewRecording(int recordingNumber) {
         SharedPreferences.Editor editor = preferences.edit();
-        editor.putInt("recording_counter", recordingNumber + 1);
+        editor.putInt("recording_counter", recordingNumber++);
         editor.apply();
     }
 
+    /**
+     * Get the last recorded file number
+     * @return either last record number or 0 if there are no records
+     */
     public int getLastRecordingNumber() {
         return preferences.getInt("recording_counter", 0);
-    }
-
-    public boolean isFirstLaunch() {
-        return preferences.getBoolean(IS_FIRST_LAUNCH, false);
     }
 
     /**
@@ -173,6 +180,34 @@ public class SonarCloudApp extends Application {
     }
 
     /**
+     * Save user login data to login in background
+     * @param email user email from login screen
+     * @param password user password from login screen
+     */
+    public void saveUserLoginDate(String email, String password) {
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putString(USER_EMAIL, email);
+        editor.putString(USER_PASS, password);
+        editor.apply();
+    }
+
+    /**
+     * Get user password from preferences
+     * @return either saved password or an empty string
+     */
+    public String getUserPass() {
+        return preferences.getString(USER_PASS, "");
+    }
+
+    /**
+     * Get user email from preferences
+     * @return either saved email or an empty string
+     */
+    public String getUserEmail() {
+        return preferences.getString(USER_EMAIL, "");
+    }
+
+    /**
      * @return current user secret
      */
     public String getSavedData() {
@@ -191,12 +226,17 @@ public class SonarCloudApp extends Application {
         editor.apply();
     }
 
+    /**
+     * Clear all saved user data from preferences
+     */
     public void clearUserSession() {
         SharedPreferences.Editor editor = preferences.edit();
         editor.remove(LOGIN_STATUS);
         editor.remove(USER_ID);
         editor.remove(USER_DATA);
         editor.remove(USER_IDENTIFIER);
+        editor.remove(USER_EMAIL);
+        editor.remove(USER_PASS);
         editor.apply();
     }
 
