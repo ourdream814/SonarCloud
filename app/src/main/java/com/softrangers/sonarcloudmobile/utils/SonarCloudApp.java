@@ -4,23 +4,32 @@ import android.Manifest;
 import android.app.AlarmManager;
 import android.app.Application;
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Typeface;
 import android.os.IBinder;
+import android.support.design.widget.Snackbar;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.util.TimeUtils;
 import android.util.Log;
+import android.view.View;
 
+import com.softrangers.sonarcloudmobile.R;
 import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.models.User;
+import com.softrangers.sonarcloudmobile.ui.MainActivity;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
 import com.softrangers.sonarcloudmobile.utils.api.ConnectionKeeper;
 import com.softrangers.sonarcloudmobile.utils.api.SocketService;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.sql.Time;
 import java.util.concurrent.TimeUnit;
@@ -206,6 +215,82 @@ public class SonarCloudApp extends Application {
         editor.putString(USER_EMAIL, email);
         editor.putString(USER_PASS, password);
         editor.apply();
+    }
+
+    BroadcastReceiver mLoginReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            try {
+                String action = intent.getAction();
+                JSONObject jsonResponse = new JSONObject(intent.getExtras().getString(action));
+                boolean success = jsonResponse.optBoolean("success", false);
+                if (!success) {
+                    return;
+                }
+                switch (action) {
+                    case Api.Command.AUTHENTICATE:
+                        onResponseSucceed(jsonResponse);
+                        break;
+                    case Api.Command.IDENTIFIER:
+                        onIdentifierReady(jsonResponse);
+                        break;
+                }
+            } catch (Exception e) {
+            }
+        }
+    };
+
+    public void loginUser() {
+        IntentFilter intentFilter = new IntentFilter(Api.Command.AUTHENTICATE);
+        intentFilter.addAction(Api.Command.IDENTIFIER);
+        intentFilter.addAction(Api.EXCEPTION);
+        registerReceiver(mLoginReceiver, intentFilter);
+        // Create a JSON request for server
+        JSONObject req = new Request.Builder().command(Api.Command.AUTHENTICATE)
+                .method(Api.Method.USER)
+                .device(Api.Device.CLIENT)
+                .email(getUserEmail())
+                .password(getUserPass())
+                .seq(SonarCloudApp.SEQ_VALUE)
+                .build().toJSON();
+        // Send the request
+        SonarCloudApp.socketService.sendRequest(req);
+    }
+
+    /**
+     * Called to notify about server response
+     * @param response object which contains desired data
+     */
+    public void onResponseSucceed(JSONObject response) {
+        try {
+            // Get user id from the response object
+            String id = response.getString("userID");
+
+            user.setId(id);
+
+            // request identifier from server
+            requestUserIdentifier();
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void onIdentifierReady(JSONObject response) {
+        try {
+            // Save identifier and secret to app preferences
+            SonarCloudApp.getInstance().saveIdentifier(response.getString(Api.IDENTIFIER));
+            SonarCloudApp.getInstance().saveUserSecret(response.getString(Api.SECRET));
+
+            // save identifier and secret to user object for this session
+            user.setIdentifier(SonarCloudApp.getInstance().getIdentifier());
+            user.setSecret(SonarCloudApp.getInstance().getSavedData());
+
+            saveUserLoginStatus(true, user.getId());
+            startKeepingConnection();
+            unregisterReceiver(mLoginReceiver);
+            socketService.restartConnection();
+        } catch (Exception e) {
+        }
     }
 
     /**

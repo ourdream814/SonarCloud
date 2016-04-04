@@ -29,6 +29,8 @@ import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.ui.AddGroupActivity;
 import com.softrangers.sonarcloudmobile.ui.MainActivity;
 import com.softrangers.sonarcloudmobile.utils.BaseFragment;
+import com.softrangers.sonarcloudmobile.utils.Constants;
+import com.softrangers.sonarcloudmobile.utils.DBManager;
 import com.softrangers.sonarcloudmobile.utils.GroupObserver;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
@@ -319,14 +321,14 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
     @Override
     public void onCommandFailure(String message) {
         mActivity.dismissLoading();
-        Snackbar.make(mGroupsLayout, message, Snackbar.LENGTH_SHORT).show();
+        if (message != null) {
+            Snackbar.make(mReceiversLayout, message, Snackbar.LENGTH_SHORT).show();
+        }
     }
 
     @Override
     public void onErrorOccurred() {
         mActivity.dismissLoading();
-        Snackbar.make(mGroupsLayout, mActivity.getString(R.string.unknown_error),
-                Snackbar.LENGTH_SHORT).show();
     }
 
 
@@ -411,6 +413,7 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
             try {
                 String action = intent.getAction();
                 JSONObject jsonResponse = new JSONObject(intent.getExtras().getString(action));
+                JSONObject jsonRequest = new JSONObject(intent.getExtras().getString(Api.REQUEST_MESSAGE));
                 boolean success = jsonResponse.optBoolean("success", false);
                 if (!success) {
                     String message = jsonResponse.optString("message", mActivity.getString(R.string.unknown_error));
@@ -419,13 +422,13 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
                 }
                 switch (action) {
                     case Api.Command.ORGANISATIONS:
-                        onOrganisationsReceived(jsonResponse);
+                        onOrganisationsReceived(jsonResponse, jsonRequest);
                         break;
                     case Api.Command.RECEIVERS:
-                        onReceiversReceived(jsonResponse);
+                        onReceiversReceived(jsonResponse, jsonRequest);
                         break;
                     case Api.Command.RECEIVER_GROUPS:
-                        onGroupsReceived(jsonResponse);
+                        onGroupsReceived(jsonResponse, jsonRequest);
                         break;
                 }
             } catch (Exception e) {
@@ -435,7 +438,7 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
         }
     };
 
-    private void onOrganisationsReceived(JSONObject response) {
+    private void onOrganisationsReceived(JSONObject response, JSONObject jsonRequest) {
         // Build a list of organisations
         mPASystems = PASystem.build(response);
         // Start getting receivers for each organisation
@@ -456,11 +459,15 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
                 SonarCloudApp.socketService.sendRequest(request.toJSON());
             }
         }
-
+        response.remove("seq");
+        jsonRequest.remove("seq");
+        String[] columns = {Constants.REQUEST, Constants.RESPONSE};
+        String[] values = {jsonRequest.toString(), response.toString()};
+        DBManager.getInstance().insertInTable(Constants.RESPONSE_TABLE, values, columns);
         setUpReceiversListView(mPASystems);
     }
 
-    private void onReceiversReceived(JSONObject response) {
+    private void onReceiversReceived(JSONObject response, JSONObject jsonRequest) {
         hideLoading();
         try {
             // Parse the response and build an receivers array list
@@ -478,16 +485,28 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
                     }
                 }
             }
+            response.remove("seq");
+            jsonRequest.remove("seq");
+            String[] columns = {Constants.REQUEST, Constants.RESPONSE};
+            String[] values = {jsonRequest.toString(), response.toString()};
+            DBManager.getInstance().insertInTable(Constants.RESPONSE_TABLE, values, columns);
+            setUpReceiversListView(mPASystems);
             mReceiverListAdapter.notifyDataSetChanged();
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private void onGroupsReceived(JSONObject response) {
+    private void onGroupsReceived(JSONObject response, JSONObject jsonRequest) {
         hideLoading();
         mGroups = Group.build(response);
         setUpGroupsListView(mGroups);
+        response.remove("seq");
+        jsonRequest.remove("seq");
+        String[] columns = {Constants.REQUEST, Constants.RESPONSE};
+        String[] values = {jsonRequest.toString(), response.toString()};
+        DBManager.getInstance().insertInTable(Constants.RESPONSE_TABLE, values, columns);
+        setUpReceiversListView(mPASystems);
     }
 
     public interface OnRecordFragmentListener {

@@ -1,5 +1,6 @@
 package com.softrangers.sonarcloudmobile.ui;
 
+import android.content.Intent;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.SwitchCompat;
@@ -43,7 +44,11 @@ public class LockAppActivity extends AppCompatActivity implements CompoundButton
     @Override
     public void onBackPressed() {
         super.onBackPressed();
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.setAction("lock");
+        setResult(RESULT_CANCELED, intent);
         overridePendingTransition(R.anim.left_to_right, R.anim.right_to_left);
+        finish();
     }
 
     @Override

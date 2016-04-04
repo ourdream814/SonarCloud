@@ -9,8 +9,11 @@ import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.softrangers.sonarcloudmobile.models.Request;
+import com.softrangers.sonarcloudmobile.utils.Constants;
+import com.softrangers.sonarcloudmobile.utils.DBManager;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -225,8 +228,8 @@ public class SocketService extends Service {
             try {
                 if (dataSocket != null && dataSocket.isConnected()) {
                     dataSocket.close();
-                    new Connection();
                 }
+                new Connection();
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -310,7 +313,7 @@ public class SocketService extends Service {
                     // send the request to server through writer object
                     writeOut.write(message.toString() + "\n");
                     writeOut.flush();
-                    new Thread(new ReceiveMessage(readIn)).start();
+                    new Thread(new ReceiveMessage(readIn, message)).start();
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -351,7 +354,7 @@ public class SocketService extends Service {
                     writeOut.write(message.toString() + "\n");
                     writeOut.flush();
                     readIn = new BufferedReader(new InputStreamReader(dataSocket.getInputStream()));
-                    mResponseExecutor.execute(new ReceiveMessage(readIn));
+                    mResponseExecutor.execute(new ReceiveMessage(readIn, message));
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -365,9 +368,11 @@ public class SocketService extends Service {
     class ReceiveMessage implements Runnable {
 
         final BufferedReader mReader;
+        final JSONObject mRequest;
 
-        public ReceiveMessage(BufferedReader reader) {
+        public ReceiveMessage(BufferedReader reader, JSONObject request) {
             mReader = reader;
+            mRequest = request;
         }
 
         @Override
@@ -386,24 +391,36 @@ public class SocketService extends Service {
                 stringResponse = builder.toString();
                 Log.i(this.getClass().getSimpleName(), "Response: " + stringResponse);
                 if (stringResponse == null || stringResponse.equals("null")) {
-                    stringResponse = "{\"success\":false}";
-                    restartConnection();
-                    sendRequest(mLastRequest);
-                    Log.e(this.getClass().getSimpleName(), "Request sent again: " + mLastRequest.toString());
+                    stringResponse = DBManager.loadDataFromDB(mRequest);
+                    if (stringResponse.equals("")) {
+                        restartConnection();
+                        sendRequest(mRequest);
+                    }
+                    Log.e(this.getClass().getSimpleName(), "Request sent again: " + mRequest.toString());
                 }
-                response = new JSONObject(stringResponse);
+
             } catch (Exception e) {
                 e.printStackTrace();
+                stringResponse = DBManager.loadDataFromDB(mRequest);
+                if (stringResponse.equals("")) {
+                    restartConnection();
+                    sendRequest(mRequest);
+                }
             } finally {
                 String command = Api.EXCEPTION;
+                try {
+                    response = new JSONObject(stringResponse);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
                 if (response != null) {
                     command = response.optString("originalCommand", Api.EXCEPTION);
                 }
                 // send the response to ui
                 Intent responseContainer = new Intent(command);
                 responseContainer.putExtra(command, stringResponse);
+                responseContainer.putExtra(Api.REQUEST_MESSAGE, mRequest.toString());
                 sendBroadcast(responseContainer);
-                mLastRequest = null;
             }
         }
     }

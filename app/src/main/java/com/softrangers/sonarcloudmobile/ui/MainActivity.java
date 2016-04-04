@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
@@ -52,6 +53,7 @@ public class MainActivity extends BaseActivity implements
     private static ArrayList<GroupObserver> observers;
     public static boolean statusChanged;
     private Group mGroup;
+    private static boolean isAlreadyStarted;
 
     private TextView mToolbarTitle;
     private LinearLayout mMainBottomBar;
@@ -61,15 +63,24 @@ public class MainActivity extends BaseActivity implements
     private ImageButton mSettingsSelector;
     private SelectedFragment mSelectedFragment;
 
-    private ReceiversFragment mReceiversFragment;
-    private RecordFragment mRecordFragment;
-    private ScheduleFragment mScheduleFragment;
-    private SettingsFragment mSettingsFragment;
+    private static ReceiversFragment receiversFragment;
+    private static RecordFragment recordFragment;
+    private static ScheduleFragment scheduleFragment;
+    private static SettingsFragment settingsFragment;
 
     // set selected items to send the record to them
     public static ArrayList<Receiver> selectedReceivers = new ArrayList<>();
     public static Group selectedGroup;
     private IntentFilter intentFilter;
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        receiversFragment = new ReceiversFragment();
+        recordFragment = new RecordFragment();
+        settingsFragment = new SettingsFragment();
+        scheduleFragment = new ScheduleFragment();
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -83,38 +94,26 @@ public class MainActivity extends BaseActivity implements
         assert mToolbarTitle != null;
         mToolbarTitle = (TextView) findViewById(R.id.main_activity_toolbarTitle);
         mToolbarTitle.setTypeface(SonarCloudApp.avenirMedium);
+        initializeBottomButtons();
         if (!SonarCloudApp.getInstance().isLoggedIn()) {
             Intent intent = new Intent(this, LoginActivity.class);
             startActivityForResult(intent, LOGIN_REQUEST_CODE);
             return;
         }
-
         ConnectionReceiver.getInstance().addOnConnectedListener(this);
         if (SonarCloudApp.socketService != null) {
             SonarCloudApp.socketService.restartConnection();
         }
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        initializeBottomButtons();
+        showLoading();
     }
 
     //------------------- Fragment controls -------------------//
-
     /**
      * Initialize bottom buttons and set the {@link ReceiversFragment} as the first fragment in
      * the activity
-     *
      * @see {@link MainActivity#changeFragment(Fragment)}
      */
     private void initializeBottomButtons() {
-        // instantiate fragments
-        mReceiversFragment = new ReceiversFragment();
-        mRecordFragment = new RecordFragment();
-        mSettingsFragment = new SettingsFragment();
-        mScheduleFragment = new ScheduleFragment();
         //link bottom buttons
         mMainBottomBar = (LinearLayout) findViewById(R.id.main_bottomBar);
         mReceiversSelector = (ImageButton) findViewById(R.id.bottom_PASystems_selector);
@@ -134,7 +133,6 @@ public class MainActivity extends BaseActivity implements
      * Change the curent fragment with the given fragment.
      * method firs check if the fragment is not already added to the list then it hides all other
      * fragments and then either shows or add the given fragment into app backstack
-     *
      * @param newFragment which you want to show on the screen
      */
     private void changeFragment(Fragment newFragment) {
@@ -158,18 +156,17 @@ public class MainActivity extends BaseActivity implements
 
     /**
      * Called when on of the four bottom buttons is clicked
-     *
      * @param view of the actual clicked button
      */
     public void onBottomButtonsClick(View view) {
         switch (view.getId()) {
             case R.id.bottom_PASystems_selector:
-                changeFragment(mReceiversFragment);
+                changeFragment(receiversFragment);
                 mSelectedFragment = SelectedFragment.RECEIVERS;
                 invalidateViews();
                 break;
             case R.id.bottom_announcements_selector:
-                changeFragment(mRecordFragment);
+                changeFragment(recordFragment);
                 mSelectedFragment = SelectedFragment.ANNOUNCEMENTS;
                 invalidateViews();
                 break;
@@ -184,28 +181,14 @@ public class MainActivity extends BaseActivity implements
                 }
                 mSelectedFragment = SelectedFragment.RECORDINGS;
                 invalidateViews();
-                changeFragment(mScheduleFragment);
+                changeFragment(scheduleFragment);
                 break;
             case R.id.bottom_settings_selector:
-                changeFragment(mSettingsFragment);
+                changeFragment(settingsFragment);
                 mSelectedFragment = SelectedFragment.SETTINGS;
                 invalidateViews();
                 break;
         }
-    }
-
-    public void disableBottomButtons() {
-        mReceiversSelector.setEnabled(false);
-        mRecordingsSelector.setEnabled(false);
-        mSettingsSelector.setEnabled(false);
-        mAnnouncementsSelector.setEnabled(false);
-    }
-
-    public void enableBottomButtons() {
-        mReceiversSelector.setEnabled(true);
-        mRecordingsSelector.setEnabled(true);
-        mSettingsSelector.setEnabled(true);
-        mAnnouncementsSelector.setEnabled(true);
     }
 
     /**
@@ -275,24 +258,24 @@ public class MainActivity extends BaseActivity implements
     }
 
     private void sendReceiversToScheduleFragment(ArrayList<Receiver> receivers) {
-        mScheduleFragment = (ScheduleFragment) getSupportFragmentManager()
+        scheduleFragment = (ScheduleFragment) getSupportFragmentManager()
                 .findFragmentByTag(ScheduleFragment.class.getSimpleName());
-        if (mScheduleFragment != null && statusChanged) {
+        if (scheduleFragment != null && statusChanged) {
             if (receivers.size() <= 0) {
-                mScheduleFragment.clearLists();
+                scheduleFragment.clearLists();
             } else {
-                mScheduleFragment.clearLists();
-                mScheduleFragment.getAllRecordingsFromServer(receivers);
+                scheduleFragment.clearLists();
+                scheduleFragment.getAllRecordingsFromServer(receivers);
             }
             return;
         } else if (statusChanged) {
-            mScheduleFragment = new ScheduleFragment();
+            scheduleFragment = new ScheduleFragment();
             Bundle bundle = new Bundle();
             bundle.putParcelableArrayList(ScheduleFragment.RECEIVERS_ARGS, receivers);
-            mScheduleFragment.setArguments(bundle);
+            scheduleFragment.setArguments(bundle);
             return;
         }
-        mScheduleFragment = new ScheduleFragment();
+        scheduleFragment = new ScheduleFragment();
     }
 
     /**
@@ -341,7 +324,7 @@ public class MainActivity extends BaseActivity implements
         SonarCloudApp.user = User.build(response);
         // set first button selected and add fragment to container
         mSelectedFragment = SelectedFragment.RECEIVERS;
-        changeFragment(mReceiversFragment);
+        changeFragment(receiversFragment);
         invalidateViews();
     }
 
@@ -353,10 +336,12 @@ public class MainActivity extends BaseActivity implements
      */
     public void onCommandFailure(String message) {
         if (message.equalsIgnoreCase("Invalid identifier and secret combination.")) {
-            logout(null);
+            SonarCloudApp.getInstance().loginUser();
         } else {
             dismissLoading();
-            Snackbar.make(mToolbarTitle, message, Snackbar.LENGTH_SHORT).show();
+            if (message != null) {
+                Snackbar.make(mToolbarTitle, message, Snackbar.LENGTH_SHORT).show();
+            }
         }
     }
 
@@ -365,7 +350,7 @@ public class MainActivity extends BaseActivity implements
      */
     public void onErrorOccurred() {
         dismissLoading();
-        Snackbar.make(mToolbarTitle, getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
+//        Snackbar.make(mToolbarTitle, getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
     }
 
     /**
@@ -411,7 +396,7 @@ public class MainActivity extends BaseActivity implements
      * Called when lock button from {@link SettingsFragment} is clicked
      */
     public void lockApplication(View view) {
-        startActivity(new Intent(this, LockAppActivity.class));
+        startActivityForResult(new Intent(this, LockAppActivity.class), 56);
         overridePendingTransition(R.anim.enter, R.anim.exit);
     }
 
@@ -452,10 +437,11 @@ public class MainActivity extends BaseActivity implements
                     case ACTION_LOGIN:
                         registerReceiver(mLoginReceiver, intentFilter);
                         SonarCloudApp.socketService.restartConnection();
+                        showLoading();
                         break;
                     case ScheduleActivity.ACTION_ADD_SCHEDULE:
-                        if (mRecordFragment != null && mRecordFragment.mRecAdapter != null) {
-                            mRecordFragment.mRecAdapter.refreshList(mRecordFragment.getRecordedFileList());
+                        if (recordFragment != null && recordFragment.mRecAdapter != null) {
+                            recordFragment.mRecAdapter.refreshList(recordFragment.getRecordedFileList());
                         }
                         break;
                     case ScheduleActivity.ACTION_EDIT_SCHEDULE:

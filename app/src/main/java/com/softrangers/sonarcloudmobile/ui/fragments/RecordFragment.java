@@ -704,7 +704,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                 JSONObject jsonResponse = new JSONObject(intent.getExtras().getString(action));
                 boolean success = jsonResponse.optBoolean("success", false);
                 if (!success && !SonarCloudApp.socketService.isAudioConnectionReady()) {
-                    String message = jsonResponse.optString("message", getString(R.string.unknown_error));
+                    String message = jsonResponse.optString("message");
                     onCommandFailure(message);
                     return;
                 }
@@ -734,8 +734,12 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
      *
      * @param recording which needs to be sent
      */
-    private void startSendingAudioProcess(Recording recording, ProgressBar progressBar, ImageButton send) {
+    public void startSendingAudioProcess(Recording recording, ProgressBar progressBar, ImageButton send) {
         try {
+            if (SonarCloudApp.socketService.isAudioConnectionReady()) {
+                onServerReadyForData();
+                return;
+            }
             if (mSelectedLayout == SelectedLayout.RECORDING) {
                 mRecording = recording;
                 mSendingProgress = progressBar;
@@ -743,6 +747,8 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                 mSendButton.setClickable(false);
                 mSendButton.setVisibility(View.INVISIBLE);
                 mSendingProgress.setVisibility(View.VISIBLE);
+            } else {
+                mActivity.showLoading();
             }
             Request.Builder requestBuilder = new Request.Builder()
                     .command(Api.Command.SEND_AUDIO)
@@ -764,9 +770,11 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
             SonarCloudApp.socketService.sendRequest(request);
         } catch (Exception e) {
             isSending = false;
-            mSendButton.setVisibility(View.VISIBLE);
-            mSendingProgress.setVisibility(View.GONE);
-            mSendButton.setClickable(true);
+            if (mSendButton != null && mSendingProgress != null) {
+                mSendButton.setVisibility(View.VISIBLE);
+                mSendingProgress.setVisibility(View.GONE);
+                mSendButton.setClickable(true);
+            }
             onErrorOccurred();
             e.printStackTrace();
         }
@@ -810,9 +818,11 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                     SonarCloudApp.socketService.sendAudio(bytes);
                 } catch (Exception e) {
                     isSending = false;
-                    mSendButton.setVisibility(View.VISIBLE);
-                    mSendingProgress.setVisibility(View.GONE);
-                    mSendButton.setClickable(true);
+                    if (mSendButton != null && mSendingProgress != null) {
+                        mSendButton.setVisibility(View.VISIBLE);
+                        mSendingProgress.setVisibility(View.GONE);
+                        mSendButton.setClickable(true);
+                    }
                     onErrorOccurred();
                     e.printStackTrace();
                 }
@@ -822,12 +832,14 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                 mActivity.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
+                        mActivity.dismissLoading();
                         Toast.makeText(mActivity, "Press and hold to record your message", Toast.LENGTH_SHORT).show();
                     }
                 });
                 break;
             }
             case STREAMING: {
+                mActivity.dismissLoading();
                 opusRecorder.startStreaming(SonarCloudApp.socketService.getAudioSocket());
                 break;
             }
@@ -869,12 +881,14 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
     private void onCommandFailure(String message) {
         isSending = false;
         isServerReady = false;
+        if (message != null) {
+            Snackbar.make(mStreamLayout, message, Snackbar.LENGTH_SHORT).show();
+        }
         if (mSendButton != null && mSendingProgress != null) {
             mSendButton.setVisibility(View.VISIBLE);
             mSendingProgress.setVisibility(View.GONE);
             mSendButton.setClickable(true);
         }
-        Snackbar.make(mRecordAndSend, message, Snackbar.LENGTH_SHORT).show();
     }
 
     /**
@@ -888,7 +902,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
             mSendingProgress.setVisibility(View.GONE);
             mSendButton.setClickable(true);
         }
-        Snackbar.make(mRecordAndSend, mActivity.getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
     }
 
     @Override
