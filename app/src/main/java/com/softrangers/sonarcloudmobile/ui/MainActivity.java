@@ -95,6 +95,11 @@ public class MainActivity extends BaseActivity implements
         }
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        initializeBottomButtons();
+    }
 
     //------------------- Fragment controls -------------------//
 
@@ -116,10 +121,6 @@ public class MainActivity extends BaseActivity implements
         mAnnouncementsSelector = (ImageButton) findViewById(R.id.bottom_announcements_selector);
         mRecordingsSelector = (ImageButton) findViewById(R.id.bottom_recordings_selector);
         mSettingsSelector = (ImageButton) findViewById(R.id.bottom_settings_selector);
-        // set first button selected and add fragment to container
-        mSelectedFragment = SelectedFragment.RECEIVERS;
-        changeFragment(mReceiversFragment);
-        invalidateViews();
         if (!SonarCloudApp.getInstance().canUseMicrophone()) {
             if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.RECORD_AUDIO)) {
                 new ExplainPermission().execute();
@@ -338,7 +339,10 @@ public class MainActivity extends BaseActivity implements
     public void onResponseSucceed(JSONObject response) {
         dismissLoading();
         SonarCloudApp.user = User.build(response);
-        initializeBottomButtons();
+        // set first button selected and add fragment to container
+        mSelectedFragment = SelectedFragment.RECEIVERS;
+        changeFragment(mReceiversFragment);
+        invalidateViews();
     }
 
     /**
@@ -430,15 +434,7 @@ public class MainActivity extends BaseActivity implements
      */
     @Override
     public void onSocketConnected() {
-        if (SonarCloudApp.socketService != null) {
-            registerReceiver(mLoginReceiver, intentFilter);
-            Request.Builder builder = new Request.Builder();
-            builder.command(Api.Command.AUTHENTICATE);
-            builder.device(Api.Device.CLIENT).method(Api.Method.IDENTIFIER).identifier(SonarCloudApp.getInstance().getIdentifier())
-                    .secret(SonarCloudApp.getInstance().getSavedData()).seq(SonarCloudApp.SEQ_VALUE);
-            SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
-            showLoading();
-        }
+
     }
 
     @Override
@@ -454,8 +450,8 @@ public class MainActivity extends BaseActivity implements
                         notifyObservers();
                         break;
                     case ACTION_LOGIN:
-                        ConnectionReceiver.getInstance().addOnConnectedListener(this);
-                        onSocketConnected();
+                        registerReceiver(mLoginReceiver, intentFilter);
+                        SonarCloudApp.socketService.restartConnection();
                         break;
                     case ScheduleActivity.ACTION_ADD_SCHEDULE:
                         if (mRecordFragment != null && mRecordFragment.mRecAdapter != null) {

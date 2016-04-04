@@ -8,6 +8,9 @@ import android.os.Looper;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
+import com.softrangers.sonarcloudmobile.models.Request;
+import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
+
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -184,9 +187,14 @@ public class SocketService extends Service {
                         new Socket(Api.URL, Api.PORT), Api.M_URL, Api.PORT, true
                 );
 
-                Intent intent = new Intent(SocketService.this, ConnectionReceiver.class);
-                intent.setAction(Api.CONNECTION_BROADCAST);
-                sendBroadcast(intent);
+                if (SonarCloudApp.getInstance().isLoggedIn()) {
+                    Request.Builder builder = new Request.Builder();
+                    builder.command(Api.Command.AUTHENTICATE);
+                    builder.device(Api.Device.CLIENT).method(Api.Method.IDENTIFIER).identifier(SonarCloudApp.getInstance().getIdentifier())
+                            .secret(SonarCloudApp.getInstance().getSavedData()).seq(SonarCloudApp.SEQ_VALUE);
+                    sendRequest(builder.build().toJSON());
+                    SonarCloudApp.getInstance().startKeepingConnection();
+                }
 
                 isConnected = true;
             } catch (Exception e) {

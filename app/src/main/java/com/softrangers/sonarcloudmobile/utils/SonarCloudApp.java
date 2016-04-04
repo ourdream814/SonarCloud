@@ -14,7 +14,9 @@ import android.graphics.Typeface;
 import android.os.IBinder;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.util.TimeUtils;
+import android.util.Log;
 
+import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.models.User;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
 import com.softrangers.sonarcloudmobile.utils.api.ConnectionKeeper;
@@ -54,7 +56,6 @@ public class SonarCloudApp extends Application {
 
     private AlarmManager mAlarmManager;
     private PendingIntent mPendingIntent;
-    private Intent mIntent;
 
 
     @Override
@@ -66,13 +67,28 @@ public class SonarCloudApp extends Application {
         avenirMedium = Typeface.createFromAsset(getAssets(), "fonts/avenir_lt_65_medium_0.ttf");
         // initialize a preferences object
         preferences = getSharedPreferences(LOGIN_RESULT, MODE_PRIVATE);
-        startKeepingConnection();
+
         // start socket service and connect to server
         Intent socketIntent = new Intent(this, SocketService.class);
         startService(socketIntent);
 
         // bind current class to the SocketService
         bindService(new Intent(this, SocketService.class), mServiceConnection, Context.BIND_AUTO_CREATE);
+    }
+
+    public void requestUserIdentifier() {
+        String identifier = getIdentifier();
+        // Start building a request to either create a new or renew existing identifier
+        Request.Builder requestBuilder = new Request.Builder();
+        requestBuilder.command(Api.Command.IDENTIFIER);
+        requestBuilder.seq(SonarCloudApp.SEQ_VALUE);
+        if (SonarCloudApp.NO_IDENTIFIER.equals(identifier)) {
+            requestBuilder.action(Api.Action.NEW);
+        } else {
+            requestBuilder.action(Api.Action.RENEW);
+            requestBuilder.identifier(identifier);
+        }
+        socketService.sendRequest(requestBuilder.build().toJSON());
     }
 
     /**
@@ -82,9 +98,9 @@ public class SonarCloudApp extends Application {
     public void startKeepingConnection() {
         if (isLoggedIn()) {
             mAlarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
-            mIntent = new Intent(this, ConnectionKeeper.class);
-            mIntent.setAction(Api.KEEP_CONNECTION);
-            mPendingIntent = PendingIntent.getBroadcast(this, 0, mIntent, 0);
+            Intent intent = new Intent(this, ConnectionKeeper.class);
+            intent.setAction(Api.KEEP_CONNECTION);
+            mPendingIntent = PendingIntent.getBroadcast(this, 0, intent, 0);
             mAlarmManager.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), 50000, mPendingIntent);
         }
     }
@@ -118,7 +134,8 @@ public class SonarCloudApp extends Application {
      */
     public void addNewRecording(int recordingNumber) {
         SharedPreferences.Editor editor = preferences.edit();
-        editor.putInt("recording_counter", recordingNumber++);
+        Log.i("addNewRecordingNumber", "Record Number: " + recordingNumber);
+        editor.putInt("recording_counter", recordingNumber + 1);
         editor.apply();
     }
 
@@ -127,7 +144,7 @@ public class SonarCloudApp extends Application {
      * @return either last record number or 0 if there are no records
      */
     public int getLastRecordingNumber() {
-        return preferences.getInt("recording_counter", 0);
+        return preferences.getInt("recording_counter", 1);
     }
 
     /**

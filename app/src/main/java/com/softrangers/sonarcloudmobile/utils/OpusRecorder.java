@@ -87,32 +87,33 @@ public class OpusRecorder {
             if (sslSocket != null) {
                 serverStream = sslSocket.getOutputStream();
             }
-            while (recorderState == RecorderState.RECORDING || recorderState == RecorderState.PAUSED) {
-                if (recorderState != RecorderState.PAUSED) {
-                    audioRecorder.read(recordBuffer, 0, recordBuffer.length);
-                    // Encode
-                    int bytesWritten = audioProcessor.encodePCM(recordBuffer, 0, encodeBuffer, 0);
-                    outputStream.write(encodeBuffer, 0, bytesWritten);
-                    if (serverStream != null) {
-                        serverStream.write(encodeBuffer, 0, bytesWritten);
-                        Log.i(this.getClass().getSimpleName(), "Sent: " + encodeBuffer.length);
-                    }
-                } else {
-                    if (mOnRecordListener != null) {
-                        mOnRecordListener.onRecordPaused(recorderState);
-                    }
+            while (recorderState == RecorderState.RECORDING) {
+                audioRecorder.read(recordBuffer, 0, recordBuffer.length);
+                // Encode
+                int bytesWritten = audioProcessor.encodePCM(recordBuffer, 0, encodeBuffer, 0);
+                outputStream.write(encodeBuffer, 0, bytesWritten);
+                if (serverStream != null) {
+                    serverStream.write(encodeBuffer, 0, bytesWritten);
+                    Log.i(this.getClass().getSimpleName(), "Sent: " + encodeBuffer.length);
                 }
             }
             // Stop the recorder
             audioRecorder.stop();
             audioRecorder.release();
 
-            if (mOnRecordListener != null) {
-                mOnRecordListener.onRecordFinished(outputStream.toByteArray(), recorderState);
-            }
-
             // Get rid
             audioProcessor.dealloc();
+
+            if (recorderState == RecorderState.PAUSED) {
+                if (mOnRecordListener != null) {
+                    mOnRecordListener.onRecordPaused(outputStream.toByteArray(), recorderState);
+                }
+            } else if (recorderState == RecorderState.STOPPED){
+                if (mOnRecordListener != null) {
+                    mOnRecordListener.onRecordFinished(outputStream.toByteArray(), recorderState);
+                }
+            }
+
         } catch (Exception e) {
             recorderState = RecorderState.STOPPED;
             if (mOnRecordListener != null) {
@@ -133,6 +134,11 @@ public class OpusRecorder {
      * Stop the recording process if there are any
      */
     public void stopRecording() {
+        if (recorderState == RecorderState.PAUSED) {
+            if (mOnRecordListener != null) {
+                mOnRecordListener.onRecordFinished(new byte[0], RecorderState.STOPPED);
+            }
+        }
         recorderState = RecorderState.STOPPED;
     }
 
@@ -140,22 +146,29 @@ public class OpusRecorder {
         recorderState = RecorderState.PAUSED;
     }
 
-    public void resumeRecording() {
-        recorderState = RecorderState.RECORDING;
-    }
-
     public enum RecorderState {
-        RECORDING, STOPPED, PAUSED, STREAMING
+        RECORDING, RESUME_RECORDING, STOPPED, PAUSED, STREAMING
     }
 
     public boolean isRecording() {
         return recorderState == RecorderState.RECORDING;
     }
 
+    public boolean isPaused() {
+        return recorderState == RecorderState.PAUSED;
+    }
+
+    public RecorderState getRecorderState() {
+        return recorderState;
+    }
+
     public interface OnRecordListener {
         void onRecordStarted(RecorderState recorderState);
-        void onRecordPaused(RecorderState recorderState);
+
+        void onRecordPaused(byte[] audioData, RecorderState recorderState);
+
         void onRecordFinished(byte[] audioData, RecorderState recorderState);
+
         void onRecordFailed(Exception e, RecorderState recorderState);
     }
 }

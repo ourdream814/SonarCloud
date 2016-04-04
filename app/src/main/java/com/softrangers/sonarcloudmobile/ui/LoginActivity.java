@@ -141,26 +141,11 @@ public class LoginActivity extends BaseActivity {
             // Get user id from the response object
             String id = response.getString("userID");
 
-            // Save user id to preferences for future uses
-            SonarCloudApp.getInstance().saveUserLoginStatus(true, id);
-
-            // Get user identifier from preferences
-            String identifier = SonarCloudApp.getInstance().getIdentifier();
             mUser.setId(id);
+            SonarCloudApp.getInstance().saveUserLoginDate(mUser.getEmail(), mUser.getPassword());
 
-            // Start building a request to either create a new or renew existing identifier
-            Request.Builder requestBuilder = new Request.Builder();
-            requestBuilder.command(Api.Command.IDENTIFIER);
-            requestBuilder.seq(SonarCloudApp.SEQ_VALUE);
-            if (SonarCloudApp.NO_IDENTIFIER.equals(identifier)) {
-                requestBuilder.action(Api.Action.NEW);
-            } else {
-                requestBuilder.action(Api.Action.RENEW);
-                requestBuilder.identifier(identifier);
-            }
-
-            // Send the created request to server
-            SonarCloudApp.socketService.sendRequest(requestBuilder.build().toJSON());
+            // request identifier from server
+            SonarCloudApp.getInstance().requestUserIdentifier();
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -219,6 +204,7 @@ public class LoginActivity extends BaseActivity {
             Intent main = new Intent(LoginActivity.this, MainActivity.class);
             main.setAction(MainActivity.ACTION_LOGIN);
             setResult(RESULT_OK, main);
+            SonarCloudApp.getInstance().saveUserLoginStatus(true, mUser.getId());
             SonarCloudApp.getInstance().startKeepingConnection();
             finish();
         } catch (Exception e) {

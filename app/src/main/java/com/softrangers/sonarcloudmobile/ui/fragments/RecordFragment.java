@@ -12,6 +12,7 @@ import android.support.v4.view.MotionEventCompat;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.helper.ItemTouchHelper;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -43,6 +44,7 @@ import org.json.JSONObject;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -72,7 +74,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
     private RadioButton mPushTTButton;
     private ImageButton mPTTButton;
     private MainActivity mActivity;
-    private RecorderState mRecorderState;
     private StreamingState mStreamingState;
     public AnnouncementRecAdapter mRecAdapter;
     private MillisChronometer mRecordChronometer;
@@ -102,7 +103,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         intentFilter.addAction(Api.AUDIO_DATA_RESULT);
         mActivity.registerReceiver(mAudioSendingReceiver, intentFilter);
         // set default states for all layouts included in current fragment
-        mRecorderState = RecorderState.STOPPED;
         mStreamingState = StreamingState.WAITING;
         // Link all views and set listeners
         // Record, Stream and PTT layouts
@@ -149,10 +149,9 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         mPTTButton.setOnTouchListener(this);
         mSelectedLayout = SelectedLayout.RECORDING;
         // set all views in default state
-        invalidateRecordAndSendViews(mRecorderState);
+        invalidateRecordAndSendViews(opusRecorder.getRecorderState());
         return view;
     }
-
 
     //---------------- Common methods ----------------//
 
@@ -163,15 +162,11 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
     public void onClick(View v) {
         switch (v.getId()) {
             case R.id.start_pause_recording_button:
-                if (mRecorderState == RecorderState.STOPPED) {
+                if (!opusRecorder.isRecording() || opusRecorder.isPaused()) {
                     // start recording if it is stopped
                     opusRecorder.startRecording();
-                } else if (mRecorderState == RecorderState.RECORDING) {
-                    // if the device is recording, pause it
+                } else {
                     opusRecorder.pauseRecording();
-                } else if (mRecorderState == RecorderState.PAUSED) {
-                    // if is paused then we should release the pause
-                    opusRecorder.resumeRecording();
                 }
                 break;
             case R.id.stop_recording_button:
@@ -188,7 +183,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                 if (mStreamingState == StreamingState.WAITING) {
                     startSendingAudioProcess(null, null, null);
                 } else if (mStreamingState == StreamingState.STREAMING) {
-                    // TODO: 3/27/16 stop streaming process
                     opusRecorder.stopRecording();
                 }
                 break;
@@ -304,10 +298,12 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         ArrayList<Recording> recordingList = new ArrayList<>();
         if (recordings != null) {
             for (File file : recordings) {
-                Recording recording = new Recording();
-                recording.setFilePath(file.getAbsolutePath());
-                recording.setRecordName(file.getName().split("\\.")[0]);
-                recordingList.add(recording);
+                if (!file.isDirectory()) {
+                    Recording recording = new Recording();
+                    recording.setFilePath(file.getAbsolutePath());
+                    recording.setRecordName(file.getName().split("\\.")[0]);
+                    recordingList.add(recording);
+                }
             }
         }
         return recordingList;
@@ -394,13 +390,12 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
      */
     private void deleteRecord(Recording rec) {
         File file = new File(rec.getFilePath());
-        if (file.delete()) {
-            mRecAdapter.refreshList(getRecordedFileList());
-        }
+        file.delete();
     }
 
     @Override
     public void onRecordStarted(final RecorderState recorderState) {
+        Log.i(this.getClass().getSimpleName(), "Record started");
         mActivity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -422,18 +417,36 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
     }
 
     @Override
-    public void onRecordPaused(final RecorderState recorderState) {
-        mActivity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                switch (mSelectedLayout) {
-                    case RECORDING:
-                        invalidateRecordAndSendViews(recorderState);
-                        break;
-                }
+    public void onRecordPaused(byte[] audioData, final RecorderState recorderState) {
+        try {
+            Log.i(this.getClass().getSimpleName(), "Record paused");
+            // get the directory for temp files or create it if it does not exist
+            File directory = new File(PATH + File.separator + "tmp" + File.separator);
+            directory.mkdirs();
+            // create a temp file
+            File tempFile = new File(directory, "tmp.opus");
+            // write bytes to temp file or append them to the end of the
+            // file in case file already exists
+            FileOutputStream fileOutputStream = new FileOutputStream(tempFile, true);
+            fileOutputStream.write(audioData, 0, audioData.length);
+            fileOutputStream.flush();
+            fileOutputStream.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            mActivity.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    switch (mSelectedLayout) {
+                        case RECORDING:
+                            invalidateRecordAndSendViews(recorderState);
+                            break;
+                    }
 
-            }
-        });
+                }
+            });
+        }
+
     }
 
     @Override
@@ -481,20 +494,51 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
             }
             case RECORDING: {
                 try {
+                    Log.i(this.getClass().getSimpleName(), "Record finished");
+                    // get the directory for temp files
+                    File directoryTemp = new File(PATH + File.separator + "tmp" + File.separator);
+                    directoryTemp.mkdirs();
+                    // obtain last temp file if it exists
+                    File tempFile = new File(directoryTemp, "tmp.opus");
+                    byte[] writtenBytes = new byte[(int) tempFile.length()];
+                    // if temp file exists read bytes from it to an array
+                    if (tempFile.exists()) {
+                        FileInputStream fis = new FileInputStream(tempFile);
+                        BufferedInputStream bis = new BufferedInputStream(fis);
+                        bis.read(writtenBytes, 0, writtenBytes.length);
+                        bis.close();
+                    }
+                    // copy both arrays to allData[]
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    baos.write(writtenBytes, 0, writtenBytes.length);
+                    baos.write(audioData, 0, audioData.length);
+                    byte[] allData = baos.toByteArray();
+
+                    // create a new recorded file
                     File directory = new File(PATH);
                     directory.mkdirs();
                     int recordingNumber = SonarCloudApp.getInstance().getLastRecordingNumber();
                     File file = new File(directory, FILENAME + recordingNumber + ".opus");
+                    // increment recording numbers
                     SonarCloudApp.getInstance().addNewRecording(recordingNumber);
+                    // start writing all audio data to file
                     FileOutputStream fileOutputStream = new FileOutputStream(file);
                     BufferedOutputStream bos = new BufferedOutputStream(fileOutputStream);
-                    bos.write(audioData, 0, audioData.length);
+                    // write recorded bytes at the end of the file
+                    bos.write(allData, 0, allData.length);
+
                     bos.flush();
                     bos.close();
+
+                    baos.flush();
+                    baos.close();
+
+                    tempFile.delete();
                     mActivity.runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
                             mRecAdapter.refreshList(getRecordedFileList());
+                            Log.i(this.getClass().getSimpleName(), "Adapter updated");
                         }
                     });
                 } catch (Exception e) {
@@ -506,6 +550,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
     @Override
     public void onRecordFailed(Exception e, final RecorderState recorderState) {
+        Log.i(this.getClass().getSimpleName(), "Record failed");
         mActivity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
