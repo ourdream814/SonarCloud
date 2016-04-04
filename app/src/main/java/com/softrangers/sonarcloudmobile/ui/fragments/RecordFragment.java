@@ -83,6 +83,8 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
     private static boolean isServerReady;
     private static OpusRecorder opusRecorder;
     private OpusPlayer mOpusPlayer;
+    private RecordingLayout mRecordingLayout;
+
 
     public RecordFragment() {
         // Required empty public constructor
@@ -162,6 +164,10 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
     public void onClick(View v) {
         switch (v.getId()) {
             case R.id.start_pause_recording_button:
+                if (opusRecorder.isRecording() && mRecordingLayout != RecordingLayout.RECORDINGS) {
+                    Toast.makeText(mActivity, mActivity.getString(R.string.stop_recording), Toast.LENGTH_SHORT).show();
+                    return;
+                }
                 if (!opusRecorder.isRecording() || opusRecorder.isPaused()) {
                     // start recording if it is stopped
                     opusRecorder.startRecording();
@@ -174,6 +180,10 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                 opusRecorder.stopRecording();
                 break;
             case R.id.start_streaming_button:
+                if (opusRecorder.isRecording() && mRecordingLayout != RecordingLayout.STREAMING) {
+                    Toast.makeText(mActivity, mActivity.getString(R.string.stop_recording), Toast.LENGTH_SHORT).show();
+                    return;
+                }
                 // if the user did not select any receivers, inform about it and return
                 if (MainActivity.selectedReceivers.size() <= 0 && MainActivity.selectedGroup == null) {
                     Toast.makeText(mActivity, mActivity.getString(R.string.please_select_pa), Toast.LENGTH_SHORT).show();
@@ -187,18 +197,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                 }
                 break;
         }
-    }
-
-    private void disableSelectors() {
-        mPushTTButton.setClickable(false);
-        mStreamingButton.setClickable(false);
-        mRecordButton.setClickable(false);
-    }
-
-    private void enableSelectors() {
-        mPushTTButton.setClickable(true);
-        mStreamingButton.setClickable(true);
-        mRecordButton.setClickable(true);
     }
 
     /**
@@ -224,6 +222,12 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                 mPushToTalkLayout.setVisibility(View.VISIBLE);
                 mRecordAndSend.setVisibility(View.GONE);
                 mStreamLayout.setVisibility(View.GONE);
+
+                if (opusRecorder.isRecording() && mRecordingLayout != RecordingLayout.PUSH_TO_TALK) {
+                    Toast.makeText(mActivity, mActivity.getString(R.string.stop_recording), Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
                 if (MainActivity.selectedReceivers.size() <= 0 && MainActivity.selectedGroup == null) {
                     Toast.makeText(mActivity, mActivity.getString(R.string.please_select_pa), Toast.LENGTH_SHORT).show();
                     return;
@@ -399,18 +403,20 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         mActivity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                mActivity.disableBottomButtons();
-                disableSelectors();
                 switch (mSelectedLayout) {
                     case RECORDING:
                         invalidateRecordAndSendViews(recorderState);
+                        mRecordingLayout = RecordingLayout.RECORDINGS;
                         break;
                     case STREAMING:
                         mStreamingState = StreamingState.STREAMING;
+                        mRecordingLayout = RecordingLayout.STREAMING;
                         invalidateStreamViews(recorderState);
                         break;
                     case PTT:
                         invalidatePTTViews(recorderState);
+                        mRecordingLayout = RecordingLayout.PUSH_TO_TALK;
+                        break;
                 }
             }
         });
@@ -454,8 +460,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         mActivity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                mActivity.enableBottomButtons();
-                enableSelectors();
                 switch (mSelectedLayout) {
                     case RECORDING:
                         invalidateRecordAndSendViews(recorderState);
@@ -469,8 +473,8 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                 }
             }
         });
-        switch (mSelectedLayout) {
-            case PTT: {
+        switch (mRecordingLayout) {
+            case PUSH_TO_TALK: {
                 Snackbar.make(mPushToTalkLayout, "Sending audio", Snackbar.LENGTH_LONG).setAction("Undo",
                         new View.OnClickListener() {
                             @Override
@@ -492,7 +496,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                 }).show();
                 break;
             }
-            case RECORDING: {
+            case RECORDINGS: {
                 try {
                     Log.i(this.getClass().getSimpleName(), "Record finished");
                     // get the directory for temp files
@@ -543,6 +547,8 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                     });
                 } catch (Exception e) {
                     e.printStackTrace();
+                } finally {
+                    mRecordingLayout = RecordingLayout.NOT_RECORDING;
                 }
             }
         }
@@ -550,12 +556,11 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
     @Override
     public void onRecordFailed(Exception e, final RecorderState recorderState) {
+        mRecordingLayout = RecordingLayout.NOT_RECORDING;
         Log.i(this.getClass().getSimpleName(), "Record failed");
         mActivity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                mActivity.enableBottomButtons();
-                enableSelectors();
                 switch (mSelectedLayout) {
                     case RECORDING:
                         invalidateRecordAndSendViews(recorderState);
@@ -621,11 +626,16 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
     //---------------- Push to talk layout ----------------//
     @Override
     public boolean onTouch(View v, MotionEvent event) {
+        if (opusRecorder.isRecording() && mRecordingLayout != RecordingLayout.PUSH_TO_TALK) {
+            Toast.makeText(mActivity, mActivity.getString(R.string.stop_recording), Toast.LENGTH_SHORT).show();
+            return false;
+        }
         int action = MotionEventCompat.getActionMasked(event);
         if (MainActivity.selectedReceivers.size() <= 0 && MainActivity.selectedGroup == null) {
             Toast.makeText(mActivity, mActivity.getString(R.string.please_select_pa), Toast.LENGTH_SHORT).show();
             return false;
         }
+        // do not start recording if server is not ready for data
         if (!isServerReady) {
             startSendingAudioProcess(null, null, null);
             return false;
@@ -726,7 +736,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
      */
     private void startSendingAudioProcess(Recording recording, ProgressBar progressBar, ImageButton send) {
         try {
-            mActivity.showLoading();
             if (mSelectedLayout == SelectedLayout.RECORDING) {
                 mRecording = recording;
                 mSendingProgress = progressBar;
@@ -890,5 +899,9 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
     enum SelectedLayout {
         RECORDING, STREAMING, PTT
+    }
+
+    enum RecordingLayout {
+        RECORDINGS, STREAMING, PUSH_TO_TALK, NOT_RECORDING
     }
 }

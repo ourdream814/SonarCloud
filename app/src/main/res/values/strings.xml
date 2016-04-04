@@ -79,5 +79,6 @@
     <string name="announcements">Announcements</string>
     <string name="all_recordings">All recordings</string>
     <string name="schedules">Schedules</string>
+    <string name="stop_recording">Please stop recording first</string>
 
 </resources>
