@@ -418,7 +418,14 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
 
     @Override
     public void onErrorOccurred() {
-        mActivity.dismissLoading();
+        hideLoading();
+        ArrayList<Receiver> receivers = new ArrayList<>();
+        if (MainActivity.selectedReceivers != null && MainActivity.selectedReceivers.size() > 0) {
+            receivers = MainActivity.selectedReceivers;
+        } else if (MainActivity.selectedGroup != null) {
+            receivers = MainActivity.selectedGroup.getReceivers();
+        }
+        getAllRecordingsFromServer(receivers);
         Snackbar.make(allScheduleLayout,
                 mActivity.getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
     }
@@ -527,8 +534,9 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
             clickedRecordPosition = position;
             clickedRecording = recording;
             Request.Builder builder = new Request.Builder();
-            builder.command(Api.Command.SEND_AUDIO).recordingID(recording.getRecordingId());
-            SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
+            builder.command(Api.Command.GET_AUDIO).recordingID(recording.getRecordingId());
+            JSONObject request = builder.build().toJSON();
+            SonarCloudApp.socketService.sendRequest(request);
         }
     }
 
@@ -537,7 +545,8 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         if (key != null) {
             Request.Builder builder = new Request.Builder();
             builder.command(Api.Command.RECEIVE).key(key);
-            SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
+            JSONObject request = builder.build().toJSON();
+            SonarCloudApp.socketService.sendRequest(request);
         }
     }
 
