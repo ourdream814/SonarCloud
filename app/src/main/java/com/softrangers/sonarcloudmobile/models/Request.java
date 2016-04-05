@@ -52,6 +52,7 @@ public class Request {
     private int seq;
     private int scheduleID = UNSPECIFIED_INT;
     private int channels = UNSPECIFIED_INT;
+    private int recordingID = UNSPECIFIED_INT;
     private JSONArray receivers;
     private JSONArray receiversID;
     private JSONObject schedule;
@@ -85,6 +86,7 @@ public class Request {
             if (bitrate == UNSPECIFIED_INT) request.remove("bitrate");
             if (samplerate == UNSPECIFIED_INT) request.remove("samplerate");
             if (channels == UNSPECIFIED_INT) request.remove("channels");
+            if (recordingID == UNSPECIFIED_INT) request.remove("recordingID");
             if (!command.equalsIgnoreCase(Api.Command.UPDATE_SCHEDULE)) request.remove("deleteAfter");
             request.remove("UNSPECIFIED_INT");
             request.remove("receiversID");
@@ -131,6 +133,7 @@ public class Request {
         private String startDate;
         private String mFormat;
         private String mKey;
+        private int mRecordingId = UNSPECIFIED_INT;
         private int deleteAfter;
         private int mBitrate = UNSPECIFIED_INT;
         private JSONArray mReceiversID;
@@ -322,6 +325,11 @@ public class Request {
             return this;
         }
 
+        public Builder recordingID(int recordingId) {
+            mRecordingId = recordingId;
+            return this;
+        }
+
 
         public Request build() {
             Request request = new Request();
@@ -363,6 +371,7 @@ public class Request {
             request.receiversID = mReceiversID;
             request.key = mKey;
             request.schedule = mSchedule;
+            request.recordingID = mRecordingId;
             return request;
         }
     }

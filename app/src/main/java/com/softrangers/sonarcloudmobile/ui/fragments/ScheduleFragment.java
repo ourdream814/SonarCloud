@@ -37,6 +37,10 @@ import com.softrangers.sonarcloudmobile.utils.api.Api;
 
 import org.json.JSONObject;
 
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.util.ArrayList;
 
 
@@ -44,7 +48,6 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         ScheduledRecordsAdapter.OnScheduleClickListener, DaysAdapter.OnDayClickListener,
         ScheduleAllRecordingsAdapter.OnRecordClickListener, OpusPlayer.OnPlayListener {
 
-    public static final String RECEIVERS_ARGS = "receivers arguments key";
     private static RelativeLayout scheduledLayout;
     private static RelativeLayout allScheduleLayout;
 
@@ -60,6 +63,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     private int clickedPosition;
     private ProgressBar mLoadingProgress;
     private OpusPlayer mOpusPlayer;
+    private View mRootView;
 
     public ScheduleFragment() {
         // Required empty public constructor
@@ -70,7 +74,8 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        View view = inflater.inflate(R.layout.fragment_schedule, container, false);
+        mRootView = inflater.inflate(R.layout.fragment_schedule, container, false);
+        setRetainInstance(true);
         // get a link to fragment activity
         mActivity = (MainActivity) getActivity();
         IntentFilter intentFilter = new IntentFilter(Api.Command.RECORDINGS);
@@ -78,6 +83,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         intentFilter.addAction(Api.EXCEPTION);
         intentFilter.addAction(ScheduleActivity.ACTION_EDIT_SCHEDULE);
         intentFilter.addAction(ScheduleActivity.ACTION_ADD_SCHEDULE);
+        intentFilter.addAction(Api.Command.GET_AUDIO);
         mActivity.registerReceiver(mBroadcastReceiver, intentFilter);
         mDaysAdapter = new DaysAdapter();
         mOpusPlayer = new OpusPlayer();
@@ -88,18 +94,13 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         allRecordingsAdapter = new ScheduleAllRecordingsAdapter(recordings, mActivity);
         allRecordingsAdapter.setOnRecordClickListener(this);
         scheduledRecordsAdapter = new ScheduledRecordsAdapter(schedules, mActivity);
-        // initialize all fragment views
-        initializeViews(view);
-        if (getArguments() != null) {
-            ArrayList<Receiver> receivers = getArguments().getParcelableArrayList(RECEIVERS_ARGS);
-            if (receivers.size() > 0 && MainActivity.statusChanged) {
-                clearLists();
-                getAllRecordingsFromServer(receivers);
-            } else if (MainActivity.statusChanged) {
-                clearLists();
-            }
-        }
-        return view;
+        return mRootView;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        initializeViews(mRootView);
     }
 
     /**
@@ -210,7 +211,6 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         // build a request with provided receivers
         Request.Builder builder = new Request.Builder();
         builder.command(Api.Command.SCHEDULES);
-        int requestCounter;
         for (Receiver receiver : receivers) {
             builder.receiverId(receiver.getReceiverId());
             // send request to server
@@ -229,6 +229,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
      * @param receivers for which to get recordings
      */
     public void getAllRecordingsFromServer(ArrayList<Receiver> receivers) {
+        showLoading();
         if (receivers == null) receivers = new ArrayList<>();
         getAllScheduledRecords(receivers);
         // hide the unselected text
@@ -245,7 +246,6 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
             builder.receiverId(receiver.getReceiverId());
             // send request to server
             SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
-            showLoading();
             try {
                 Thread.sleep(500);
             } catch (InterruptedException e) {
@@ -319,7 +319,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
 
     @Override
     public void onSchedulePlayClick(Schedule schedule, Recording recording, int position) {
-
+        startGettingAudioData(recording, position);
     }
 
     BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
@@ -354,11 +354,24 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
                             case Api.Command.RECORDINGS:
                                 onRecordingsReceived(jsonResponse);
                                 break;
+                            case Api.Command.GET_AUDIO: {
+                                onAudioDetailsReceived(jsonResponse);
+                                break;
+                            }
+                            case Api.EXCEPTION: {
+                                String message = jsonResponse.optString("message");
+                                if (message.equalsIgnoreCase("Ready for data.")) {
+                                    startReadingAudioData();
+                                } else {
+                                    onErrorOccurred();
+                                }
+                                break;
+
+                            }
                         }
                         break;
                 }
             } catch (Exception e) {
-                e.printStackTrace();
                 onErrorOccurred();
             }
         }
@@ -500,11 +513,52 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         });
     }
 
+
+    static int clickedRecordPosition = -1;
+    Recording clickedRecording;
+
     @Override
     public void onItemClick(Recording recording, int position) {
-//        mOpusPlayer.play(recording, position);
-        recording.setIsPlaying(!recording.isPlaying());
-        notifyAllRecordAdapter(position);
+        startGettingAudioData(recording, position);
+    }
+
+    private void startGettingAudioData(Recording recording, int position) {
+        if (!recording.isPlaying()) {
+            clickedRecordPosition = position;
+            clickedRecording = recording;
+            Request.Builder builder = new Request.Builder();
+            builder.command(Api.Command.SEND_AUDIO).recordingID(recording.getRecordingId());
+            SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
+        }
+    }
+
+    private void onAudioDetailsReceived(JSONObject audioDetails) {
+        String key = audioDetails.optString("key", null);
+        if (key != null) {
+            Request.Builder builder = new Request.Builder();
+            builder.command(Api.Command.RECEIVE).key(key);
+            SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
+        }
+    }
+
+    private void startReadingAudioData() {
+        SonarCloudApp.socketService.setAudioConnection();
+        try {
+            byte[] buffer = new byte[1024];
+            InputStream inputStream = SonarCloudApp.socketService.getAudioSocket().getInputStream();
+            File file = new File(mActivity.getCacheDir().getAbsolutePath() + File.separator + "tmp" + File.separator + "audioSRV.opus");
+            file.mkdirs();
+            BufferedOutputStream baos = new BufferedOutputStream(new FileOutputStream(file));
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer, 0, buffer.length)) != -1) {
+                baos.write(buffer, 0, bytesRead);
+            }
+            baos.flush();
+            clickedRecording.setFilePath(file.getAbsolutePath());
+            mOpusPlayer.play(clickedRecording, clickedPosition);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Override

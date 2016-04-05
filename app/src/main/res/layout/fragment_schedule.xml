@@ -46,15 +46,6 @@
             android:textColor="@drawable/text_color"/>
     </RadioGroup>
 
-    <ProgressBar
-        android:id="@+id/schedules_loadingProgress"
-        android:layout_width="30dp"
-        android:layout_height="30dp"
-        android:layout_below="@+id/schedule_list_selector"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="20dp"
-        android:visibility="gone"/>
-
     <include
         layout="@layout/schedule_all_layout"
         android:layout_width="match_parent"
@@ -77,4 +68,13 @@
         android:padding="16sp"
         android:text="@string/select_receiver_or_group"
         android:textSize="20sp"/>
+
+    <ProgressBar
+        android:id="@+id/schedules_loadingProgress"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_below="@+id/schedule_list_selector"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="20dp"
+        android:visibility="gone"/>
 </RelativeLayout>

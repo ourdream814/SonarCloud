@@ -85,7 +85,7 @@
         android:layout_width="match_parent"
         android:layout_height="60dp"
         android:clickable="true"
-        android:onClick="setLockPatern"
+        android:onClick="setLockPattern"
         android:background="@drawable/white_selectable_no_padding"
         android:id="@+id/lock_activity_setPattern"
         android:layout_below="@+id/lock_activity_enableLocking"

@@ -29,7 +29,7 @@ public class LockAppActivity extends AppCompatActivity implements CompoundButton
         mEnableLocking.setChecked(!mEnableLocking.isChecked());
     }
 
-    public void setLockPatern(View view) {
+    public void setLockPattern(View view) {
 
     }
 
@@ -38,17 +38,16 @@ public class LockAppActivity extends AppCompatActivity implements CompoundButton
     }
 
     public void onBackButtonClick(View view) {
-        onBackPressed();
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.setAction("lock");
+        setResult(RESULT_OK, intent);
+        finish();
     }
 
     @Override
     public void onBackPressed() {
         super.onBackPressed();
-        Intent intent = new Intent(this, MainActivity.class);
-        intent.setAction("lock");
-        setResult(RESULT_CANCELED, intent);
-        overridePendingTransition(R.anim.left_to_right, R.anim.right_to_left);
-        finish();
+//        overridePendingTransition(R.anim.left_to_right, R.anim.right_to_left);
     }
 
     @Override

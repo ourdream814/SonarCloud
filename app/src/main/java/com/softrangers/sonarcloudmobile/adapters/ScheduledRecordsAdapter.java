@@ -119,6 +119,7 @@ public class ScheduledRecordsAdapter extends RecyclerView.Adapter<ScheduledRecor
             mHour = (TextView) itemView.findViewById(R.id.schedule_hour_textView);
             mMinutesAmPm = (TextView) itemView.findViewById(R.id.schedule_minutes_textView);
             mPlayPauseBtn = (ImageButton) itemView.findViewById(R.id.schedule_record_item_playButton);
+            mPlayPauseBtn.setOnClickListener(this);
         }
 
         @Override

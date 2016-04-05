@@ -199,6 +199,10 @@ public class SocketService extends Service {
                     SonarCloudApp.getInstance().startKeepingConnection();
                 }
 
+                Intent intent = new Intent(SocketService.this, ConnectionReceiver.class);
+                intent.setAction(Api.CONNECTION_BROADCAST);
+                sendBroadcast(intent);
+
                 isConnected = true;
             } catch (Exception e) {
                 isConnected = false;
@@ -368,7 +372,7 @@ public class SocketService extends Service {
     class ReceiveMessage implements Runnable {
 
         final BufferedReader mReader;
-        final JSONObject mRequest;
+        JSONObject mRequest;
 
         public ReceiveMessage(BufferedReader reader, JSONObject request) {
             mReader = reader;
@@ -411,7 +415,12 @@ public class SocketService extends Service {
                 try {
                     response = new JSONObject(stringResponse);
                 } catch (JSONException e) {
-                    e.printStackTrace();
+                    stringResponse = DBManager.loadDataFromDB(mRequest);
+                    try {
+                        response = new JSONObject(stringResponse);
+                    } catch (JSONException e1) {
+                        e1.printStackTrace();
+                    }
                 }
                 if (response != null) {
                     command = response.optString("originalCommand", Api.EXCEPTION);

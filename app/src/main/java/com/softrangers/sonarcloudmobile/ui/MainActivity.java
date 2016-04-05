@@ -9,12 +9,14 @@ import android.content.IntentFilter;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.PersistableBundle;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AlertDialog;
+import android.util.Log;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
@@ -73,13 +75,8 @@ public class MainActivity extends BaseActivity implements
     public static Group selectedGroup;
     private IntentFilter intentFilter;
 
-    @Override
-    protected void onStart() {
-        super.onStart();
-        receiversFragment = new ReceiversFragment();
-        recordFragment = new RecordFragment();
-        settingsFragment = new SettingsFragment();
-        scheduleFragment = new ScheduleFragment();
+    static {
+        observers = new ArrayList<>();
     }
 
     @Override
@@ -89,7 +86,6 @@ public class MainActivity extends BaseActivity implements
         intentFilter = new IntentFilter(Api.Command.AUTHENTICATE);
         intentFilter.addAction(Api.EXCEPTION);
         registerReceiver(mLoginReceiver, intentFilter);
-        observers = new ArrayList<>();
         // initialize bottom buttons
         assert mToolbarTitle != null;
         mToolbarTitle = (TextView) findViewById(R.id.main_activity_toolbarTitle);
@@ -100,17 +96,49 @@ public class MainActivity extends BaseActivity implements
             startActivityForResult(intent, LOGIN_REQUEST_CODE);
             return;
         }
-        ConnectionReceiver.getInstance().addOnConnectedListener(this);
+
+        if (savedInstanceState != null) {
+            receiversFragment = (ReceiversFragment) getSupportFragmentManager().getFragment(savedInstanceState,
+                    receiversFragment.getClass().getSimpleName());
+            recordFragment = (RecordFragment) getSupportFragmentManager().getFragment(savedInstanceState,
+                    recordFragment.getClass().getSimpleName());
+            scheduleFragment = (ScheduleFragment) getSupportFragmentManager().getFragment(savedInstanceState,
+                    scheduleFragment.getClass().getSimpleName());
+            settingsFragment = (SettingsFragment) getSupportFragmentManager().getFragment(savedInstanceState,
+                    settingsFragment.getClass().getSimpleName());
+        } else {
+            receiversFragment = (ReceiversFragment) getSupportFragmentManager().findFragmentById(R.id.receivers_fragment);
+            recordFragment = (RecordFragment) getSupportFragmentManager().findFragmentById(R.id.record_fragment);
+            settingsFragment = (SettingsFragment) getSupportFragmentManager().findFragmentById(R.id.settings_fragment);
+            scheduleFragment = (ScheduleFragment) getSupportFragmentManager().findFragmentById(R.id.schedules_fragment);
+        }
+
+        mSelectedFragment = SelectedFragment.RECEIVERS;
+        changeFragment(receiversFragment);
+        invalidateViews();
+
         if (SonarCloudApp.socketService != null) {
             SonarCloudApp.socketService.restartConnection();
         }
+
         showLoading();
     }
 
+    @Override
+    public void onSaveInstanceState(Bundle outState, PersistableBundle outPersistentState) {
+        super.onSaveInstanceState(outState, outPersistentState);
+        getSupportFragmentManager().putFragment(outState, receiversFragment.getClass().getSimpleName(), receiversFragment);
+        getSupportFragmentManager().putFragment(outState, recordFragment.getClass().getSimpleName(), recordFragment);
+        getSupportFragmentManager().putFragment(outState, scheduleFragment.getClass().getSimpleName(), scheduleFragment);
+        getSupportFragmentManager().putFragment(outState, settingsFragment.getClass().getSimpleName(), settingsFragment);
+    }
+
     //------------------- Fragment controls -------------------//
+
     /**
      * Initialize bottom buttons and set the {@link ReceiversFragment} as the first fragment in
      * the activity
+     *
      * @see {@link MainActivity#changeFragment(Fragment)}
      */
     private void initializeBottomButtons() {
@@ -130,32 +158,26 @@ public class MainActivity extends BaseActivity implements
     }
 
     /**
-     * Change the curent fragment with the given fragment.
-     * method firs check if the fragment is not already added to the list then it hides all other
-     * fragments and then either shows or add the given fragment into app backstack
+     * Change the current fragment with the given fragment.
+     * method first check if the fragment is not already added to the list then it hides all other
+     * fragments and then either shows or add the given fragment into app back stack
+     *
      * @param newFragment which you want to show on the screen
      */
     private void changeFragment(Fragment newFragment) {
         FragmentManager fragmentManager = getSupportFragmentManager();
         FragmentTransaction transaction = fragmentManager.beginTransaction();
-        Fragment old = fragmentManager.findFragmentByTag(newFragment.getClass().getSimpleName());
         List<Fragment> fragments = fragmentManager.getFragments();
-        if (fragments != null) {
-            for (Fragment fragment : fragments) {
-                transaction.hide(fragment);
-            }
+        for (Fragment fragment : fragments) {
+            transaction.hide(fragment);
         }
-        if (old != null && old.equals(newFragment)) {
-            transaction.show(old);
-        } else {
-            transaction.add(R.id.main_fragmentContainer, newFragment,
-                    newFragment.getClass().getSimpleName());
-        }
+        transaction.show(newFragment);
         transaction.commit();
     }
 
     /**
      * Called when on of the four bottom buttons is clicked
+     *
      * @param view of the actual clicked button
      */
     public void onBottomButtonsClick(View view) {
@@ -257,25 +279,18 @@ public class MainActivity extends BaseActivity implements
         statusChanged = true;
     }
 
-    private void sendReceiversToScheduleFragment(ArrayList<Receiver> receivers) {
-        scheduleFragment = (ScheduleFragment) getSupportFragmentManager()
-                .findFragmentByTag(ScheduleFragment.class.getSimpleName());
-        if (scheduleFragment != null && statusChanged) {
-            if (receivers.size() <= 0) {
-                scheduleFragment.clearLists();
-            } else {
-                scheduleFragment.clearLists();
-                scheduleFragment.getAllRecordingsFromServer(receivers);
+    private void sendReceiversToScheduleFragment(final ArrayList<Receiver> receivers) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                if (receivers.size() <= 0) {
+                    scheduleFragment.clearLists();
+                } else {
+                    scheduleFragment.clearLists();
+                    scheduleFragment.getAllRecordingsFromServer(receivers);
+                }
             }
-            return;
-        } else if (statusChanged) {
-            scheduleFragment = new ScheduleFragment();
-            Bundle bundle = new Bundle();
-            bundle.putParcelableArrayList(ScheduleFragment.RECEIVERS_ARGS, receivers);
-            scheduleFragment.setArguments(bundle);
-            return;
-        }
-        scheduleFragment = new ScheduleFragment();
+        }).start();
     }
 
     /**
@@ -322,10 +337,6 @@ public class MainActivity extends BaseActivity implements
     public void onResponseSucceed(JSONObject response) {
         dismissLoading();
         SonarCloudApp.user = User.build(response);
-        // set first button selected and add fragment to container
-        mSelectedFragment = SelectedFragment.RECEIVERS;
-        changeFragment(receiversFragment);
-        invalidateViews();
     }
 
     /**
@@ -400,15 +411,14 @@ public class MainActivity extends BaseActivity implements
         overridePendingTransition(R.anim.enter, R.anim.exit);
     }
 
-    /**
-     * Unregister broadcast receiver
-     */
+
     @Override
-    protected void onStop() {
-        super.onStop();
+    protected void onDestroy() {
+        super.onDestroy();
         try {
             unregisterReceiver(mLoginReceiver);
         } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 

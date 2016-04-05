@@ -94,6 +94,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.fragment_record, container, false);
+        setRetainInstance(true);
         // Obtain a link to activity
         mActivity = (MainActivity) getActivity();
         PATH = mActivity.getCacheDir().getAbsolutePath()
@@ -155,6 +156,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         return view;
     }
 
+
     //---------------- Common methods ----------------//
 
     /**
@@ -162,8 +164,10 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
      */
     @Override
     public void onClick(View v) {
+
         switch (v.getId()) {
             case R.id.start_pause_recording_button:
+                // if there aren't any receiver or group selected inform user about this and return
                 if (opusRecorder.isRecording() && mRecordingLayout != RecordingLayout.RECORDINGS) {
                     Toast.makeText(mActivity, mActivity.getString(R.string.stop_recording), Toast.LENGTH_SHORT).show();
                     return;
@@ -184,7 +188,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                     Toast.makeText(mActivity, mActivity.getString(R.string.stop_recording), Toast.LENGTH_SHORT).show();
                     return;
                 }
-                // if the user did not select any receivers, inform about it and return
                 if (MainActivity.selectedReceivers.size() <= 0 && MainActivity.selectedGroup == null) {
                     Toast.makeText(mActivity, mActivity.getString(R.string.please_select_pa), Toast.LENGTH_SHORT).show();
                     return;
@@ -200,7 +203,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
     }
 
     /**
-     * Handles chechk state changes for top radio buttons
+     * Handles check state changes for top radio buttons
      */
     @Override
     public void onCheckedChanged(RadioGroup group, int checkedId) {
@@ -242,7 +245,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
     /**
      * Called when a record from the list is clicked
-     *
      * @param recording which was clicked
      * @param position  of the clicked record in the list
      * @param isPlaying either true or false, depends on record playing state
@@ -254,7 +256,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
     /**
      * Called when schedule button for a record within the list is clicked
-     *
      * @param recording whom schedule button was clicked
      * @param position  of the recording in the list
      */
@@ -273,7 +274,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
     /**
      * Called when send button for a record within the list is clicked
-     *
      * @param recording whom send button was clicked
      * @param position  of the record in the list
      */
@@ -292,7 +292,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
     /**
      * Load recorded files from the application cache
-     *
      * @return a list of recordings, each recording will contain a unique path to a file
      */
     public ArrayList<Recording> getRecordedFileList() {
@@ -389,13 +388,13 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
     /**
      * Delete a recorded file from application cache and reload the list
-     *
      * @param rec which needs to be deleted
      */
     private void deleteRecord(Recording rec) {
         File file = new File(rec.getFilePath());
         file.delete();
     }
+
 
     @Override
     public void onRecordStarted(final RecorderState recorderState) {
@@ -624,6 +623,10 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
 
     //---------------- Push to talk layout ----------------//
+
+    /**
+     * Called when PTT button is pressed or released
+     */
     @Override
     public boolean onTouch(View v, MotionEvent event) {
         if (opusRecorder.isRecording() && mRecordingLayout != RecordingLayout.PUSH_TO_TALK) {
@@ -672,7 +675,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
     /**
      * Notifies recordings list adapter about playing state of a recording changes
-     *
      * @param position to notify adapter about
      */
     private void notifyRecordingsAdapter(final int position) {
@@ -731,7 +733,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
     /**
      * Start the sending process
-     *
      * @param recording which needs to be sent
      */
     public void startSendingAudioProcess(Recording recording, ProgressBar progressBar, ImageButton send) {
@@ -782,7 +783,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
     /**
      * Called when the key and id for record are received from server
-     *
      * @param response which contains "key" and "recordingID"
      * @throws JSONException
      */
@@ -875,7 +875,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
     /**
      * called when the command which is sent to server fails
-     *
      * @param message with the problem description
      */
     private void onCommandFailure(String message) {
@@ -895,6 +894,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
      * Called when an exception occurs while sending the audio
      */
     private void onErrorOccurred() {
+
         isSending = false;
         isServerReady = false;
         if (mSendButton != null && mSendingProgress != null) {

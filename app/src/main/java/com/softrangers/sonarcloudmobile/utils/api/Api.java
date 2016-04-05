@@ -24,6 +24,7 @@ public class Api {
     public static final String METHOD = "method";
 
     public static final String AUDIO_DATA_RESULT = "sending audio result";
+    public static final String AUDIO_READY_TO_PLAY = "audio ready for playing";
     public static final String FORMAT = "opus";
 
     public static final String ACTION_ADD_GROUP = "com.softrangers.sonarcloudmobile.ADD_NEW_GROUP";
@@ -63,6 +64,8 @@ public class Api {
         public static final String SEND_AUDIO = "sendAudio";
         public static final String SEND = "send";
         public static final String NOOP = "noop";
+        public static final String GET_AUDIO = "getAudio";
+        public static final String RECEIVE = "receive";
     }
 
     /**

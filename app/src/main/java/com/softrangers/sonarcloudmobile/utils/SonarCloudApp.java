@@ -66,7 +66,6 @@ public class SonarCloudApp extends Application {
     private AlarmManager mAlarmManager;
     private PendingIntent mPendingIntent;
 
-
     @Override
     public void onCreate() {
         super.onCreate();

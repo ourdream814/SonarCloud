@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+import android.support.annotation.Nullable;
 import android.support.design.widget.Snackbar;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -34,6 +35,7 @@ import com.softrangers.sonarcloudmobile.utils.DBManager;
 import com.softrangers.sonarcloudmobile.utils.GroupObserver;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
+import com.softrangers.sonarcloudmobile.utils.api.ConnectionReceiver;
 import com.softrangers.sonarcloudmobile.utils.widgets.AnimatedExpandableListView;
 
 import org.json.JSONObject;
@@ -43,7 +45,7 @@ import java.util.ArrayList;
 
 public class ReceiversFragment extends BaseFragment implements RadioGroup.OnCheckedChangeListener,
         ReceiverListAdapter.OnItemClickListener,
-        GroupsListAdapter.OnGroupClickListener, GroupObserver {
+        GroupsListAdapter.OnGroupClickListener, GroupObserver, ConnectionReceiver.OnConnected {
 
     private static final String PA_LIST_STATE = "pa_list_state";
     private static final String GROUPS_LIST_STATE = "groups_list_state";
@@ -77,6 +79,14 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
             throw new ClassCastException(activity.toString()
                     + " must implement OnRecordFragmentListener");
         }
+
+        mActivity = (MainActivity) activity;
+        mActivity.addObserver(this);
+        IntentFilter intentFilter = new IntentFilter(Api.Command.ORGANISATIONS);
+        intentFilter.addAction(Api.Command.RECEIVERS);
+        intentFilter.addAction(Api.Command.RECEIVER_GROUPS);
+        intentFilter.addAction(Api.EXCEPTION);
+        mActivity.registerReceiver(mPAReceiver, intentFilter);
     }
 
     @Override
@@ -84,14 +94,8 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.fragment_receivers, container, false);
+        setRetainInstance(true);
         Log.i(this.getClass().getSimpleName(), "onCreateView()");
-        mActivity = (MainActivity) getActivity();
-        mActivity.addObserver(this);
-        IntentFilter intentFilter = new IntentFilter(Api.Command.ORGANISATIONS);
-        intentFilter.addAction(Api.Command.RECEIVERS);
-        intentFilter.addAction(Api.Command.RECEIVER_GROUPS);
-        intentFilter.addAction(Api.EXCEPTION);
-        mActivity.registerReceiver(mPAReceiver, intentFilter);
 
         // Obtain a link to the lists from layout
         mListView = (AnimatedExpandableListView) view.findViewById(R.id.receivers_expandableListView);
@@ -113,25 +117,14 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
 
         // Initialize PAs list
         mPASystems = new ArrayList<>();
-
         mReceiversLoading = (ProgressBar) view.findViewById(R.id.receivers_loadingProgress);
-
         if (savedInstanceState != null) {
             mPASystems = savedInstanceState.getParcelableArrayList(PA_LIST_STATE);
             mGroups = savedInstanceState.getParcelableArrayList(GROUPS_LIST_STATE);
             setUpGroupsListView(mGroups);
             setUpReceiversListView(mPASystems);
         } else {
-            showLoading();
-            // build a request
-            Request.Builder requestBuilder = new Request.Builder();
-            requestBuilder.command(Api.Command.ORGANISATIONS);
-            requestBuilder.userId(SonarCloudApp.getInstance().userId());
-            requestBuilder.seq(SonarCloudApp.SEQ_VALUE);
-            // send request to server
-            if (SonarCloudApp.socketService != null) {
-                SonarCloudApp.socketService.sendRequest(requestBuilder.build().toJSON());
-            }
+            ConnectionReceiver.getInstance().addOnConnectedListener(this);
         }
         return view;
     }
@@ -507,6 +500,25 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
         String[] values = {jsonRequest.toString(), response.toString()};
         DBManager.getInstance().insertInTable(Constants.RESPONSE_TABLE, values, columns);
         setUpReceiversListView(mPASystems);
+    }
+
+    @Override
+    public void onSocketConnected() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                showLoading();
+                // build a request
+                Request.Builder requestBuilder = new Request.Builder();
+                requestBuilder.command(Api.Command.ORGANISATIONS);
+                requestBuilder.userId(SonarCloudApp.getInstance().userId());
+                requestBuilder.seq(SonarCloudApp.SEQ_VALUE);
+                // send request to server
+                if (SonarCloudApp.socketService != null) {
+                    SonarCloudApp.socketService.sendRequest(requestBuilder.build().toJSON());
+                }
+            }
+        }).start();
     }
 
     public interface OnRecordFragmentListener {

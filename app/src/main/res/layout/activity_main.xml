@@ -80,10 +80,39 @@
             android:src="@mipmap/ic_settings"/>
     </LinearLayout>
 
-    <FrameLayout
-        android:id="@+id/main_fragmentContainer"
+    <fragment
+        android:id="@+id/receivers_fragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_below="@id/relativeLayout"
-        android:layout_above="@id/main_bottomBar"/>
+        android:layout_above="@id/main_bottomBar"
+        android:name="com.softrangers.sonarcloudmobile.ui.fragments.ReceiversFragment"
+        tools:layout="@layout/fragment_receivers"/>
+
+    <fragment
+        android:id="@+id/record_fragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/relativeLayout"
+        android:layout_above="@id/main_bottomBar"
+        android:name="com.softrangers.sonarcloudmobile.ui.fragments.RecordFragment"
+        tools:layout="@layout/fragment_record"/>
+
+    <fragment
+        android:id="@+id/schedules_fragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/relativeLayout"
+        android:layout_above="@id/main_bottomBar"
+        android:name="com.softrangers.sonarcloudmobile.ui.fragments.ScheduleFragment"
+        tools:layout="@layout/fragment_schedule"/>
+
+    <fragment
+        android:id="@+id/settings_fragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/relativeLayout"
+        android:layout_above="@id/main_bottomBar"
+        android:name="com.softrangers.sonarcloudmobile.ui.fragments.SettingsFragment"
+        tools:layout="@layout/fragment_settings"/>
 </RelativeLayout>
