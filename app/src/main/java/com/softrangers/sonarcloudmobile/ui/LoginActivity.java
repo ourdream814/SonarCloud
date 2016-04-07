@@ -14,7 +14,7 @@ import android.widget.ProgressBar;
 import com.softrangers.sonarcloudmobile.R;
 import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.models.User;
-import com.softrangers.sonarcloudmobile.utils.BaseActivity;
+import com.softrangers.sonarcloudmobile.utils.ui.BaseActivity;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
 import com.softrangers.sonarcloudmobile.utils.api.ConnectionReceiver;
@@ -60,6 +60,13 @@ public class LoginActivity extends BaseActivity {
         assert mSignIn != null;
         mSignIn.setTypeface(SonarCloudApp.avenirMedium);
         mUser = new User();
+
+        String email = SonarCloudApp.getInstance().getUserEmail();
+        String password = SonarCloudApp.getInstance().getUserPass();
+        if (email != null && password != null) {
+            mEmail.setText(email);
+            mPassword.setText(password);
+        }
     }
 
     BroadcastReceiver mLoginReceiver = new BroadcastReceiver() {
@@ -128,7 +135,7 @@ public class LoginActivity extends BaseActivity {
                 .seq(SonarCloudApp.SEQ_VALUE)
                 .build().toJSON();
         // Send the request
-        SonarCloudApp.socketService.sendRequest(req);
+        SonarCloudApp.dataSocketService.sendRequest(req);
     }
 
 
@@ -158,7 +165,7 @@ public class LoginActivity extends BaseActivity {
     public void onCommandFailure(final String message) {
         // show an alert dialog to user with server message
         alertUserAboutError(getString(R.string.login_error), message);
-        SonarCloudApp.socketService.restartConnection();
+        SonarCloudApp.dataSocketService.restartConnection();
         // hide loading ui
         runOnUiThread(new Runnable() {
             @Override

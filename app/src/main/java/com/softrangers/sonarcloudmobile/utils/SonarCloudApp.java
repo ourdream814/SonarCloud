@@ -8,31 +8,22 @@ import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Typeface;
 import android.os.IBinder;
-import android.support.design.widget.Snackbar;
 import android.support.v4.content.ContextCompat;
-import android.support.v4.util.TimeUtils;
 import android.util.Log;
-import android.view.View;
 
-import com.softrangers.sonarcloudmobile.R;
 import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.models.User;
-import com.softrangers.sonarcloudmobile.ui.MainActivity;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
 import com.softrangers.sonarcloudmobile.utils.api.ConnectionKeeper;
-import com.softrangers.sonarcloudmobile.utils.api.SocketService;
+import com.softrangers.sonarcloudmobile.utils.api.DataSocketService;
 
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import java.sql.Time;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Created by Eduard Albu on 12 03 2016
@@ -61,7 +52,8 @@ public class SonarCloudApp extends Application {
     public static Typeface avenirMedium;
     private static SharedPreferences preferences;
     public static User user;
-    public static SocketService socketService;
+    public static DataSocketService dataSocketService;
+    public static Intent dataSocketIntent;
 
     private AlarmManager mAlarmManager;
     private PendingIntent mPendingIntent;
@@ -77,11 +69,11 @@ public class SonarCloudApp extends Application {
         preferences = getSharedPreferences(LOGIN_RESULT, MODE_PRIVATE);
 
         // start socket service and connect to server
-        Intent socketIntent = new Intent(this, SocketService.class);
-        startService(socketIntent);
+        dataSocketIntent = new Intent(this, DataSocketService.class);
+        startService(dataSocketIntent);
 
-        // bind current class to the SocketService
-        bindService(new Intent(this, SocketService.class), mServiceConnection, Context.BIND_AUTO_CREATE);
+        // bind current class to the DataSocketService
+        bindService(new Intent(this, DataSocketService.class), mServiceConnection, Context.BIND_AUTO_CREATE);
     }
 
     public void requestUserIdentifier() {
@@ -96,7 +88,7 @@ public class SonarCloudApp extends Application {
             requestBuilder.action(Api.Action.RENEW);
             requestBuilder.identifier(identifier);
         }
-        socketService.sendRequest(requestBuilder.build().toJSON());
+        dataSocketService.sendRequest(requestBuilder.build().toJSON());
     }
 
     /**
@@ -113,18 +105,18 @@ public class SonarCloudApp extends Application {
         }
     }
 
-    // needed to bind SocketService to current class
+    // needed to bind DataSocketService to current class
     protected ServiceConnection mServiceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             // get the service instance
-            socketService = ((SocketService.LocalBinder) service).getService();
+            dataSocketService = ((DataSocketService.LocalBinder) service).getService();
         }
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
             // remove service instance
-            socketService = null;
+            dataSocketService = null;
         }
     };
 
@@ -239,23 +231,6 @@ public class SonarCloudApp extends Application {
         }
     };
 
-    public void loginUser() {
-        IntentFilter intentFilter = new IntentFilter(Api.Command.AUTHENTICATE);
-        intentFilter.addAction(Api.Command.IDENTIFIER);
-        intentFilter.addAction(Api.EXCEPTION);
-        registerReceiver(mLoginReceiver, intentFilter);
-        // Create a JSON request for server
-        JSONObject req = new Request.Builder().command(Api.Command.AUTHENTICATE)
-                .method(Api.Method.USER)
-                .device(Api.Device.CLIENT)
-                .email(getUserEmail())
-                .password(getUserPass())
-                .seq(SonarCloudApp.SEQ_VALUE)
-                .build().toJSON();
-        // Send the request
-        SonarCloudApp.socketService.sendRequest(req);
-    }
-
     /**
      * Called to notify about server response
      * @param response object which contains desired data
@@ -287,7 +262,7 @@ public class SonarCloudApp extends Application {
             saveUserLoginStatus(true, user.getId());
             startKeepingConnection();
             unregisterReceiver(mLoginReceiver);
-            socketService.restartConnection();
+            dataSocketService.restartConnection();
         } catch (Exception e) {
         }
     }
@@ -330,20 +305,29 @@ public class SonarCloudApp extends Application {
     /**
      * Clear all saved user data from preferences
      */
-    public void clearUserSession() {
+    public void clearUserSession(boolean clearAll) {
         SharedPreferences.Editor editor = preferences.edit();
         editor.remove(LOGIN_STATUS);
         editor.remove(USER_ID);
         editor.remove(USER_DATA);
         editor.remove(USER_IDENTIFIER);
-        editor.remove(USER_EMAIL);
-        editor.remove(USER_PASS);
+        if (clearAll) {
+            editor.remove(USER_EMAIL);
+            editor.remove(USER_PASS);
+        }
         editor.apply();
+    }
+
+    public void stopKeepingConnection() {
+        if (mAlarmManager != null && mPendingIntent != null) {
+            mAlarmManager.cancel(mPendingIntent);
+        }
     }
 
     @Override
     public void onTerminate() {
         super.onTerminate();
+        stopService(dataSocketIntent);
         if (mAlarmManager != null && mPendingIntent != null) {
             mAlarmManager.cancel(mPendingIntent);
         }

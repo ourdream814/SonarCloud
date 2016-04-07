@@ -3,7 +3,6 @@ package com.softrangers.sonarcloudmobile.utils.api;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.util.Log;
 
 import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
@@ -28,9 +27,9 @@ public class ConnectionKeeper extends BroadcastReceiver {
                 try {
                     JSONObject response = new JSONObject(intent.getExtras().getString(Api.Command.NOOP));
                     boolean success = response.optBoolean("success", false);
-                    if (!success) SonarCloudApp.socketService.restartConnection();
+                    if (!success) SonarCloudApp.dataSocketService.restartConnection();
                 } catch (Exception e) {
-                    SonarCloudApp.socketService.restartConnection();
+                    SonarCloudApp.dataSocketService.restartConnection();
                 }
                 break;
         }
@@ -40,8 +39,8 @@ public class ConnectionKeeper extends BroadcastReceiver {
         try {
             Request.Builder builder = new Request.Builder();
             builder.command(Api.Command.NOOP);
-            if (SonarCloudApp.socketService != null) {
-                SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
+            if (SonarCloudApp.dataSocketService != null) {
+                SonarCloudApp.dataSocketService.sendRequest(builder.build().toJSON());
             }
         } catch (Exception e) {
 

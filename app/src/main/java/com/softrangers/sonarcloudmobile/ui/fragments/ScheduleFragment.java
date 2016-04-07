@@ -10,6 +10,7 @@ import android.support.design.widget.Snackbar;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.helper.ItemTouchHelper;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -30,8 +31,8 @@ import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.models.Schedule;
 import com.softrangers.sonarcloudmobile.ui.MainActivity;
 import com.softrangers.sonarcloudmobile.ui.ScheduleActivity;
-import com.softrangers.sonarcloudmobile.utils.BaseFragment;
-import com.softrangers.sonarcloudmobile.utils.OpusPlayer;
+import com.softrangers.sonarcloudmobile.utils.ui.BaseFragment;
+import com.softrangers.sonarcloudmobile.utils.opus.OpusPlayer;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
 
@@ -214,7 +215,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         for (Receiver receiver : receivers) {
             builder.receiverId(receiver.getReceiverId());
             // send request to server
-            SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
+            SonarCloudApp.dataSocketService.sendRequest(builder.build().toJSON());
             try {
                 Thread.sleep(500);
             } catch (InterruptedException e) {
@@ -245,7 +246,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         for (Receiver receiver : receivers) {
             builder.receiverId(receiver.getReceiverId());
             // send request to server
-            SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
+            SonarCloudApp.dataSocketService.sendRequest(builder.build().toJSON());
             try {
                 Thread.sleep(500);
             } catch (InterruptedException e) {
@@ -340,36 +341,41 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
                         break;
                     }
                     default:
-                        JSONObject jsonResponse = new JSONObject(intent.getExtras().getString(action));
-                        boolean success = jsonResponse.optBoolean("success", false);
-                        if (!success) {
-                            String message = jsonResponse.optString("message", mActivity.getString(R.string.unknown_error));
-                            onCommandFailure(message);
-                            return;
-                        }
-                        switch (action) {
-                            case Api.Command.SCHEDULES:
-                                onSchedulesReceived(jsonResponse);
-                                break;
-                            case Api.Command.RECORDINGS:
-                                onRecordingsReceived(jsonResponse);
-                                break;
-                            case Api.Command.GET_AUDIO: {
-                                onAudioDetailsReceived(jsonResponse);
-                                break;
+                        if (mActivity.mSelectedFragment == MainActivity.SelectedFragment.RECORDINGS) {
+                            JSONObject jsonResponse = new JSONObject(intent.getExtras().getString(action));
+                            boolean success = jsonResponse.optBoolean("success", false);
+                            if (!success) {
+                                String message = jsonResponse.optString("message", mActivity.getString(R.string.unknown_error));
+                                onCommandFailure(message);
+                                return;
                             }
-                            case Api.EXCEPTION: {
-                                String message = jsonResponse.optString("message");
-                                if (message.equalsIgnoreCase("Ready for data.")) {
-                                    startReadingAudioData();
-                                } else {
-                                    onErrorOccurred();
+                            switch (action) {
+                                case Api.Command.SCHEDULES:
+                                    onSchedulesReceived(jsonResponse);
+                                    break;
+                                case Api.Command.RECORDINGS:
+                                    onRecordingsReceived(jsonResponse);
+                                    break;
+                                case Api.Command.GET_AUDIO: {
+                                    onAudioDetailsReceived(jsonResponse);
+                                    break;
                                 }
-                                break;
+                                case Api.EXCEPTION: {
 
+                                    String message = jsonResponse.optString("message");
+                                    if (message.equalsIgnoreCase("Ready for data.")) {
+                                        startReadingAudioData();
+                                    } else {
+                                        onErrorOccurred();
+                                    }
+
+                                    break;
+
+                                }
                             }
                         }
                         break;
+
                 }
             } catch (Exception e) {
                 onErrorOccurred();
@@ -493,7 +499,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         builder.command(Api.Command.DELETE_SCHEDULE);
         builder.scheduleId(schedule.getScheduleID());
         // send request to server
-        SonarCloudApp.socketService.sendRequest(builder.build().toJSON());
+        SonarCloudApp.dataSocketService.sendRequest(builder.build().toJSON());
     }
 
     @Override
@@ -536,27 +542,32 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
             Request.Builder builder = new Request.Builder();
             builder.command(Api.Command.GET_AUDIO).recordingID(recording.getRecordingId());
             JSONObject request = builder.build().toJSON();
-            SonarCloudApp.socketService.sendRequest(request);
+            Log.i(this.getClass().getSimpleName(), "Get audio: " + request.toString());
+            SonarCloudApp.dataSocketService.sendRequest(request);
         }
     }
 
     private void onAudioDetailsReceived(JSONObject audioDetails) {
+        Log.i(this.getClass().getSimpleName(), "Get audio response: " + audioDetails.toString());
         String key = audioDetails.optString("key", null);
         if (key != null) {
             Request.Builder builder = new Request.Builder();
             builder.command(Api.Command.RECEIVE).key(key);
             JSONObject request = builder.build().toJSON();
-            SonarCloudApp.socketService.sendRequest(request);
+            request.remove("seq");
+            Log.i(this.getClass().getSimpleName(), request.toString());
+            SonarCloudApp.dataSocketService.sendRequest(request);
         }
     }
 
     private void startReadingAudioData() {
-        SonarCloudApp.socketService.setAudioConnection();
+        SonarCloudApp.dataSocketService.setAudioConnection();
         try {
             byte[] buffer = new byte[1024];
-            InputStream inputStream = SonarCloudApp.socketService.getAudioSocket().getInputStream();
-            File file = new File(mActivity.getCacheDir().getAbsolutePath() + File.separator + "tmp" + File.separator + "audioSRV.opus");
-            file.mkdirs();
+            InputStream inputStream = SonarCloudApp.dataSocketService.getAudioSocket().getInputStream();
+            File dir = new File(mActivity.getCacheDir().getAbsolutePath() + File.separator + "tmp");
+            dir.mkdir();
+            File file = new File(dir, "audioSRV.opus");
             BufferedOutputStream baos = new BufferedOutputStream(new FileOutputStream(file));
             int bytesRead;
             while ((bytesRead = inputStream.read(buffer, 0, buffer.length)) != -1) {

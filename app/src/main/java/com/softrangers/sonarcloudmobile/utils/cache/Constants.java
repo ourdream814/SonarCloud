@@ -1,4 +1,6 @@
-package com.softrangers.sonarcloudmobile.utils;
+package com.softrangers.sonarcloudmobile.utils.cache;
+
+import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 
 import java.io.File;
 

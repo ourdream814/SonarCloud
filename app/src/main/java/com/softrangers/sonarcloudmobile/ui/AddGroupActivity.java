@@ -17,7 +17,7 @@ import com.softrangers.sonarcloudmobile.models.Group;
 import com.softrangers.sonarcloudmobile.models.PASystem;
 import com.softrangers.sonarcloudmobile.models.Receiver;
 import com.softrangers.sonarcloudmobile.models.Request;
-import com.softrangers.sonarcloudmobile.utils.BaseActivity;
+import com.softrangers.sonarcloudmobile.utils.ui.BaseActivity;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
 
@@ -172,7 +172,7 @@ public class AddGroupActivity extends BaseActivity {
             }
             builder.receivers(receivers);
             JSONObject object = builder.build().toJSON();
-            SonarCloudApp.socketService.sendRequest(object);
+            SonarCloudApp.dataSocketService.sendRequest(object);
             showLoading();
         }
     };

@@ -29,11 +29,11 @@
             android:name=".ui.LoginActivity"
             android:screenOrientation="portrait"/>
         <activity
-            android:name=".utils.BaseActivity"
+            android:name=".utils.ui.BaseActivity"
             android:screenOrientation="portrait"/>
 
         <service
-            android:name=".utils.api.SocketService"
+            android:name=".utils.api.DataSocketService"
             android:exported="false"/>
 
         <!-- Notifies when the socket is connected -->

@@ -1,4 +1,4 @@
-package com.softrangers.sonarcloudmobile.utils;
+package com.softrangers.sonarcloudmobile.utils.ui;
 
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
@@ -11,6 +11,7 @@ import android.view.View;
 import android.widget.TextView;
 
 import com.softrangers.sonarcloudmobile.R;
+import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 
 /**
  * Created by Eduard Albu on 14 03 2016

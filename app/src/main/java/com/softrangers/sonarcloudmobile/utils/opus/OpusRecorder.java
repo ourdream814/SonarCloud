@@ -1,10 +1,12 @@
-package com.softrangers.sonarcloudmobile.utils;
+package com.softrangers.sonarcloudmobile.utils.opus;
 
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.support.annotation.Nullable;
 import android.util.Log;
+
+import com.softrangers.sonarcloudmobile.utils.AudioProcessor;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

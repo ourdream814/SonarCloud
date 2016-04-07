@@ -24,7 +24,7 @@ import com.softrangers.sonarcloudmobile.models.Receiver;
 import com.softrangers.sonarcloudmobile.models.Recording;
 import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.models.Schedule;
-import com.softrangers.sonarcloudmobile.utils.BaseActivity;
+import com.softrangers.sonarcloudmobile.utils.ui.BaseActivity;
 import com.softrangers.sonarcloudmobile.utils.RepeatingCheck;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
@@ -273,7 +273,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                     mRequestBuilder.time(schedule.getTime());
                 }
                 JSONObject request = mRequestBuilder.build().toJSON();
-                SonarCloudApp.socketService.sendRequest(request);
+                SonarCloudApp.dataSocketService.sendRequest(request);
                 break;
             }
             case ACTION_ADD_SCHEDULE: {
@@ -451,11 +451,11 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                 String action = intent.getAction();
                 JSONObject jsonResponse = new JSONObject(intent.getExtras().getString(action));
                 boolean success = jsonResponse.optBoolean("success", false);
-                if (!success && !SonarCloudApp.socketService.isAudioConnectionReady()) {
+                if (!success && !SonarCloudApp.dataSocketService.isAudioConnectionReady()) {
                     String message = jsonResponse.optString("message", getString(R.string.unknown_error));
                     onCommandFailure(message);
                     return;
-                } else if (SonarCloudApp.socketService.isAudioConnectionReady()) {
+                } else if (SonarCloudApp.dataSocketService.isAudioConnectionReady()) {
                     onAudioSent();
                     return;
                 }
@@ -528,7 +528,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
             }
             JSONObject request = requestBuilder.build().toJSON();
             request.put(Api.Options.PLAY_IMMEDIATELY, false).put(Api.Options.KEEP, schedule.getTime() == null);
-            SonarCloudApp.socketService.sendRequest(request);
+            SonarCloudApp.dataSocketService.sendRequest(request);
         } catch (Exception e) {
             onErrorOccurred();
             e.printStackTrace();
@@ -547,10 +547,10 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         recording.setRecordingId(response.getInt("recordingID"));
         Request.Builder requestBuilder = new Request.Builder();
         requestBuilder.command(Api.Command.SEND).key(sendAudioKey);
-        SonarCloudApp.socketService.setAudioConnection();
-        while (!SonarCloudApp.socketService.isAudioConnectionReady()) {
+        SonarCloudApp.dataSocketService.setAudioConnection();
+        while (!SonarCloudApp.dataSocketService.isAudioConnectionReady()) {
         }
-        SonarCloudApp.socketService.prepareServerForAudio(requestBuilder.build().toJSON());
+        SonarCloudApp.dataSocketService.prepareServerForAudio(requestBuilder.build().toJSON());
     }
 
     /**
@@ -565,7 +565,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
             BufferedInputStream bis = new BufferedInputStream(fis);
             bis.read(bytes, 0, bytes.length);
             bis.close();
-            SonarCloudApp.socketService.sendAudio(bytes);
+            SonarCloudApp.dataSocketService.sendAudio(bytes);
         } catch (Exception e) {
             onErrorOccurred();
             e.printStackTrace();
@@ -579,7 +579,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         MainActivity.statusChanged = true;
         File file = new File(recording.getFilePath());
         file.delete();
-        SonarCloudApp.socketService.closeAudioConnection();
+        SonarCloudApp.dataSocketService.closeAudioConnection();
         Intent intent = new Intent(this, MainActivity.class);
         intent.setAction(mAction);
         setResult(RESULT_OK, intent);

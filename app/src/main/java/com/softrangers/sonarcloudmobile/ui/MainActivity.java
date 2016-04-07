@@ -8,7 +8,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.PersistableBundle;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
@@ -16,7 +15,6 @@ import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AlertDialog;
-import android.util.Log;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
@@ -26,15 +24,14 @@ import android.widget.Toast;
 import com.softrangers.sonarcloudmobile.R;
 import com.softrangers.sonarcloudmobile.models.Group;
 import com.softrangers.sonarcloudmobile.models.Receiver;
-import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.models.User;
 import com.softrangers.sonarcloudmobile.ui.fragments.ReceiversFragment;
 import com.softrangers.sonarcloudmobile.ui.fragments.RecordFragment;
 import com.softrangers.sonarcloudmobile.ui.fragments.ScheduleFragment;
 import com.softrangers.sonarcloudmobile.ui.fragments.SettingsFragment;
-import com.softrangers.sonarcloudmobile.utils.BaseActivity;
-import com.softrangers.sonarcloudmobile.utils.GroupObserver;
-import com.softrangers.sonarcloudmobile.utils.Observable;
+import com.softrangers.sonarcloudmobile.utils.ui.BaseActivity;
+import com.softrangers.sonarcloudmobile.utils.observers.GroupObserver;
+import com.softrangers.sonarcloudmobile.utils.observers.Observable;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
 import com.softrangers.sonarcloudmobile.utils.api.ConnectionReceiver;
@@ -63,7 +60,7 @@ public class MainActivity extends BaseActivity implements
     private ImageButton mAnnouncementsSelector;
     private ImageButton mRecordingsSelector;
     private ImageButton mSettingsSelector;
-    private SelectedFragment mSelectedFragment;
+    public SelectedFragment mSelectedFragment;
 
     private static ReceiversFragment receiversFragment;
     private static RecordFragment recordFragment;
@@ -91,11 +88,6 @@ public class MainActivity extends BaseActivity implements
         mToolbarTitle = (TextView) findViewById(R.id.main_activity_toolbarTitle);
         mToolbarTitle.setTypeface(SonarCloudApp.avenirMedium);
         initializeBottomButtons();
-        if (!SonarCloudApp.getInstance().isLoggedIn()) {
-            Intent intent = new Intent(this, LoginActivity.class);
-            startActivityForResult(intent, LOGIN_REQUEST_CODE);
-            return;
-        }
 
         if (savedInstanceState != null) {
             receiversFragment = (ReceiversFragment) getSupportFragmentManager().getFragment(savedInstanceState,
@@ -116,9 +108,14 @@ public class MainActivity extends BaseActivity implements
         mSelectedFragment = SelectedFragment.RECEIVERS;
         changeFragment(receiversFragment);
         invalidateViews();
+        if (!SonarCloudApp.getInstance().isLoggedIn()) {
+            Intent intent = new Intent(this, LoginActivity.class);
+            startActivityForResult(intent, LOGIN_REQUEST_CODE);
+            return;
+        }
 
-        if (SonarCloudApp.socketService != null) {
-            SonarCloudApp.socketService.restartConnection();
+        if (SonarCloudApp.dataSocketService != null) {
+            SonarCloudApp.dataSocketService.restartConnection();
         }
 
         showLoading();
@@ -296,7 +293,7 @@ public class MainActivity extends BaseActivity implements
     /**
      * Helps to keep track of current selected fragment
      */
-    enum SelectedFragment {
+    public enum SelectedFragment {
         RECEIVERS, ANNOUNCEMENTS, RECORDINGS, SETTINGS
     }
 
@@ -346,8 +343,8 @@ public class MainActivity extends BaseActivity implements
      *                or a message from server
      */
     public void onCommandFailure(String message) {
-        if (message.equalsIgnoreCase("Invalid identifier and secret combination.")) {
-            SonarCloudApp.getInstance().loginUser();
+        if (message.toLowerCase().contains("identifier and secret combination.")) {
+            logout(null);
         } else {
             dismissLoading();
             if (message != null) {
@@ -368,9 +365,10 @@ public class MainActivity extends BaseActivity implements
      * Logout the current user and delete all personal data from the application
      */
     public void logout(View view) {
-        SonarCloudApp.getInstance().clearUserSession();
+        SonarCloudApp.getInstance().clearUserSession(false);
         Intent intent = new Intent(this, LoginActivity.class);
         startActivityForResult(intent, LOGIN_REQUEST_CODE);
+        SonarCloudApp.getInstance().stopKeepingConnection();
     }
 
 
@@ -416,6 +414,8 @@ public class MainActivity extends BaseActivity implements
     protected void onDestroy() {
         super.onDestroy();
         try {
+            SonarCloudApp.getInstance().startKeepingConnection();
+            stopService(SonarCloudApp.dataSocketIntent);
             unregisterReceiver(mLoginReceiver);
         } catch (Exception e) {
             e.printStackTrace();
@@ -446,8 +446,14 @@ public class MainActivity extends BaseActivity implements
                         break;
                     case ACTION_LOGIN:
                         registerReceiver(mLoginReceiver, intentFilter);
-                        SonarCloudApp.socketService.restartConnection();
+                        SonarCloudApp.dataSocketService.restartConnection();
+                        try {
+                            Thread.sleep(200);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
                         showLoading();
+                        receiversFragment.onSocketConnected();
                         break;
                     case ScheduleActivity.ACTION_ADD_SCHEDULE:
                         if (recordFragment != null && recordFragment.mRecAdapter != null) {
@@ -463,6 +469,7 @@ public class MainActivity extends BaseActivity implements
                 break;
             case RESULT_CANCELED:
                 if (action.equals(ACTION_LOGIN)) {
+                    SonarCloudApp.getInstance().clearUserSession(true);
                     finish();
                 }
                 break;

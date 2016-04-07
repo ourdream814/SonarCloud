@@ -3,14 +3,13 @@ package com.softrangers.sonarcloudmobile.ui;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.Button;
 import android.widget.ExpandableListView;
 
 import com.softrangers.sonarcloudmobile.R;
 import com.softrangers.sonarcloudmobile.adapters.ReceiverListAdapter;
 import com.softrangers.sonarcloudmobile.models.PASystem;
 import com.softrangers.sonarcloudmobile.models.Receiver;
-import com.softrangers.sonarcloudmobile.utils.BaseActivity;
+import com.softrangers.sonarcloudmobile.utils.ui.BaseActivity;
 import com.softrangers.sonarcloudmobile.utils.widgets.AnimatedExpandableListView;
 
 import java.util.ArrayList;

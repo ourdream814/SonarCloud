@@ -1,4 +1,4 @@
-package com.softrangers.sonarcloudmobile.utils;
+package com.softrangers.sonarcloudmobile.utils.ui;
 
 import android.support.v4.app.Fragment;
 

@@ -1,10 +1,11 @@
-package com.softrangers.sonarcloudmobile.utils;
+package com.softrangers.sonarcloudmobile.utils.opus;
 
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
 
 import com.softrangers.sonarcloudmobile.models.Recording;
+import com.softrangers.sonarcloudmobile.utils.AudioProcessor;
 
 import java.io.BufferedInputStream;
 import java.io.File;

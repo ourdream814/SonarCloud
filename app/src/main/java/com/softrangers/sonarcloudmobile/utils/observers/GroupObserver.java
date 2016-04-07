@@ -1,4 +1,4 @@
-package com.softrangers.sonarcloudmobile.utils;
+package com.softrangers.sonarcloudmobile.utils.observers;
 
 import com.softrangers.sonarcloudmobile.models.Group;
 

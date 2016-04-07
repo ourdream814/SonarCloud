@@ -1,4 +1,4 @@
-package com.softrangers.sonarcloudmobile.utils;
+package com.softrangers.sonarcloudmobile.utils.observers;
 
 /**
  * Created by Eduard Albu on 15 03 2016
