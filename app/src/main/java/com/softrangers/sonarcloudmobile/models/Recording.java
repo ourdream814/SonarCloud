@@ -28,6 +28,7 @@ public class Recording implements Parcelable {
     private boolean mIsPlaying;
     private String mFilePath;
     private String mRecordName;
+    private boolean mIsLoading;
 
     public Recording() {}
 
@@ -46,6 +47,7 @@ public class Recording implements Parcelable {
         mIsPlaying = in.readByte() != 0;
         mFilePath = in.readString();
         mRecordName = in.readString();
+        mIsLoading = in.readByte() != 0;
     }
 
     public static final Creator<Recording> CREATOR = new Creator<Recording>() {
@@ -176,6 +178,14 @@ public class Recording implements Parcelable {
         mRecordName = recordName;
     }
 
+    public boolean isLoading() {
+        return mIsLoading;
+    }
+
+    public void setLoading(boolean loading) {
+        mIsLoading = loading;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (o instanceof Recording) {
@@ -193,7 +203,7 @@ public class Recording implements Parcelable {
      * @param timeSeconds time in seconds
      * @return the user friendly time string
      */
-    private String stringForTime(int timeSeconds) {
+    public String stringForTime(int timeSeconds) {
         StringBuilder formatBuilder = new StringBuilder();
 //        int totalSeconds = timeMs / 1000;
 
@@ -277,5 +287,6 @@ public class Recording implements Parcelable {
         dest.writeByte((byte) (mIsPlaying ? 1 : 0));
         dest.writeString(mFilePath);
         dest.writeString(mRecordName);
+        dest.writeByte((byte) (mIsLoading ? 1 : 0));
     }
 }

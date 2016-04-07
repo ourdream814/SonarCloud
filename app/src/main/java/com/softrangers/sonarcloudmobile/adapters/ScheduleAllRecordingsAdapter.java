@@ -6,15 +6,15 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.SeekBar;
 import android.widget.TextView;
 
 import com.softrangers.sonarcloudmobile.R;
 import com.softrangers.sonarcloudmobile.models.Recording;
 
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
 
 /**
  * Created by eduard on 3/20/16.
@@ -89,16 +89,33 @@ public class ScheduleAllRecordingsAdapter extends RecyclerView.Adapter<ScheduleA
     @Override
     public void onBindViewHolder(ViewHolder holder, int position) {
         holder.mRecording = mRecordings.get(position);
-        // TODO: 3/20/16 change the icon for playing state
-        holder.mPlayStopButton.setImageResource(
-                holder.mRecording.isPlaying() ? R.mipmap.ic_button_pause : R.mipmap.ic_play
-        );
 
-        holder.mRecordTitle.setText(
-                mContext.getString(R.string.recording) + " " + holder.mRecording.getRecordingId()
-        );
+        if (holder.mRecording.isLoading()) {
+            holder.mPlayStopButton.setVisibility(View.INVISIBLE);
+        } else if (holder.mRecording.isPlaying()) {
+            holder.mPlayStopButton.setVisibility(View.GONE);
+        } else {
+            holder.mPlayStopButton.setVisibility(View.VISIBLE);
+        }
 
-        holder.mRecordLength.setText(holder.mRecording.getFromatedLength());
+        holder.mRecordTitle.setVisibility(holder.mRecording.isPlaying() ? View.GONE : View.VISIBLE);
+        holder.mRecordLength.setVisibility(holder.mRecording.isPlaying() ? View.GONE : View.VISIBLE);
+        holder.mLoadingProgress.setVisibility(holder.mRecording.isLoading() ? View.VISIBLE : View.GONE);
+        holder.mSeekBarLayout.setVisibility(holder.mRecording.isPlaying() ? View.VISIBLE : View.GONE);
+
+        if (holder.mSeekBarLayout.getVisibility() == View.VISIBLE) {
+            holder.mSeekBar.setMax(holder.mRecording.getLength());
+        }
+
+        if (holder.mRecordTitle.getVisibility() == View.VISIBLE) {
+            holder.mRecordTitle.setText(
+                    mContext.getString(R.string.recording) + " " + holder.mRecording.getRecordingId()
+            );
+        }
+
+        if (holder.mRecordLength.getVisibility() == View.VISIBLE) {
+            holder.mRecordLength.setText(holder.mRecording.getFromatedLength());
+        }
     }
 
     @Override
@@ -106,10 +123,14 @@ public class ScheduleAllRecordingsAdapter extends RecyclerView.Adapter<ScheduleA
         return mRecordings.size();
     }
 
-    public class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
+    public class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener, SeekBar.OnSeekBarChangeListener {
         final ImageButton mPlayStopButton;
         final TextView mRecordTitle;
         final TextView mRecordLength;
+        final SeekBar mSeekBar;
+        final TextView mSeekBarTime;
+        final LinearLayout mSeekBarLayout;
+        final ProgressBar mLoadingProgress;
         Recording mRecording;
 
         public ViewHolder(View itemView) {
@@ -118,8 +139,13 @@ public class ScheduleAllRecordingsAdapter extends RecyclerView.Adapter<ScheduleA
             mPlayStopButton = (ImageButton) itemView.findViewById(R.id.schedule_all_record_item_playButton);
             mRecordTitle = (TextView) itemView.findViewById(R.id.schedule_all_record_item_nameText);
             mRecordLength = (TextView) itemView.findViewById(R.id.schedule_all_record_timeText);
+            mSeekBar = (SeekBar) itemView.findViewById(R.id.schedule_all_record_seekBar);
+            mSeekBarTime = (TextView) itemView.findViewById(R.id.schedule_all_record_seekBarTime);
+            mSeekBarLayout = (LinearLayout) itemView.findViewById(R.id.schedule_all_record_seekBarLayout);
+            mLoadingProgress = (ProgressBar) itemView.findViewById(R.id.schedule_all_record_loadingProgress);
 
             mPlayStopButton.setOnClickListener(this);
+            mSeekBar.setOnSeekBarChangeListener(this);
         }
 
         @Override
@@ -132,12 +158,32 @@ public class ScheduleAllRecordingsAdapter extends RecyclerView.Adapter<ScheduleA
             }
             lastSelectedItem = currentSelectedItem;
             if (mOnRecordClickListener != null) {
-                mOnRecordClickListener.onItemClick(mRecording, getAdapterPosition());
+                mOnRecordClickListener.onItemClick(mRecording, mSeekBar, mSeekBarTime, getAdapterPosition());
             }
+        }
+
+        @Override
+        public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+            if (fromUser) {
+                if (mOnRecordClickListener != null) {
+                    mOnRecordClickListener.onSeekBarChanged(mRecording, mSeekBar, mSeekBarTime, getAdapterPosition(),  progress);
+                }
+            }
+        }
+
+        @Override
+        public void onStartTrackingTouch(SeekBar seekBar) {
+
+        }
+
+        @Override
+        public void onStopTrackingTouch(SeekBar seekBar) {
+
         }
     }
 
     public interface OnRecordClickListener {
-        void onItemClick(Recording recording, int position);
+        void onItemClick(Recording recording, SeekBar seekBar, TextView seekBarTime, int position);
+        void onSeekBarChanged(Recording recording, SeekBar seekBar, TextView seekBarTime, int position,  int progress);
     }
 }

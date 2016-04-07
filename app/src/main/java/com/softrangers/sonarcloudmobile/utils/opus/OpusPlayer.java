@@ -3,6 +3,7 @@ package com.softrangers.sonarcloudmobile.utils.opus;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
+import android.util.Log;
 
 import com.softrangers.sonarcloudmobile.models.Recording;
 import com.softrangers.sonarcloudmobile.utils.AudioProcessor;
@@ -63,9 +64,8 @@ public class OpusPlayer {
         bis.read(bytes, 0, bytes.length);
         bis.close();
         channelOption = AudioFormat.CHANNEL_OUT_MONO;
-        AudioProcessor audioProcessor;
-        // Get the decoder
-        audioProcessor = AudioProcessor.decoder(SAMPLE_RATE, CHANNEL);
+
+        AudioProcessor audioProcessor = AudioProcessor.decoder(SAMPLE_RATE, CHANNEL);
 
         int minimumBufferSize = AudioTrack.getMinBufferSize(
                 SAMPLE_RATE,
@@ -82,11 +82,23 @@ public class OpusPlayer {
                 AudioFormat.ENCODING_PCM_16BIT, minimumBufferSize, AudioTrack.MODE_STREAM);
 
         // Now figure our lives
-        audioTrack.play();
         recording.setIsPlaying(true);
         if (mOnPlayListener != null) {
             mOnPlayListener.onStartPlayback(recording, position);
         }
+        audioTrack.play();
+        audioTrack.setPlaybackPositionUpdateListener(new AudioTrack.OnPlaybackPositionUpdateListener() {
+            @Override
+            public void onMarkerReached(AudioTrack track) {
+
+            }
+
+            @Override
+            public void onPeriodicNotification(AudioTrack track) {
+
+            }
+        });
+        long lastDuration = -1;
         // Now decode in sequence
         while (recording.isPlaying()) {
             // Read more
@@ -124,6 +136,12 @@ public class OpusPlayer {
                 if (buffer.length >= minimumBufferSize || payloadOffset >= bytes.length) {
                     // Write the audio data in full
                     audioTrack.write(buffer, 0, buffer.length);
+                    // get track current position and call onPlaying() method to update UI
+                    long duration = (audioTrack.getPlaybackHeadPosition() / audioTrack.getSampleRate()) * 1000;
+                    if (lastDuration < duration) {
+                        if (mOnPlayListener != null) mOnPlayListener.onPlaying(recording, position, duration);
+                        lastDuration = duration;
+                    }
                     // We are done with our buffer
                     buffer = null;
                 } // Else fill more
@@ -146,5 +164,7 @@ public class OpusPlayer {
         void onStopPlayback(Recording recording, int position);
 
         void onPlaybackError(Recording recording, int position);
+
+        void onPlaying(Recording recording, int position, long duration);
     }
 }

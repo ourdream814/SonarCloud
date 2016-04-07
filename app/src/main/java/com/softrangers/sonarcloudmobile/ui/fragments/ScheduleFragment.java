@@ -18,6 +18,7 @@ import android.view.ViewGroup;
 import android.widget.ProgressBar;
 import android.widget.RadioGroup;
 import android.widget.RelativeLayout;
+import android.widget.SeekBar;
 import android.widget.TextView;
 
 import com.softrangers.sonarcloudmobile.R;
@@ -31,6 +32,7 @@ import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.models.Schedule;
 import com.softrangers.sonarcloudmobile.ui.MainActivity;
 import com.softrangers.sonarcloudmobile.ui.ScheduleActivity;
+import com.softrangers.sonarcloudmobile.utils.api.AudioSocket;
 import com.softrangers.sonarcloudmobile.utils.ui.BaseFragment;
 import com.softrangers.sonarcloudmobile.utils.opus.OpusPlayer;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
@@ -38,10 +40,6 @@ import com.softrangers.sonarcloudmobile.utils.api.Api;
 
 import org.json.JSONObject;
 
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStream;
 import java.util.ArrayList;
 
 
@@ -85,6 +83,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         intentFilter.addAction(ScheduleActivity.ACTION_EDIT_SCHEDULE);
         intentFilter.addAction(ScheduleActivity.ACTION_ADD_SCHEDULE);
         intentFilter.addAction(Api.Command.GET_AUDIO);
+        intentFilter.addAction(Api.AUDIO_READY_TO_PLAY);
         mActivity.registerReceiver(mBroadcastReceiver, intentFilter);
         mDaysAdapter = new DaysAdapter();
         mOpusPlayer = new OpusPlayer();
@@ -319,8 +318,11 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     }
 
     @Override
-    public void onSchedulePlayClick(Schedule schedule, Recording recording, int position) {
-        startGettingAudioData(recording, position);
+    public void onSchedulePlayClick(Schedule schedule, Recording recording, SeekBar seekBar, TextView seekBarTime, int position) {
+        recording.setLoading(true);
+        notifyAllRecordAdapter(position);
+        AudioSocket.getInstance().setAudioConnection();
+        startGettingAudioData(recording, seekBar, seekBarTime, position);
     }
 
     BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
@@ -338,6 +340,11 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
                         Schedule schedule = intent.getExtras().getParcelable(ScheduleActivity.ACTION_EDIT_SCHEDULE);
                         scheduledRecordsAdapter.removeItem(clickedPosition);
                         scheduledRecordsAdapter.addItem(schedule, clickedPosition);
+                        break;
+                    }
+                    case Api.AUDIO_READY_TO_PLAY: {
+                        String path = intent.getExtras().getString(action);
+                        onAudioReady(path);
                         break;
                     }
                     default:
@@ -361,21 +368,18 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
                                     break;
                                 }
                                 case Api.EXCEPTION: {
-
                                     String message = jsonResponse.optString("message");
                                     if (message.equalsIgnoreCase("Ready for data.")) {
-                                        startReadingAudioData();
+                                        AudioSocket.getInstance().startReadingAudioData();
                                     } else {
                                         onErrorOccurred();
                                     }
 
                                     break;
-
                                 }
                             }
                         }
                         break;
-
                 }
             } catch (Exception e) {
                 onErrorOccurred();
@@ -529,16 +533,28 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
 
     static int clickedRecordPosition = -1;
     Recording clickedRecording;
+    SeekBar mClickedItemSeekBar;
+    TextView mClickedItemSeekBarTime;
 
     @Override
-    public void onItemClick(Recording recording, int position) {
-        startGettingAudioData(recording, position);
+    public void onItemClick(Recording recording, SeekBar seekBar, TextView seekBarTime, int position) {
+        recording.setLoading(true);
+        notifyAllRecordAdapter(position);
+        AudioSocket.getInstance().setAudioConnection();
+        startGettingAudioData(recording, seekBar, seekBarTime, position);
     }
 
-    private void startGettingAudioData(Recording recording, int position) {
+    @Override
+    public void onSeekBarChanged(Recording recording, SeekBar seekBar, TextView seekBarTime, int position, int progress) {
+
+    }
+
+    private void startGettingAudioData(Recording recording, SeekBar seekBar, TextView seekBarTime, int position) {
         if (!recording.isPlaying()) {
             clickedRecordPosition = position;
             clickedRecording = recording;
+            mClickedItemSeekBar = seekBar;
+            mClickedItemSeekBarTime = seekBarTime;
             Request.Builder builder = new Request.Builder();
             builder.command(Api.Command.GET_AUDIO).recordingID(recording.getRecordingId());
             JSONObject request = builder.build().toJSON();
@@ -556,44 +572,49 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
             JSONObject request = builder.build().toJSON();
             request.remove("seq");
             Log.i(this.getClass().getSimpleName(), request.toString());
-            SonarCloudApp.dataSocketService.sendRequest(request);
+            AudioSocket.getInstance().sendRequest(request);
         }
     }
 
-    private void startReadingAudioData() {
-        SonarCloudApp.dataSocketService.setAudioConnection();
-        try {
-            byte[] buffer = new byte[1024];
-            InputStream inputStream = SonarCloudApp.dataSocketService.getAudioSocket().getInputStream();
-            File dir = new File(mActivity.getCacheDir().getAbsolutePath() + File.separator + "tmp");
-            dir.mkdir();
-            File file = new File(dir, "audioSRV.opus");
-            BufferedOutputStream baos = new BufferedOutputStream(new FileOutputStream(file));
-            int bytesRead;
-            while ((bytesRead = inputStream.read(buffer, 0, buffer.length)) != -1) {
-                baos.write(buffer, 0, bytesRead);
-            }
-            baos.flush();
-            clickedRecording.setFilePath(file.getAbsolutePath());
-            mOpusPlayer.play(clickedRecording, clickedPosition);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    private void onAudioReady(String path) {
+        clickedRecording.setFilePath(path);
+        mOpusPlayer.play(clickedRecording, clickedRecordPosition);
     }
 
     @Override
     public void onStartPlayback(Recording recording, int position) {
+        Log.i(this.getClass().getSimpleName(), "Start playback");
+        recording.setLoading(false);
         notifyAllRecordAdapter(position);
+        AudioSocket.getInstance().closeAudioConnection();
     }
 
     @Override
     public void onStopPlayback(Recording recording, int position) {
+        Log.i(this.getClass().getSimpleName(), "Stop playback");
+        recording.setLoading(false);
         notifyAllRecordAdapter(position);
+        AudioSocket.getInstance().closeAudioConnection();
     }
 
     @Override
     public void onPlaybackError(Recording recording, int position) {
+        Log.i(this.getClass().getSimpleName(), "Error playback");
+        recording.setLoading(false);
         notifyAllRecordAdapter(position);
+        AudioSocket.getInstance().closeAudioConnection();
+    }
+
+    @Override
+    public void onPlaying(final Recording recording, int position, final long duration) {
+        mActivity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                int progress = (int) (duration / 1000);
+                mClickedItemSeekBar.setProgress(progress);
+                mClickedItemSeekBarTime.setText(recording.stringForTime(progress));
+            }
+        });
     }
 
     private void notifyAllRecordAdapter(final int position) {
@@ -601,6 +622,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
             @Override
             public void run() {
                 allRecordingsAdapter.notifyItemChanged(position);
+                scheduledRecordsAdapter.notifyItemChanged(position);
             }
         });
     }

@@ -1,19 +1,21 @@
 package com.softrangers.sonarcloudmobile.utils.api;
 
-import android.app.Service;
 import android.content.Intent;
-import android.os.IBinder;
 import android.os.Looper;
-import android.support.annotation.Nullable;
 import android.util.Log;
 
+import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.cache.DBManager;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -36,22 +38,18 @@ import javax.net.ssl.X509TrustManager;
  *
  * @author eduard.albu@gmail.com
  */
-public class AudioSocketService extends Service {
+public class AudioSocket {
 
     public static SSLSocket audioSocket;
     public OutputStream mOutputStream;
-    public BufferedReader readIn;
-    public BufferedWriter writeOut;
+    public static BufferedReader readIn;
+    public static BufferedWriter writeOut;
     private static SSLSocketFactory sslSocketFactory;
-    private ExecutorService mResponseExecutor;
-    private ExecutorService mRequestExecutor;
+    private static ExecutorService mResponseExecutor;
+    private static ExecutorService mRequestExecutor;
+    private static AudioSocket instance;
 
-    /**
-     * Initiate all components needed to build a new SSLSocket object
-     */
-    @Override
-    public void onCreate() {
-        super.onCreate();
+    private AudioSocket() {
         try {
             // initialize socket factory and all-trust TrustyManager
             SecureRandom secureRandom = new SecureRandom();
@@ -65,10 +63,9 @@ public class AudioSocketService extends Service {
         }
     }
 
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        new AudioConnection();
-        return START_NOT_STICKY;
+    public static synchronized AudioSocket getInstance() {
+        if (instance == null) instance = new AudioSocket();
+        return instance;
     }
 
     /**
@@ -90,6 +87,10 @@ public class AudioSocketService extends Service {
 
     public void setAudioConnection() {
         new AudioConnection();
+    }
+
+    public void startReadingAudioData() {
+        new ReadAudioData();
     }
 
     public void closeAudioConnection() {
@@ -166,7 +167,7 @@ public class AudioSocketService extends Service {
                     mOutputStream.flush();
                     Log.i(this.getClass().getSimpleName(), "Audio data sent: " + mBytes.length);
                     Intent responseContainer = new Intent(Api.AUDIO_DATA_RESULT);
-                    sendBroadcast(responseContainer);
+                    SonarCloudApp.getInstance().sendBroadcast(responseContainer);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -262,15 +263,40 @@ public class AudioSocketService extends Service {
                 Intent responseContainer = new Intent(command);
                 responseContainer.putExtra(command, stringResponse);
                 responseContainer.putExtra(Api.REQUEST_MESSAGE, mRequest.toString());
-                sendBroadcast(responseContainer);
+                SonarCloudApp.getInstance().sendBroadcast(responseContainer);
             }
         }
     }
 
-    @Nullable
-    @Override
-    public IBinder onBind(Intent intent) {
-        return null;
+    class ReadAudioData implements Runnable {
+
+        final File mFile;
+        public ReadAudioData() {
+            File dir = new File(SonarCloudApp.getInstance().getCacheDir().getAbsolutePath() + File.separator + "tmp");
+            dir.mkdir();
+            mFile = new File(dir, "audioSRV.opus");
+            new Thread(this, this.getClass().getSimpleName()).start();
+        }
+
+        @Override
+        public void run() {
+            try {
+                byte[] buffer = new byte[1024];
+                InputStream inputStream = audioSocket.getInputStream();
+                BufferedOutputStream baos = new BufferedOutputStream(new FileOutputStream(mFile));
+                int bytesRead;
+                while ((bytesRead = inputStream.read(buffer, 0, buffer.length)) != -1) {
+                    baos.write(buffer, 0, bytesRead);
+                }
+                baos.flush();
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                Intent intent = new Intent(Api.AUDIO_READY_TO_PLAY);
+                intent.putExtra(Api.AUDIO_READY_TO_PLAY, mFile.getAbsolutePath());
+                SonarCloudApp.getInstance().sendBroadcast(intent);
+            }
+        }
     }
 
     /**

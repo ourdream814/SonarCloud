@@ -6,6 +6,9 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.SeekBar;
 import android.widget.TextView;
 
 import com.softrangers.sonarcloudmobile.R;
@@ -81,21 +84,45 @@ public class ScheduledRecordsAdapter extends RecyclerView.Adapter<ScheduledRecor
     @Override
     public void onBindViewHolder(ViewHolder holder, int position) {
         holder.mSchedule = mSchedules.get(position);
-        holder.mRecordTitle.setText(
-                mContext.getString(R.string.recording) + " " + holder.mSchedule.getRecordingID()
-        );
 
-        Date date = holder.mSchedule.getScheduleTime() == null ?
-                holder.mSchedule.getScheduleDate() : holder.mSchedule.getScheduleTime();
+        Recording recording = holder.mSchedule.getRecording();
 
-        holder.mRecordLength.setText(holder.mSchedule.getRecording().getFromatedLength());
+        if (recording.isLoading()) {
+            holder.mPlayPauseBtn.setVisibility(View.INVISIBLE);
+        } else if (recording.isPlaying()) {
+            holder.mPlayPauseBtn.setVisibility(View.GONE);
+        } else {
+            holder.mPlayPauseBtn.setVisibility(View.VISIBLE);
+        }
 
-        holder.mHour.setText(holder.mSchedule.getStringHour(date));
-        holder.mMinutesAmPm.setText(holder.mSchedule.getStringMinute(date));
-        // TODO: 3/20/16 change the icon for playing state
-        holder.mPlayPauseBtn.setImageResource(
-                holder.mSchedule.isSelected() ? R.mipmap.ic_play : R.mipmap.ic_play
-        );
+        holder.mLoadingProgress.setVisibility(recording.isLoading() ? View.VISIBLE : View.GONE);
+
+        if (recording.isPlaying()) {
+            holder.mSeekBarLayout.setVisibility(View.VISIBLE);
+            holder.mSeekBar.setMax(recording.getLength());
+            holder.mRecordTitle.setVisibility(View.GONE);
+            holder.mRecordLength.setVisibility(View.GONE);
+            holder.mHour.setVisibility(View.GONE);
+            holder.mMinutesAmPm.setVisibility(View.GONE);
+        } else {
+            holder.mSeekBarLayout.setVisibility(View.GONE);
+            holder.mRecordTitle.setVisibility(View.VISIBLE);
+            holder.mRecordLength.setVisibility(View.VISIBLE);
+            holder.mHour.setVisibility(View.VISIBLE);
+            holder.mMinutesAmPm.setVisibility(View.VISIBLE);
+
+            holder.mRecordTitle.setText(
+                    mContext.getString(R.string.recording) + " " + holder.mSchedule.getRecordingID()
+            );
+
+            Date date = holder.mSchedule.getScheduleTime() == null ?
+                    holder.mSchedule.getScheduleDate() : holder.mSchedule.getScheduleTime();
+
+            holder.mRecordLength.setText(holder.mSchedule.getRecording().getFromatedLength());
+
+            holder.mHour.setText(holder.mSchedule.getStringHour(date));
+            holder.mMinutesAmPm.setText(holder.mSchedule.getStringMinute(date));
+        }
     }
 
     @Override
@@ -103,12 +130,16 @@ public class ScheduledRecordsAdapter extends RecyclerView.Adapter<ScheduledRecor
         return mSchedules.size();
     }
 
-    public class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
+    public class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener, SeekBar.OnSeekBarChangeListener {
         final TextView mRecordTitle;
         final TextView mRecordLength;
         final TextView mHour;
         final TextView mMinutesAmPm;
         final ImageButton mPlayPauseBtn;
+        final SeekBar mSeekBar;
+        final TextView mSeekBarTime;
+        final LinearLayout mSeekBarLayout;
+        final ProgressBar mLoadingProgress;
         Schedule mSchedule;
 
         public ViewHolder(View itemView) {
@@ -119,7 +150,12 @@ public class ScheduledRecordsAdapter extends RecyclerView.Adapter<ScheduledRecor
             mHour = (TextView) itemView.findViewById(R.id.schedule_hour_textView);
             mMinutesAmPm = (TextView) itemView.findViewById(R.id.schedule_minutes_textView);
             mPlayPauseBtn = (ImageButton) itemView.findViewById(R.id.schedule_record_item_playButton);
+            mSeekBar = (SeekBar) itemView.findViewById(R.id.schedule_all_record_seekBar);
+            mSeekBarTime = (TextView) itemView.findViewById(R.id.schedule_all_record_seekBarTime);
+            mSeekBarLayout = (LinearLayout) itemView.findViewById(R.id.schedule_all_record_seekBarLayout);
+            mLoadingProgress = (ProgressBar) itemView.findViewById(R.id.schedule_all_record_loadingProgress);
             mPlayPauseBtn.setOnClickListener(this);
+            mSeekBar.setOnSeekBarChangeListener(this);
         }
 
         @Override
@@ -138,7 +174,7 @@ public class ScheduledRecordsAdapter extends RecyclerView.Adapter<ScheduledRecor
 
                     if (mOnScheduleClickListener != null) {
                         mOnScheduleClickListener.onSchedulePlayClick(mSchedule, mSchedule.getRecording(),
-                                currentSelectedPosition);
+                                mSeekBar, mSeekBarTime, currentSelectedPosition);
                     }
                     break;
                 default:
@@ -148,11 +184,32 @@ public class ScheduledRecordsAdapter extends RecyclerView.Adapter<ScheduledRecor
                     break;
             }
         }
+
+        @Override
+        public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+            if (fromUser) {
+                if (mOnScheduleClickListener != null) {
+                    mOnScheduleClickListener.onSeekBarChanged(mSchedule.getRecording(), mSeekBar, mSeekBarTime, getAdapterPosition(),  progress);
+                }
+            }
+        }
+
+        @Override
+        public void onStartTrackingTouch(SeekBar seekBar) {
+
+        }
+
+        @Override
+        public void onStopTrackingTouch(SeekBar seekBar) {
+
+        }
     }
 
     public interface OnScheduleClickListener {
         void onScheduleClick(Schedule schedule, int position);
 
-        void onSchedulePlayClick(Schedule schedule, Recording recording, int position);
+        void onSchedulePlayClick(Schedule schedule, Recording recording, SeekBar seekBar, TextView seekBarTime, int position);
+
+        void onSeekBarChanged(Recording recording, SeekBar seekBar, TextView seekBarTime, int position,  int progress);
     }
 }

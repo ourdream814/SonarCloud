@@ -72,8 +72,22 @@
             tools:text="0:00"/>
     </LinearLayout>
 
+    <include layout="@layout/playing_item_layout"/>
+
     <View android:layout_width="match_parent"
           android:layout_height="1dp"
           android:layout_alignParentBottom="true"
           android:background="#cacaca"/>
+
+    <ProgressBar
+        style="?android:attr/progressBarStyleSmall"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:id="@+id/schedule_all_record_loadingProgress"
+        android:layout_centerVertical="true"
+        android:layout_alignLeft="@+id/schedule_record_item_playButton"
+        android:layout_alignStart="@+id/schedule_record_item_playButton"
+        android:layout_alignRight="@+id/schedule_record_item_playButton"
+        android:layout_alignEnd="@+id/schedule_record_item_playButton"/>
 </RelativeLayout>

@@ -19,7 +19,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.ProgressBar;
-import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
@@ -32,11 +31,12 @@ import com.softrangers.sonarcloudmobile.models.Recording;
 import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.ui.MainActivity;
 import com.softrangers.sonarcloudmobile.ui.ScheduleActivity;
+import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
+import com.softrangers.sonarcloudmobile.utils.api.Api;
+import com.softrangers.sonarcloudmobile.utils.api.AudioSocket;
 import com.softrangers.sonarcloudmobile.utils.opus.OpusPlayer;
 import com.softrangers.sonarcloudmobile.utils.opus.OpusRecorder;
 import com.softrangers.sonarcloudmobile.utils.opus.OpusRecorder.RecorderState;
-import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
-import com.softrangers.sonarcloudmobile.utils.api.Api;
 import com.softrangers.sonarcloudmobile.utils.widgets.MillisChronometer;
 
 import org.json.JSONException;
@@ -69,9 +69,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
     private ImageButton mStartStreamingBtn;
     private ImageButton mStartRecordingBtn;
     private ImageButton mStopRecordingBtn;
-    private RadioButton mRecordButton;
-    private RadioButton mStreamingButton;
-    private RadioButton mPushTTButton;
     private ImageButton mPTTButton;
     private MainActivity mActivity;
     private StreamingState mStreamingState;
@@ -115,9 +112,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         // Radio group which holds all buttons used to change the layouts visibility within this fragment
         RadioGroup layoutSelector = (RadioGroup) view.findViewById(R.id.send_audio_type_selector);
         layoutSelector.setOnCheckedChangeListener(this);
-        mRecordButton = (RadioButton) view.findViewById(R.id.records_selector_button);
-        mStreamingButton = (RadioButton) view.findViewById(R.id.stream_selector_button);
-        mPushTTButton = (RadioButton) view.findViewById(R.id.ptt_selector_button);
 
         // Recordings list
         RecyclerView recordingsList = (RecyclerView) view.findViewById(R.id.make_announcement_recordingsList);
@@ -488,7 +482,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                             case DISMISS_EVENT_TIMEOUT:
                             case DISMISS_EVENT_CONSECUTIVE:
                             case DISMISS_EVENT_MANUAL:
-                                SonarCloudApp.dataSocketService.sendAudio(audioData);
+                                AudioSocket.getInstance().sendAudio(audioData);
                                 break;
                         }
                     }
@@ -614,6 +608,11 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         notifyRecordingsAdapter(position);
     }
 
+    @Override
+    public void onPlaying(Recording recording, int position, long duration) {
+
+    }
+
     /**
      * Used to track the streaming process state
      */
@@ -706,7 +705,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                     }
                     JSONObject jsonResponse = new JSONObject(intent.getExtras().getString(action));
                     boolean success = jsonResponse.optBoolean("success", false);
-                    if (!success && !SonarCloudApp.dataSocketService.isAudioConnectionReady()) {
+                    if (!success && !AudioSocket.getInstance().isAudioConnectionReady()) {
                         String message = jsonResponse.optString("message");
                         onCommandFailure(message);
                         return;
@@ -739,7 +738,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
      */
     public void startSendingAudioProcess(Recording recording, ProgressBar progressBar, ImageButton send) {
         try {
-            if (SonarCloudApp.dataSocketService.isAudioConnectionReady()) {
+            if (AudioSocket.getInstance().isAudioConnectionReady()) {
                 onServerReadyForData();
                 return;
             }
@@ -770,7 +769,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
             }
             JSONObject request = requestBuilder.build().toJSON();
             request.put(Api.Options.PLAY_IMMEDIATELY, true).put(Api.Options.KEEP, false);
-            SonarCloudApp.dataSocketService.sendRequest(request);
+            AudioSocket.getInstance().sendRequest(request);
         } catch (Exception e) {
             isSending = false;
             if (mSendButton != null && mSendingProgress != null) {
@@ -795,11 +794,11 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         Request.Builder requestBuilder = new Request.Builder();
         requestBuilder.command(Api.Command.SEND).key(sendAudioKey);
         JSONObject request = requestBuilder.build().toJSON();
-        SonarCloudApp.dataSocketService.setAudioConnection();
-        while (!SonarCloudApp.dataSocketService.isAudioConnectionReady()) {
+        AudioSocket.getInstance().setAudioConnection();
+        while (!AudioSocket.getInstance().isAudioConnectionReady()) {
             // wait till connection will be ok to start sending audio data
         }
-        SonarCloudApp.dataSocketService.prepareServerForAudio(requestBuilder.build().toJSON());
+        AudioSocket.getInstance().sendRequest(request);
     }
 
     /**
@@ -818,7 +817,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                     BufferedInputStream bis = new BufferedInputStream(fis);
                     bis.read(bytes, 0, bytes.length);
                     bis.close();
-                    SonarCloudApp.dataSocketService.sendAudio(bytes);
+                    AudioSocket.getInstance().sendAudio(bytes);
                 } catch (Exception e) {
                     isSending = false;
                     if (mSendButton != null && mSendingProgress != null) {
@@ -843,7 +842,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
             }
             case STREAMING: {
                 mActivity.dismissLoading();
-                opusRecorder.startStreaming(SonarCloudApp.dataSocketService.getAudioSocket());
+                opusRecorder.startStreaming(AudioSocket.getInstance().getAudioSocket());
                 break;
             }
         }
@@ -860,7 +859,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
             case PTT:
             case RECORDING: {
                 MainActivity.statusChanged = true;
-                SonarCloudApp.dataSocketService.closeAudioConnection();
+                AudioSocket.getInstance().closeAudioConnection();
                 Snackbar.make(mRecordAndSend, mActivity.getString(R.string.audio_sent), Snackbar.LENGTH_SHORT).show();
                 if (mSendButton != null && mSendingProgress != null) {
                     mSendButton.setVisibility(View.VISIBLE);

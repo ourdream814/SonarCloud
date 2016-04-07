@@ -49,4 +49,18 @@
           android:layout_height="1dp"
         android:layout_alignParentBottom="true"
           android:background="#cacaca"/>
+
+    <include layout="@layout/playing_item_layout"/>
+
+    <ProgressBar
+        style="?android:attr/progressBarStyleSmall"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:id="@+id/schedule_all_record_loadingProgress"
+        android:layout_centerVertical="true"
+        android:layout_alignLeft="@+id/schedule_all_record_item_playButton"
+        android:layout_alignStart="@+id/schedule_all_record_item_playButton"
+        android:layout_alignRight="@+id/schedule_all_record_item_playButton"
+        android:layout_alignEnd="@+id/schedule_all_record_item_playButton"/>
 </RelativeLayout>

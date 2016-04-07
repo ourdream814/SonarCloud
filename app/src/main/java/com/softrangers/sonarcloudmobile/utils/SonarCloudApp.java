@@ -43,7 +43,6 @@ public class SonarCloudApp extends Application {
 
     public static final String NO_IDENTIFIER = "no identifier";
     public static final String NO_DATA = "no_user_server_data";
-    private static final String IS_FIRST_LAUNCH = "is first launch";
 
     public static int SEQ_VALUE;
 
@@ -73,7 +72,7 @@ public class SonarCloudApp extends Application {
         startService(dataSocketIntent);
 
         // bind current class to the DataSocketService
-        bindService(new Intent(this, DataSocketService.class), mServiceConnection, Context.BIND_AUTO_CREATE);
+        bindService(dataSocketIntent, mDataServiceConnection, Context.BIND_AUTO_CREATE);
     }
 
     public void requestUserIdentifier() {
@@ -106,7 +105,7 @@ public class SonarCloudApp extends Application {
     }
 
     // needed to bind DataSocketService to current class
-    protected ServiceConnection mServiceConnection = new ServiceConnection() {
+    protected ServiceConnection mDataServiceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             // get the service instance

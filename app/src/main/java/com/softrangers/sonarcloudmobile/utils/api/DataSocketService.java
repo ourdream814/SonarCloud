@@ -238,8 +238,10 @@ public class DataSocketService extends Service {
                 stringResponse = builder.toString();
                 Log.i(this.getClass().getSimpleName(), "Response: " + stringResponse);
                 if (stringResponse == null || stringResponse.equals("null")) {
-                    stringResponse = DBManager.loadDataFromDB(mRequest);
+                    restartConnection();
+                    sendRequest(mRequest);
                     Log.e(this.getClass().getSimpleName(), "Response is: " + stringResponse);
+                    return;
                 }
 
             } catch (Exception e) {

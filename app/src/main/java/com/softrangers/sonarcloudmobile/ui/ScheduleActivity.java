@@ -24,6 +24,7 @@ import com.softrangers.sonarcloudmobile.models.Receiver;
 import com.softrangers.sonarcloudmobile.models.Recording;
 import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.models.Schedule;
+import com.softrangers.sonarcloudmobile.utils.api.AudioSocket;
 import com.softrangers.sonarcloudmobile.utils.ui.BaseActivity;
 import com.softrangers.sonarcloudmobile.utils.RepeatingCheck;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
@@ -451,11 +452,11 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                 String action = intent.getAction();
                 JSONObject jsonResponse = new JSONObject(intent.getExtras().getString(action));
                 boolean success = jsonResponse.optBoolean("success", false);
-                if (!success && !SonarCloudApp.dataSocketService.isAudioConnectionReady()) {
+                if (!success && !AudioSocket.getInstance().isAudioConnectionReady()) {
                     String message = jsonResponse.optString("message", getString(R.string.unknown_error));
                     onCommandFailure(message);
                     return;
-                } else if (SonarCloudApp.dataSocketService.isAudioConnectionReady()) {
+                } else if (AudioSocket.getInstance().isAudioConnectionReady()) {
                     onAudioSent();
                     return;
                 }
@@ -547,10 +548,10 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         recording.setRecordingId(response.getInt("recordingID"));
         Request.Builder requestBuilder = new Request.Builder();
         requestBuilder.command(Api.Command.SEND).key(sendAudioKey);
-        SonarCloudApp.dataSocketService.setAudioConnection();
-        while (!SonarCloudApp.dataSocketService.isAudioConnectionReady()) {
+        AudioSocket.getInstance().setAudioConnection();
+        while (!AudioSocket.getInstance().isAudioConnectionReady()) {
         }
-        SonarCloudApp.dataSocketService.prepareServerForAudio(requestBuilder.build().toJSON());
+        AudioSocket.getInstance().sendRequest(requestBuilder.build().toJSON());
     }
 
     /**
@@ -565,7 +566,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
             BufferedInputStream bis = new BufferedInputStream(fis);
             bis.read(bytes, 0, bytes.length);
             bis.close();
-            SonarCloudApp.dataSocketService.sendAudio(bytes);
+            AudioSocket.getInstance().sendAudio(bytes);
         } catch (Exception e) {
             onErrorOccurred();
             e.printStackTrace();
@@ -579,7 +580,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         MainActivity.statusChanged = true;
         File file = new File(recording.getFilePath());
         file.delete();
-        SonarCloudApp.dataSocketService.closeAudioConnection();
+        AudioSocket.getInstance().closeAudioConnection();
         Intent intent = new Intent(this, MainActivity.class);
         intent.setAction(mAction);
         setResult(RESULT_OK, intent);
