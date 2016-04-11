@@ -44,7 +44,7 @@ public class ConnectionReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         String action = intent.getAction();
         switch (action) {
-            case Api.CONNECTION_BROADCAST:
+            case Api.CONNECTION_SUCCEED:
                 if (listeners == null || listeners.size() <= 0) break;
                 for (OnConnected connected : listeners) {
                     connected.onSocketConnected();

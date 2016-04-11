@@ -80,9 +80,6 @@ public class MainActivity extends BaseActivity implements
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        intentFilter = new IntentFilter(Api.Command.AUTHENTICATE);
-        intentFilter.addAction(Api.EXCEPTION);
-        registerReceiver(mLoginReceiver, intentFilter);
         // initialize bottom buttons
         assert mToolbarTitle != null;
         mToolbarTitle = (TextView) findViewById(R.id.main_activity_toolbarTitle);
@@ -99,10 +96,10 @@ public class MainActivity extends BaseActivity implements
             settingsFragment = (SettingsFragment) getSupportFragmentManager().getFragment(savedInstanceState,
                     settingsFragment.getClass().getSimpleName());
         } else {
-            receiversFragment = (ReceiversFragment) getSupportFragmentManager().findFragmentById(R.id.receivers_fragment);
-            recordFragment = (RecordFragment) getSupportFragmentManager().findFragmentById(R.id.record_fragment);
-            settingsFragment = (SettingsFragment) getSupportFragmentManager().findFragmentById(R.id.settings_fragment);
-            scheduleFragment = (ScheduleFragment) getSupportFragmentManager().findFragmentById(R.id.schedules_fragment);
+            receiversFragment = new ReceiversFragment();
+            recordFragment = new RecordFragment();
+            settingsFragment = new SettingsFragment();
+            scheduleFragment = new ScheduleFragment();
         }
 
         mSelectedFragment = SelectedFragment.RECEIVERS;
@@ -113,6 +110,10 @@ public class MainActivity extends BaseActivity implements
             startActivityForResult(intent, LOGIN_REQUEST_CODE);
             return;
         }
+
+        intentFilter = new IntentFilter(Api.Command.AUTHENTICATE);
+        intentFilter.addAction(Api.EXCEPTION);
+        registerReceiver(mLoginReceiver, intentFilter);
 
         if (SonarCloudApp.dataSocketService != null) {
             SonarCloudApp.dataSocketService.restartConnection();
@@ -128,7 +129,9 @@ public class MainActivity extends BaseActivity implements
         getSupportFragmentManager().putFragment(outState, recordFragment.getClass().getSimpleName(), recordFragment);
         getSupportFragmentManager().putFragment(outState, scheduleFragment.getClass().getSimpleName(), scheduleFragment);
         getSupportFragmentManager().putFragment(outState, settingsFragment.getClass().getSimpleName(), settingsFragment);
+        outState.putParcelable(USER_STATE, SonarCloudApp.user);
     }
+
 
     //------------------- Fragment controls -------------------//
 
@@ -164,9 +167,13 @@ public class MainActivity extends BaseActivity implements
     private void changeFragment(Fragment newFragment) {
         FragmentManager fragmentManager = getSupportFragmentManager();
         FragmentTransaction transaction = fragmentManager.beginTransaction();
+        Fragment old = fragmentManager.findFragmentByTag(newFragment.getClass().getSimpleName());
+        if (old == null) transaction.add(R.id.main_fragmentContainer, newFragment, newFragment.getClass().getSimpleName());
         List<Fragment> fragments = fragmentManager.getFragments();
-        for (Fragment fragment : fragments) {
-            transaction.hide(fragment);
+        if (fragments != null && fragments.size() > 0) {
+            for (Fragment fragment : fragments) {
+                transaction.hide(fragment);
+            }
         }
         transaction.show(newFragment);
         transaction.commit();
@@ -190,6 +197,9 @@ public class MainActivity extends BaseActivity implements
                 invalidateViews();
                 break;
             case R.id.bottom_recordings_selector:
+                changeFragment(scheduleFragment);
+                mSelectedFragment = SelectedFragment.RECORDINGS;
+                invalidateViews();
                 if (statusChanged) {
                     if (selectedReceivers.size() > 0)
                         sendReceiversToScheduleFragment(selectedReceivers);
@@ -198,9 +208,6 @@ public class MainActivity extends BaseActivity implements
                     else
                         sendReceiversToScheduleFragment(new ArrayList<Receiver>());
                 }
-                mSelectedFragment = SelectedFragment.RECORDINGS;
-                invalidateViews();
-                changeFragment(scheduleFragment);
                 break;
             case R.id.bottom_settings_selector:
                 changeFragment(settingsFragment);
@@ -334,6 +341,7 @@ public class MainActivity extends BaseActivity implements
     public void onResponseSucceed(JSONObject response) {
         dismissLoading();
         SonarCloudApp.user = User.build(response);
+        SonarCloudApp.getInstance().startKeepingConnection();
     }
 
     /**
@@ -367,17 +375,12 @@ public class MainActivity extends BaseActivity implements
     public void logout(View view) {
         SonarCloudApp.getInstance().clearUserSession(false);
         Intent intent = new Intent(this, LoginActivity.class);
+        SonarCloudApp.dataSocketService.restartConnection();
+        unregisterReceiver(mLoginReceiver);
         startActivityForResult(intent, LOGIN_REQUEST_CODE);
         SonarCloudApp.getInstance().stopKeepingConnection();
     }
 
-
-    //------------------- Helpers -------------------//
-    @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        super.onSaveInstanceState(outState);
-        outState.putParcelable(USER_STATE, SonarCloudApp.user);
-    }
 
     /**
      * Class used to show a dialog with details about requested permission
@@ -414,7 +417,7 @@ public class MainActivity extends BaseActivity implements
     protected void onDestroy() {
         super.onDestroy();
         try {
-            SonarCloudApp.getInstance().startKeepingConnection();
+            SonarCloudApp.getInstance().stopKeepingConnection();
             stopService(SonarCloudApp.dataSocketIntent);
             unregisterReceiver(mLoginReceiver);
         } catch (Exception e) {
@@ -446,14 +449,13 @@ public class MainActivity extends BaseActivity implements
                         break;
                     case ACTION_LOGIN:
                         registerReceiver(mLoginReceiver, intentFilter);
-                        SonarCloudApp.dataSocketService.restartConnection();
                         try {
                             Thread.sleep(200);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
+                        SonarCloudApp.dataSocketService.restartConnection();
                         showLoading();
-                        receiversFragment.onSocketConnected();
                         break;
                     case ScheduleActivity.ACTION_ADD_SCHEDULE:
                         if (recordFragment != null && recordFragment.mRecAdapter != null) {

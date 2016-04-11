@@ -56,8 +56,8 @@ public class AudioSocket {
             SSLContext sslContext = SSLContext.getInstance("TLS");
             sslContext.init(null, getTrustManagers(), secureRandom);
             sslSocketFactory = sslContext.getSocketFactory();
-            mResponseExecutor = Executors.newFixedThreadPool(10);
-            mRequestExecutor = Executors.newFixedThreadPool(10);
+            mResponseExecutor = Executors.newFixedThreadPool(5);
+            mRequestExecutor = Executors.newFixedThreadPool(5);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -132,6 +132,7 @@ public class AudioSocket {
                 audioSocket = (SSLSocket) sslSocketFactory.createSocket(
                         new Socket(Api.URL, Api.AUDIO_PORT), Api.M_URL, Api.AUDIO_PORT, true
                 );
+                readIn = new BufferedReader(new InputStreamReader(audioSocket.getInputStream()));
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -206,7 +207,6 @@ public class AudioSocket {
                     // send the request to server through writer object
                     writeOut.write(message.toString() + "\n");
                     writeOut.flush();
-                    readIn = new BufferedReader(new InputStreamReader(audioSocket.getInputStream()));
                     mResponseExecutor.execute(new ReceiveMessage(readIn, message));
                 }
             } catch (Exception e) {

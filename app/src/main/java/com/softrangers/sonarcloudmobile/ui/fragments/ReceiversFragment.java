@@ -93,7 +93,6 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.fragment_receivers, container, false);
-        setRetainInstance(true);
         Log.i(this.getClass().getSimpleName(), "onCreateView()");
 
         // Obtain a link to the lists from layout
@@ -146,8 +145,15 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
     }
 
     @Override
+    public void onResume() {
+        super.onResume();
+        Log.d(this.getClass().getSimpleName(), "onResume()");
+    }
+
+    @Override
     public void onDetach() {
         super.onDetach();
+        Log.d(this.getClass().getSimpleName(), "onDetach()");
         mActivity.unregisterReceiver(mPAReceiver);
     }
 

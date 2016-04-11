@@ -60,7 +60,6 @@ public class LoginActivity extends BaseActivity {
         assert mSignIn != null;
         mSignIn.setTypeface(SonarCloudApp.avenirMedium);
         mUser = new User();
-
         String email = SonarCloudApp.getInstance().getUserEmail();
         String password = SonarCloudApp.getInstance().getUserPass();
         if (email != null && password != null) {
@@ -212,7 +211,6 @@ public class LoginActivity extends BaseActivity {
             main.setAction(MainActivity.ACTION_LOGIN);
             setResult(RESULT_OK, main);
             SonarCloudApp.getInstance().saveUserLoginStatus(true, mUser.getId());
-            SonarCloudApp.getInstance().startKeepingConnection();
             finish();
         } catch (Exception e) {
             Snackbar.make(mSignIn, getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();

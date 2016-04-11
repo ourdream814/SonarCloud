@@ -68,14 +68,22 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         // Required empty public constructor
     }
 
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+        // initialize adapters with empty lists
+        ArrayList<Recording> recordings = new ArrayList<>();
+        ArrayList<Schedule> schedules = new ArrayList<>();
+        allRecordingsAdapter = new ScheduleAllRecordingsAdapter(recordings, context);
+        allRecordingsAdapter.setOnRecordClickListener(this);
+        scheduledRecordsAdapter = new ScheduledRecordsAdapter(schedules, context);
+    }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         mRootView = inflater.inflate(R.layout.fragment_schedule, container, false);
-        setRetainInstance(true);
-        // get a link to fragment activity
         mActivity = (MainActivity) getActivity();
         IntentFilter intentFilter = new IntentFilter(Api.Command.RECORDINGS);
         intentFilter.addAction(Api.Command.SCHEDULES);
@@ -88,19 +96,14 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         mDaysAdapter = new DaysAdapter();
         mOpusPlayer = new OpusPlayer();
         mOpusPlayer.setOnPlayListener(this);
-        // initialize adapters with empty lists
-        ArrayList<Recording> recordings = new ArrayList<>();
-        ArrayList<Schedule> schedules = new ArrayList<>();
-        allRecordingsAdapter = new ScheduleAllRecordingsAdapter(recordings, mActivity);
-        allRecordingsAdapter.setOnRecordClickListener(this);
-        scheduledRecordsAdapter = new ScheduledRecordsAdapter(schedules, mActivity);
+        initializeViews(mRootView);
         return mRootView;
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        initializeViews(mRootView);
+
     }
 
     /**
@@ -200,7 +203,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     public void getAllScheduledRecords(ArrayList<Receiver> receivers) {
         if (receivers == null) receivers = new ArrayList<>();
         // hide the unselected text
-        mActivity.runOnUiThread(new Runnable() {
+        getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 unselectedText.setVisibility(View.GONE);
@@ -233,7 +236,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         if (receivers == null) receivers = new ArrayList<>();
         getAllScheduledRecords(receivers);
         // hide the unselected text
-        mActivity.runOnUiThread(new Runnable() {
+        getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 unselectedText.setVisibility(View.GONE);
@@ -388,7 +391,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     };
 
     public void clearLists() {
-        mActivity.runOnUiThread(new Runnable() {
+        getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 scheduledRecordsAdapter.clearList();
@@ -513,7 +516,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     }
 
     private void showLoading() {
-        mActivity.runOnUiThread(new Runnable() {
+        getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 mLoadingProgress.setVisibility(View.VISIBLE);
@@ -522,7 +525,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     }
 
     private void hideLoading() {
-        mActivity.runOnUiThread(new Runnable() {
+        getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 mLoadingProgress.setVisibility(View.GONE);
@@ -607,7 +610,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
 
     @Override
     public void onPlaying(final Recording recording, int position, final long duration) {
-        mActivity.runOnUiThread(new Runnable() {
+        getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 int progress = (int) (duration / 1000);
@@ -618,7 +621,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     }
 
     private void notifyAllRecordAdapter(final int position) {
-        mActivity.runOnUiThread(new Runnable() {
+        getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 allRecordingsAdapter.notifyItemChanged(position);

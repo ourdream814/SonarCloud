@@ -9,7 +9,6 @@ import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.softrangers.sonarcloudmobile.models.Request;
-import com.softrangers.sonarcloudmobile.utils.cache.DBManager;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 
 import org.json.JSONException;
@@ -84,8 +83,8 @@ public class DataSocketService extends Service {
             SSLContext sslContext = SSLContext.getInstance("TLS");
             sslContext.init(null, getTrustManagers(), secureRandom);
             sslSocketFactory = sslContext.getSocketFactory();
-            mResponseExecutor = Executors.newFixedThreadPool(10);
-            mRequestExecutor = Executors.newFixedThreadPool(10);
+            mResponseExecutor = Executors.newFixedThreadPool(5);
+            mRequestExecutor = Executors.newFixedThreadPool(5);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -117,6 +116,8 @@ public class DataSocketService extends Service {
                         new Socket(Api.URL, Api.PORT), Api.M_URL, Api.PORT, true
                 );
 
+                readIn = new BufferedReader(new InputStreamReader(dataSocket.getInputStream()));
+
                 if (SonarCloudApp.getInstance().isLoggedIn()) {
                     Request.Builder builder = new Request.Builder();
                     builder.command(Api.Command.AUTHENTICATE);
@@ -127,11 +128,11 @@ public class DataSocketService extends Service {
                 }
 
                 Intent intent = new Intent(DataSocketService.this, ConnectionReceiver.class);
-                intent.setAction(Api.CONNECTION_BROADCAST);
+                intent.setAction(Api.CONNECTION_SUCCEED);
                 sendBroadcast(intent);
-                Log.i(this.getClass().getSimpleName(), "Connection restarted");
                 isConnected = true;
             } catch (Exception e) {
+                Log.e(this.getClass().getSimpleName(), e.getMessage());
                 isConnected = false;
             }
         }
@@ -199,7 +200,6 @@ public class DataSocketService extends Service {
                     // send the request to server through writer object
                     writeOut.write(message.toString() + "\n");
                     writeOut.flush();
-                    readIn = new BufferedReader(new InputStreamReader(dataSocket.getInputStream()));
                     mResponseExecutor.execute(new ReceiveMessage(readIn, message));
                 }
             } catch (Exception e) {
@@ -224,41 +224,25 @@ public class DataSocketService extends Service {
         @Override
         public void run() {
             JSONObject response;
-            String stringResponse = null;
             try {
-                char[] buffer = new char[1024];
-                StringBuilder builder = new StringBuilder();
-                builder.append(mReader.readLine());
-
-                while (mReader.ready()) {
-                    mReader.read(buffer, 0, buffer.length);
-                    builder.append(buffer);
-                }
-
-                stringResponse = builder.toString();
-                Log.i(this.getClass().getSimpleName(), "Response: " + stringResponse);
-                if (stringResponse == null || stringResponse.equals("null")) {
-                    restartConnection();
-                    sendRequest(mRequest);
-                    Log.e(this.getClass().getSimpleName(), "Response is: " + stringResponse);
-                    return;
-                }
-
-            } catch (Exception e) {
-                Log.e(this.getClass().getSimpleName(), e.getMessage());
-            } finally {
+                Log.i(this.getClass().getSimpleName(), "Response: Before");
+                String respons = mReader.readLine();
+                Log.i(this.getClass().getSimpleName(), "Response: " + respons);
                 String command = Api.EXCEPTION;
                 try {
-                    response = new JSONObject(stringResponse);
+                    response = new JSONObject(respons);
                     command = response.optString("originalCommand", Api.EXCEPTION);
                 } catch (JSONException e) {
                     Log.e(this.getClass().getName(), "Finally " + e.getMessage());
+                } finally {
+                    // send the response to ui
+                    Intent responseContainer = new Intent(command);
+                    responseContainer.putExtra(command, respons);
+                    responseContainer.putExtra(Api.REQUEST_MESSAGE, mRequest.toString());
+                    sendBroadcast(responseContainer);
                 }
-                // send the response to ui
-                Intent responseContainer = new Intent(command);
-                responseContainer.putExtra(command, stringResponse);
-                responseContainer.putExtra(Api.REQUEST_MESSAGE, mRequest.toString());
-                sendBroadcast(responseContainer);
+            } catch (Exception e) {
+                Log.e(this.getClass().getSimpleName(), e.getMessage());
             }
         }
     }
@@ -270,6 +254,8 @@ public class DataSocketService extends Service {
     public void onDestroy() {
         super.onDestroy();
         try {
+            readIn.close();
+            writeOut.close();
             dataSocket.close();
             isConnected = false;
             mResponseExecutor.shutdown();
@@ -282,6 +268,7 @@ public class DataSocketService extends Service {
 
     /**
      * Create a TrustManager which will trust all certificates
+     *
      * @return TrustManager[] with a trust-all certificates TrustManager object inside
      */
     private TrustManager[] getTrustManagers() {
