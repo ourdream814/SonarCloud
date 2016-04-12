@@ -100,12 +100,6 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         return mRootView;
     }
 
-    @Override
-    public void onResume() {
-        super.onResume();
-
-    }
-
     /**
      * Initialize all views for this fragment
      *

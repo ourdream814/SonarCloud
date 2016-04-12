@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+import android.support.annotation.Nullable;
 import android.support.design.widget.Snackbar;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -69,7 +70,7 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
     }
 
     @Override
-    public void onAttach(Activity activity) {
+    public void onAttach(Context activity) {
         super.onAttach(activity);
 
         try {
@@ -145,16 +146,19 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
     }
 
     @Override
-    public void onResume() {
-        super.onResume();
-        Log.d(this.getClass().getSimpleName(), "onResume()");
-    }
-
-    @Override
     public void onDetach() {
         super.onDetach();
         Log.d(this.getClass().getSimpleName(), "onDetach()");
         mActivity.unregisterReceiver(mPAReceiver);
+    }
+
+    @Override
+    public void onViewStateRestored(@Nullable Bundle savedInstanceState) {
+        super.onViewStateRestored(savedInstanceState);
+        if (mPASystems == null || mPASystems.size() <= 0) {
+            getPAListFromServer();
+        }
+        Log.e(this.getClass().getSimpleName(), "onViewStateRestored()");
     }
 
     @Override
@@ -207,7 +211,6 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
 
     /**
      * Hide the PAs layout and show the Groups layout
-     *
      * @param always make request to server
      */
     private void showGroupsLayout(boolean always) {

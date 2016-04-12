@@ -19,6 +19,7 @@ public class ConnectionKeeper extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         String action = intent.getAction();
+        if (!SonarCloudApp.getInstance().isLoggedIn()) return;
         switch (action) {
             case Api.KEEP_CONNECTION:
                 sendKeepConnectionRequest();

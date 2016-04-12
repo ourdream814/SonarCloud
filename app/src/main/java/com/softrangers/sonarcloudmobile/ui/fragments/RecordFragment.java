@@ -769,7 +769,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
             }
             JSONObject request = requestBuilder.build().toJSON();
             request.put(Api.Options.PLAY_IMMEDIATELY, true).put(Api.Options.KEEP, false);
-            AudioSocket.getInstance().sendRequest(request);
+            SonarCloudApp.dataSocketService.sendRequest(request);
         } catch (Exception e) {
             isSending = false;
             if (mSendButton != null && mSendingProgress != null) {

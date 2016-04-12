@@ -306,11 +306,11 @@ public class SonarCloudApp extends Application {
      */
     public void clearUserSession(boolean clearAll) {
         SharedPreferences.Editor editor = preferences.edit();
-        editor.remove(LOGIN_STATUS);
         editor.remove(USER_ID);
         editor.remove(USER_DATA);
         editor.remove(USER_IDENTIFIER);
         if (clearAll) {
+            editor.remove(LOGIN_STATUS);
             editor.remove(USER_EMAIL);
             editor.remove(USER_PASS);
         }
@@ -327,8 +327,6 @@ public class SonarCloudApp extends Application {
     public void onTerminate() {
         super.onTerminate();
         stopService(dataSocketIntent);
-        if (mAlarmManager != null && mPendingIntent != null) {
-            mAlarmManager.cancel(mPendingIntent);
-        }
+        stopKeepingConnection();
     }
 }

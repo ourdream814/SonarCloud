@@ -133,8 +133,10 @@ public class AudioSocket {
                         new Socket(Api.URL, Api.AUDIO_PORT), Api.M_URL, Api.AUDIO_PORT, true
                 );
                 readIn = new BufferedReader(new InputStreamReader(audioSocket.getInputStream()));
+                Log.i(this.getClass().getSimpleName(), "Audio socket connected");
             } catch (Exception e) {
                 e.printStackTrace();
+                Log.e(this.getClass().getSimpleName(), "Connection failed: " + e.getMessage());
             }
         }
     }
@@ -172,6 +174,7 @@ public class AudioSocket {
                 }
             } catch (Exception e) {
                 e.printStackTrace();
+                Log.e(this.getClass().getSimpleName(), "Data sending failed");
             }
         }
     }
@@ -194,6 +197,7 @@ public class AudioSocket {
         @Override
         public void run() {
             try {
+                Log.i(this.getClass().getSimpleName(), "Start sending data for audio");
                 if (audioSocket == null || !audioSocket.isConnected()) {
                     new AudioConnection();
                 }
@@ -207,10 +211,12 @@ public class AudioSocket {
                     // send the request to server through writer object
                     writeOut.write(message.toString() + "\n");
                     writeOut.flush();
+                    Log.i(this.getClass().getSimpleName(), "Request sent successfully");
                     mResponseExecutor.execute(new ReceiveMessage(readIn, message));
                 }
             } catch (Exception e) {
                 e.printStackTrace();
+                Log.e(this.getClass().getSimpleName(), "Sending request failed");
             }
         }
     }
@@ -230,40 +236,24 @@ public class AudioSocket {
 
         @Override
         public void run() {
-            JSONObject response;
-            String stringResponse = null;
             try {
-                char[] buffer = new char[1024];
-                StringBuilder builder = new StringBuilder();
-                builder.append(mReader.readLine());
-
-                while (mReader.ready()) {
-                    mReader.read(buffer, 0, buffer.length);
-                    builder.append(buffer);
-                }
-
-                stringResponse = builder.toString();
-                Log.i(this.getClass().getSimpleName(), "Response: " + stringResponse);
-                if (stringResponse == null || stringResponse.equals("null")) {
-                    stringResponse = DBManager.loadDataFromDB(mRequest);
-                    Log.e(this.getClass().getSimpleName(), "Response is: " + stringResponse);
-                }
-
-            } catch (Exception e) {
-                Log.e(this.getClass().getSimpleName(), e.getMessage());
-            } finally {
+                String line = mReader.readLine();
+                Log.i(this.getClass().getSimpleName(), "Audio response: " + line);
                 String command = Api.EXCEPTION;
                 try {
-                    response = new JSONObject(stringResponse);
+                    JSONObject response = new JSONObject(line);
                     command = response.optString("originalCommand", Api.EXCEPTION);
                 } catch (JSONException e) {
                     Log.e(this.getClass().getName(), "Finally " + e.getMessage());
+                } finally {
+                    // send the response to ui
+                    Intent responseContainer = new Intent(command);
+                    responseContainer.putExtra(command, line);
+                    responseContainer.putExtra(Api.REQUEST_MESSAGE, mRequest.toString());
+                    SonarCloudApp.getInstance().sendBroadcast(responseContainer);
                 }
-                // send the response to ui
-                Intent responseContainer = new Intent(command);
-                responseContainer.putExtra(command, stringResponse);
-                responseContainer.putExtra(Api.REQUEST_MESSAGE, mRequest.toString());
-                SonarCloudApp.getInstance().sendBroadcast(responseContainer);
+            } catch (Exception e) {
+                Log.e(this.getClass().getSimpleName(), e.getMessage());
             }
         }
     }

@@ -122,7 +122,7 @@ public class LoginActivity extends BaseActivity {
         mProgressBar.setVisibility(View.VISIBLE);
 
         // Disable Sign In button while loading
-        mSignIn.setEnabled(false);
+        mSignIn.setClickable(false);
         mSignIn.setVisibility(View.INVISIBLE);
 
         // Create a JSON request for server
@@ -170,7 +170,7 @@ public class LoginActivity extends BaseActivity {
             @Override
             public void run() {
                 mProgressBar.setVisibility(View.GONE);
-                mSignIn.setEnabled(true);
+                mSignIn.setClickable(true);
                 mSignIn.setVisibility(View.VISIBLE);
             }
         });
@@ -187,7 +187,7 @@ public class LoginActivity extends BaseActivity {
             @Override
             public void run() {
                 mProgressBar.setVisibility(View.GONE);
-                mSignIn.setEnabled(true);
+                mSignIn.setClickable(true);
                 mSignIn.setVisibility(View.VISIBLE);
             }
         });

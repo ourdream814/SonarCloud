@@ -52,10 +52,8 @@ public class MainActivity extends BaseActivity implements
     private static ArrayList<GroupObserver> observers;
     public static boolean statusChanged;
     private Group mGroup;
-    private static boolean isAlreadyStarted;
 
     private TextView mToolbarTitle;
-    private LinearLayout mMainBottomBar;
     private ImageButton mReceiversSelector;
     private ImageButton mAnnouncementsSelector;
     private ImageButton mRecordingsSelector;
@@ -86,6 +84,10 @@ public class MainActivity extends BaseActivity implements
         mToolbarTitle.setTypeface(SonarCloudApp.avenirMedium);
         initializeBottomButtons();
 
+        intentFilter = new IntentFilter();
+        intentFilter.addAction(Api.Command.AUTHENTICATE);
+        intentFilter.addAction(Api.EXCEPTION);
+
         if (savedInstanceState != null) {
             receiversFragment = (ReceiversFragment) getSupportFragmentManager().getFragment(savedInstanceState,
                     receiversFragment.getClass().getSimpleName());
@@ -102,17 +104,17 @@ public class MainActivity extends BaseActivity implements
             scheduleFragment = new ScheduleFragment();
         }
 
-        mSelectedFragment = SelectedFragment.RECEIVERS;
-        changeFragment(receiversFragment);
-        invalidateViews();
+
         if (!SonarCloudApp.getInstance().isLoggedIn()) {
             Intent intent = new Intent(this, LoginActivity.class);
             startActivityForResult(intent, LOGIN_REQUEST_CODE);
             return;
         }
 
-        intentFilter = new IntentFilter(Api.Command.AUTHENTICATE);
-        intentFilter.addAction(Api.EXCEPTION);
+        changeFragment(receiversFragment);
+        mSelectedFragment = SelectedFragment.RECEIVERS;
+        invalidateViews();
+
         registerReceiver(mLoginReceiver, intentFilter);
 
         if (SonarCloudApp.dataSocketService != null) {
@@ -121,6 +123,7 @@ public class MainActivity extends BaseActivity implements
 
         showLoading();
     }
+
 
     @Override
     public void onSaveInstanceState(Bundle outState, PersistableBundle outPersistentState) {
@@ -143,7 +146,6 @@ public class MainActivity extends BaseActivity implements
      */
     private void initializeBottomButtons() {
         //link bottom buttons
-        mMainBottomBar = (LinearLayout) findViewById(R.id.main_bottomBar);
         mReceiversSelector = (ImageButton) findViewById(R.id.bottom_PASystems_selector);
         mAnnouncementsSelector = (ImageButton) findViewById(R.id.bottom_announcements_selector);
         mRecordingsSelector = (ImageButton) findViewById(R.id.bottom_recordings_selector);
@@ -168,14 +170,15 @@ public class MainActivity extends BaseActivity implements
         FragmentManager fragmentManager = getSupportFragmentManager();
         FragmentTransaction transaction = fragmentManager.beginTransaction();
         Fragment old = fragmentManager.findFragmentByTag(newFragment.getClass().getSimpleName());
-        if (old == null) transaction.add(R.id.main_fragmentContainer, newFragment, newFragment.getClass().getSimpleName());
         List<Fragment> fragments = fragmentManager.getFragments();
         if (fragments != null && fragments.size() > 0) {
             for (Fragment fragment : fragments) {
                 transaction.hide(fragment);
             }
         }
-        transaction.show(newFragment);
+        if (old == null)
+            transaction.add(R.id.main_fragmentContainer, newFragment, newFragment.getClass().getSimpleName());
+        else transaction.show(old);
         transaction.commit();
     }
 
@@ -335,7 +338,6 @@ public class MainActivity extends BaseActivity implements
 
     /**
      * Called when server has a successful response for us
-     *
      * @param response json which is received from server
      */
     public void onResponseSucceed(JSONObject response) {
@@ -355,9 +357,7 @@ public class MainActivity extends BaseActivity implements
             logout(null);
         } else {
             dismissLoading();
-            if (message != null) {
-                Snackbar.make(mToolbarTitle, message, Snackbar.LENGTH_SHORT).show();
-            }
+            Snackbar.make(mToolbarTitle, message, Snackbar.LENGTH_SHORT).show();
         }
     }
 
@@ -373,12 +373,13 @@ public class MainActivity extends BaseActivity implements
      * Logout the current user and delete all personal data from the application
      */
     public void logout(View view) {
-        SonarCloudApp.getInstance().clearUserSession(false);
         Intent intent = new Intent(this, LoginActivity.class);
-        SonarCloudApp.dataSocketService.restartConnection();
-        unregisterReceiver(mLoginReceiver);
         startActivityForResult(intent, LOGIN_REQUEST_CODE);
+        SonarCloudApp.getInstance().clearUserSession(false);
+        unregisterReceiver(mLoginReceiver);
+        SonarCloudApp.dataSocketService.restartConnection();
         SonarCloudApp.getInstance().stopKeepingConnection();
+        changeFragment(receiversFragment);
     }
 
 

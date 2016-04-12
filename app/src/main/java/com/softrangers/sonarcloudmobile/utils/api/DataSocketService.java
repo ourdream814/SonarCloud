@@ -2,6 +2,7 @@ package com.softrangers.sonarcloudmobile.utils.api;
 
 import android.app.Service;
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Binder;
 import android.os.IBinder;
 import android.os.Looper;
@@ -19,6 +20,7 @@ import java.io.BufferedWriter;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -41,10 +43,9 @@ public class DataSocketService extends Service {
 
     public static SSLSocket dataSocket;
     private static SSLSocketFactory sslSocketFactory;
-    public BufferedReader readIn;
-    public BufferedWriter writeOut;
+    public static BufferedReader readIn;
+    public static BufferedWriter writeOut;
     public boolean isConnected;
-    private ExecutorService mResponseExecutor;
     private ExecutorService mRequestExecutor;
 
     // Bind this service to application
@@ -64,7 +65,6 @@ public class DataSocketService extends Service {
 
     /**
      * Send a request to server if the connection is ok and send back the response through
-     *
      * @param request to send
      */
     public void sendRequest(JSONObject request) {
@@ -83,7 +83,6 @@ public class DataSocketService extends Service {
             SSLContext sslContext = SSLContext.getInstance("TLS");
             sslContext.init(null, getTrustManagers(), secureRandom);
             sslSocketFactory = sslContext.getSocketFactory();
-            mResponseExecutor = Executors.newFixedThreadPool(5);
             mRequestExecutor = Executors.newFixedThreadPool(5);
         } catch (Exception e) {
             e.printStackTrace();
@@ -94,7 +93,7 @@ public class DataSocketService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         // Connect socket to server through TLS protocol
         new Connection();
-        return START_NOT_STICKY;
+        return START_STICKY;
     }
 
     /**
@@ -110,13 +109,12 @@ public class DataSocketService extends Service {
         @Override
         public void run() {
             try {
-                Looper.prepare();
                 // create a new instance of socket and connect it to server
                 dataSocket = (SSLSocket) sslSocketFactory.createSocket(
-                        new Socket(Api.URL, Api.PORT), Api.M_URL, Api.PORT, true
+                        new Socket(Api.URL, Api.PORT), Api.URL, Api.PORT, false
                 );
-
-                readIn = new BufferedReader(new InputStreamReader(dataSocket.getInputStream()));
+                dataSocket.setKeepAlive(true);
+                dataSocket.setUseClientMode(true);
 
                 if (SonarCloudApp.getInstance().isLoggedIn()) {
                     Request.Builder builder = new Request.Builder();
@@ -124,7 +122,6 @@ public class DataSocketService extends Service {
                     builder.device(Api.Device.CLIENT).method(Api.Method.IDENTIFIER).identifier(SonarCloudApp.getInstance().getIdentifier())
                             .secret(SonarCloudApp.getInstance().getSavedData()).seq(SonarCloudApp.SEQ_VALUE);
                     sendRequest(builder.build().toJSON());
-                    SonarCloudApp.getInstance().startKeepingConnection();
                 }
 
                 Intent intent = new Intent(DataSocketService.this, ConnectionReceiver.class);
@@ -176,7 +173,6 @@ public class DataSocketService extends Service {
 
         /**
          * Constructor
-         *
          * @param message for server
          */
         public SendRequest(JSONObject message) {
@@ -187,63 +183,42 @@ public class DataSocketService extends Service {
         @Override
         public void run() {
             try {
-                if (dataSocket == null || !dataSocket.isConnected()) {
-                    new Connection();
-                }
-
-                if (dataSocket != null && dataSocket.isConnected()) {
-                    // Start socket handshake
-                    dataSocket.startHandshake();
-                    if (dataSocket.isClosed()) new Connection();
-                    // Create a reader and writer from socket output and input streams
-                    writeOut = new BufferedWriter(new OutputStreamWriter(dataSocket.getOutputStream()));
-                    // send the request to server through writer object
-                    writeOut.write(message.toString() + "\n");
-                    writeOut.flush();
-                    mResponseExecutor.execute(new ReceiveMessage(readIn, message));
-                }
+                // Start socket handshake
+                dataSocket.startHandshake();
+                // Create a reader and writer from socket output and input streams
+                writeOut = new BufferedWriter(new OutputStreamWriter(dataSocket.getOutputStream()));
+                // send the request to server through writer object
+                writeOut.write(message.toString());
+                writeOut.newLine();
+                writeOut.flush();
+                readIn = new BufferedReader(new InputStreamReader(dataSocket.getInputStream()));
+                String line = readIn.readLine();
+                sendResponseToUI(line, message);
             } catch (Exception e) {
                 e.printStackTrace();
+                Log.e(this.getClass().getSimpleName(), e.getMessage());
+                // send the response to ui
+                Intent responseContainer = new Intent(Api.EXCEPTION);
+//                responseContainer.putExtra(command, line);
+                responseContainer.putExtra(Api.REQUEST_MESSAGE, message.toString());
+                sendBroadcast(responseContainer);
             }
         }
     }
 
-    /**
-     * Receives and read message obtained from server
-     */
-    class ReceiveMessage implements Runnable {
-
-        final BufferedReader mReader;
-        JSONObject mRequest;
-
-        public ReceiveMessage(BufferedReader reader, JSONObject request) {
-            mReader = reader;
-            mRequest = request;
-        }
-
-        @Override
-        public void run() {
-            JSONObject response;
-            try {
-                Log.i(this.getClass().getSimpleName(), "Response: Before");
-                String respons = mReader.readLine();
-                Log.i(this.getClass().getSimpleName(), "Response: " + respons);
-                String command = Api.EXCEPTION;
-                try {
-                    response = new JSONObject(respons);
-                    command = response.optString("originalCommand", Api.EXCEPTION);
-                } catch (JSONException e) {
-                    Log.e(this.getClass().getName(), "Finally " + e.getMessage());
-                } finally {
-                    // send the response to ui
-                    Intent responseContainer = new Intent(command);
-                    responseContainer.putExtra(command, respons);
-                    responseContainer.putExtra(Api.REQUEST_MESSAGE, mRequest.toString());
-                    sendBroadcast(responseContainer);
-                }
-            } catch (Exception e) {
-                Log.e(this.getClass().getSimpleName(), e.getMessage());
-            }
+    private void sendResponseToUI(String response, JSONObject message) {
+        String command = Api.EXCEPTION;
+        try {
+            JSONObject jsonResponse = new JSONObject(response);
+            command = jsonResponse.optString("originalCommand", Api.EXCEPTION);
+        } catch (JSONException e) {
+            Log.e(this.getClass().getName(), "Finally " + e.getMessage());
+        } finally {
+            // send the response to ui
+            Intent responseContainer = new Intent(command);
+            responseContainer.putExtra(command, response);
+            responseContainer.putExtra(Api.REQUEST_MESSAGE, message.toString());
+            sendBroadcast(responseContainer);
         }
     }
 
@@ -258,8 +233,8 @@ public class DataSocketService extends Service {
             writeOut.close();
             dataSocket.close();
             isConnected = false;
-            mResponseExecutor.shutdown();
             mRequestExecutor.shutdown();
+            Log.i(this.getClass().getSimpleName(), "onDestroy(): Socket closed");
         } catch (Exception e) {
             e.printStackTrace();
         }
