@@ -54,8 +54,8 @@ public class SonarCloudApp extends Application {
     public static DataSocketService dataSocketService;
     public static Intent dataSocketIntent;
 
-    private AlarmManager mAlarmManager;
-    private PendingIntent mPendingIntent;
+    private static AlarmManager alarmManager;
+    private static PendingIntent pendingIntent;
 
     @Override
     public void onCreate() {
@@ -69,8 +69,6 @@ public class SonarCloudApp extends Application {
 
         // start socket service and connect to server
         dataSocketIntent = new Intent(this, DataSocketService.class);
-        startService(dataSocketIntent);
-
         // bind current class to the DataSocketService
         bindService(dataSocketIntent, mDataServiceConnection, Context.BIND_AUTO_CREATE);
     }
@@ -96,11 +94,11 @@ public class SonarCloudApp extends Application {
      */
     public void startKeepingConnection() {
         if (isLoggedIn()) {
-            mAlarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
+            alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
             Intent intent = new Intent(this, ConnectionKeeper.class);
             intent.setAction(Api.KEEP_CONNECTION);
-            mPendingIntent = PendingIntent.getBroadcast(this, 0, intent, 0);
-            mAlarmManager.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), 50000, mPendingIntent);
+            pendingIntent = PendingIntent.getBroadcast(this, 0, intent, 0);
+            alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), 50000, pendingIntent);
         }
     }
 
@@ -306,11 +304,11 @@ public class SonarCloudApp extends Application {
      */
     public void clearUserSession(boolean clearAll) {
         SharedPreferences.Editor editor = preferences.edit();
+        editor.remove(LOGIN_STATUS);
         editor.remove(USER_ID);
         editor.remove(USER_DATA);
         editor.remove(USER_IDENTIFIER);
         if (clearAll) {
-            editor.remove(LOGIN_STATUS);
             editor.remove(USER_EMAIL);
             editor.remove(USER_PASS);
         }
@@ -318,15 +316,16 @@ public class SonarCloudApp extends Application {
     }
 
     public void stopKeepingConnection() {
-        if (mAlarmManager != null && mPendingIntent != null) {
-            mAlarmManager.cancel(mPendingIntent);
+        if (alarmManager != null && pendingIntent != null) {
+            alarmManager.cancel(pendingIntent);
         }
+        alarmManager = null;
     }
 
     @Override
     public void onTerminate() {
         super.onTerminate();
-        stopService(dataSocketIntent);
+        unbindService(mDataServiceConnection);
         stopKeepingConnection();
     }
 }

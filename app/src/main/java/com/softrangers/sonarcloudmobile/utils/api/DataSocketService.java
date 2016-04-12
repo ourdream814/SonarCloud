@@ -52,6 +52,7 @@ public class DataSocketService extends Service {
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
+        new Connection();
         return mIBinder;
     }
 
@@ -83,17 +84,10 @@ public class DataSocketService extends Service {
             SSLContext sslContext = SSLContext.getInstance("TLS");
             sslContext.init(null, getTrustManagers(), secureRandom);
             sslSocketFactory = sslContext.getSocketFactory();
-            mRequestExecutor = Executors.newFixedThreadPool(5);
+            mRequestExecutor = Executors.newFixedThreadPool(10);
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        // Connect socket to server through TLS protocol
-        new Connection();
-        return START_STICKY;
     }
 
     /**
@@ -115,6 +109,12 @@ public class DataSocketService extends Service {
                 );
                 dataSocket.setKeepAlive(true);
                 dataSocket.setUseClientMode(true);
+
+//                // Start socket handshake
+//                dataSocket.startHandshake();
+                // Create a reader and writer from socket output and input streams
+//                readIn = new BufferedReader(new InputStreamReader(dataSocket.getInputStream()));
+//                writeOut = new BufferedWriter(new OutputStreamWriter(dataSocket.getOutputStream()));
 
                 if (SonarCloudApp.getInstance().isLoggedIn()) {
                     Request.Builder builder = new Request.Builder();
@@ -161,6 +161,55 @@ public class DataSocketService extends Service {
                 new Connection();
             } catch (Exception e) {
                 e.printStackTrace();
+            }
+        }
+    }
+
+    public void loginRequest(JSONObject request) {
+        mRequestExecutor.execute(new LoginRequest(request));
+    }
+
+    /**
+     * Runnable which will send requests in a new thread
+     */
+    class LoginRequest implements Runnable {
+        JSONObject message;
+
+        /**
+         * Constructor
+         * @param message for server
+         */
+        public LoginRequest(JSONObject message) {
+            // give the message for server and socket object to current thread
+            this.message = message;
+        }
+
+        @Override
+        public void run() {
+            try {
+                SSLSocket dataSocket = (SSLSocket) sslSocketFactory.createSocket(
+                        new Socket(Api.URL, Api.PORT), Api.URL, Api.PORT, false
+                );
+                // Start socket handshake
+                dataSocket.startHandshake();
+                // Create a reader and writer from socket output and input streams
+                BufferedReader readIn = new BufferedReader(new InputStreamReader(dataSocket.getInputStream()));
+                BufferedWriter writeOut = new BufferedWriter(new OutputStreamWriter(dataSocket.getOutputStream()));
+                // send the request to server through writer object
+                writeOut.write(message.toString());
+                writeOut.newLine();
+                writeOut.flush();
+
+                String line = readIn.readLine();
+                sendResponseToUI(line, message);
+            } catch (Exception e) {
+                e.printStackTrace();
+                Log.e(this.getClass().getSimpleName(), e.getMessage());
+                // send the response to ui
+                Intent responseContainer = new Intent(Api.EXCEPTION);
+//                responseContainer.putExtra(command, line);
+                responseContainer.putExtra(Api.REQUEST_MESSAGE, message.toString());
+                sendBroadcast(responseContainer);
             }
         }
     }

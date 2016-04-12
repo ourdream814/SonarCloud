@@ -2,12 +2,15 @@ package com.softrangers.sonarcloudmobile.ui;
 
 import android.Manifest;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.os.PersistableBundle;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
@@ -15,6 +18,7 @@ import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AlertDialog;
+import android.util.Log;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
@@ -29,6 +33,7 @@ import com.softrangers.sonarcloudmobile.ui.fragments.ReceiversFragment;
 import com.softrangers.sonarcloudmobile.ui.fragments.RecordFragment;
 import com.softrangers.sonarcloudmobile.ui.fragments.ScheduleFragment;
 import com.softrangers.sonarcloudmobile.ui.fragments.SettingsFragment;
+import com.softrangers.sonarcloudmobile.utils.api.DataSocketService;
 import com.softrangers.sonarcloudmobile.utils.ui.BaseActivity;
 import com.softrangers.sonarcloudmobile.utils.observers.GroupObserver;
 import com.softrangers.sonarcloudmobile.utils.observers.Observable;
@@ -65,6 +70,8 @@ public class MainActivity extends BaseActivity implements
     private static ScheduleFragment scheduleFragment;
     private static SettingsFragment settingsFragment;
 
+    public static DataSocketService dataSocketService;
+
     // set selected items to send the record to them
     public static ArrayList<Receiver> selectedReceivers = new ArrayList<>();
     public static Group selectedGroup;
@@ -78,6 +85,8 @@ public class MainActivity extends BaseActivity implements
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        Intent socketIntent = new Intent(this, DataSocketService.class);
+        bindService(socketIntent, mDataServiceConnection, Context.BIND_AUTO_CREATE);
         // initialize bottom buttons
         assert mToolbarTitle != null;
         mToolbarTitle = (TextView) findViewById(R.id.main_activity_toolbarTitle);
@@ -104,6 +113,9 @@ public class MainActivity extends BaseActivity implements
             scheduleFragment = new ScheduleFragment();
         }
 
+        changeFragment(receiversFragment);
+        mSelectedFragment = SelectedFragment.RECEIVERS;
+        invalidateViews();
 
         if (!SonarCloudApp.getInstance().isLoggedIn()) {
             Intent intent = new Intent(this, LoginActivity.class);
@@ -111,18 +123,29 @@ public class MainActivity extends BaseActivity implements
             return;
         }
 
-        changeFragment(receiversFragment);
-        mSelectedFragment = SelectedFragment.RECEIVERS;
-        invalidateViews();
-
         registerReceiver(mLoginReceiver, intentFilter);
 
-        if (SonarCloudApp.dataSocketService != null) {
-            SonarCloudApp.dataSocketService.restartConnection();
+        if (dataSocketService != null) {
+            dataSocketService.restartConnection();
         }
 
         showLoading();
     }
+
+    // needed to bind DataSocketService to current class
+    protected ServiceConnection mDataServiceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            // get the service instance
+            dataSocketService = ((DataSocketService.LocalBinder) service).getService();
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            // remove service instance
+            dataSocketService = null;
+        }
+    };
 
 
     @Override
@@ -330,7 +353,6 @@ public class MainActivity extends BaseActivity implements
                         break;
                 }
             } catch (Exception e) {
-                e.printStackTrace();
                 onErrorOccurred();
             }
         }
@@ -342,6 +364,7 @@ public class MainActivity extends BaseActivity implements
      */
     public void onResponseSucceed(JSONObject response) {
         dismissLoading();
+        receiversFragment.getPAListFromServer();
         SonarCloudApp.user = User.build(response);
         SonarCloudApp.getInstance().startKeepingConnection();
     }
@@ -377,9 +400,8 @@ public class MainActivity extends BaseActivity implements
         startActivityForResult(intent, LOGIN_REQUEST_CODE);
         SonarCloudApp.getInstance().clearUserSession(false);
         unregisterReceiver(mLoginReceiver);
-        SonarCloudApp.dataSocketService.restartConnection();
+        dataSocketService.restartConnection();
         SonarCloudApp.getInstance().stopKeepingConnection();
-        changeFragment(receiversFragment);
     }
 
 
@@ -419,10 +441,10 @@ public class MainActivity extends BaseActivity implements
         super.onDestroy();
         try {
             SonarCloudApp.getInstance().stopKeepingConnection();
-            stopService(SonarCloudApp.dataSocketIntent);
             unregisterReceiver(mLoginReceiver);
+            unbindService(mDataServiceConnection);
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.e(this.getClass().getSimpleName(), "OnDestroy(): " + e.getMessage());
         }
     }
 
@@ -455,7 +477,7 @@ public class MainActivity extends BaseActivity implements
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
-                        SonarCloudApp.dataSocketService.restartConnection();
+                        dataSocketService.restartConnection();
                         showLoading();
                         break;
                     case ScheduleActivity.ACTION_ADD_SCHEDULE:
@@ -473,6 +495,8 @@ public class MainActivity extends BaseActivity implements
             case RESULT_CANCELED:
                 if (action.equals(ACTION_LOGIN)) {
                     SonarCloudApp.getInstance().clearUserSession(true);
+                    SonarCloudApp.getInstance().stopKeepingConnection();
+                    unbindService(mDataServiceConnection);
                     finish();
                 }
                 break;
