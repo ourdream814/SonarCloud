@@ -10,6 +10,7 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
 import android.os.PersistableBundle;
 import android.support.design.widget.Snackbar;
@@ -21,7 +22,6 @@ import android.support.v7.app.AlertDialog;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageButton;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -33,13 +33,13 @@ import com.softrangers.sonarcloudmobile.ui.fragments.ReceiversFragment;
 import com.softrangers.sonarcloudmobile.ui.fragments.RecordFragment;
 import com.softrangers.sonarcloudmobile.ui.fragments.ScheduleFragment;
 import com.softrangers.sonarcloudmobile.ui.fragments.SettingsFragment;
-import com.softrangers.sonarcloudmobile.utils.api.DataSocketService;
-import com.softrangers.sonarcloudmobile.utils.ui.BaseActivity;
-import com.softrangers.sonarcloudmobile.utils.observers.GroupObserver;
-import com.softrangers.sonarcloudmobile.utils.observers.Observable;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
 import com.softrangers.sonarcloudmobile.utils.api.ConnectionReceiver;
+import com.softrangers.sonarcloudmobile.utils.api.DataSocketService;
+import com.softrangers.sonarcloudmobile.utils.observers.GroupObserver;
+import com.softrangers.sonarcloudmobile.utils.observers.Observable;
+import com.softrangers.sonarcloudmobile.utils.ui.BaseActivity;
 
 import org.json.JSONObject;
 
@@ -227,12 +227,17 @@ public class MainActivity extends BaseActivity implements
                 mSelectedFragment = SelectedFragment.RECORDINGS;
                 invalidateViews();
                 if (statusChanged) {
-                    if (selectedReceivers.size() > 0)
-                        sendReceiversToScheduleFragment(selectedReceivers);
-                    else if (selectedGroup != null)
-                        sendReceiversToScheduleFragment(selectedGroup.getReceivers());
-                    else
-                        sendReceiversToScheduleFragment(new ArrayList<Receiver>());
+                    new Handler().postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (selectedReceivers.size() > 0)
+                                sendReceiversToScheduleFragment(selectedReceivers);
+                            else if (selectedGroup != null)
+                                sendReceiversToScheduleFragment(selectedGroup.getReceivers());
+                            else
+                                sendReceiversToScheduleFragment(new ArrayList<Receiver>());
+                        }
+                    }, 20);
                 }
                 break;
             case R.id.bottom_settings_selector:
@@ -288,6 +293,7 @@ public class MainActivity extends BaseActivity implements
     @Override
     public void onReceiverClicked(Receiver receiver) {
         selectedGroup = null;
+        if (selectedReceivers == null) selectedReceivers = new ArrayList<>();
         if (receiver.isSelected()) {
             selectedReceivers.add(receiver);
         } else {
@@ -360,6 +366,7 @@ public class MainActivity extends BaseActivity implements
 
     /**
      * Called when server has a successful response for us
+     *
      * @param response json which is received from server
      */
     public void onResponseSucceed(JSONObject response) {
@@ -440,6 +447,8 @@ public class MainActivity extends BaseActivity implements
     protected void onDestroy() {
         super.onDestroy();
         try {
+            selectedReceivers = null;
+            selectedGroup = null;
             SonarCloudApp.getInstance().stopKeepingConnection();
             unregisterReceiver(mLoginReceiver);
             unbindService(mDataServiceConnection);
@@ -479,6 +488,16 @@ public class MainActivity extends BaseActivity implements
                         }
                         dataSocketService.restartConnection();
                         showLoading();
+                        if (selectedReceivers != null)
+                            selectedReceivers.clear();
+                        selectedGroup = null;
+                        statusChanged = true;
+                        new Handler().postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                onBottomButtonsClick(mReceiversSelector);
+                            }
+                        }, 50);
                         break;
                     case ScheduleActivity.ACTION_ADD_SCHEDULE:
                         if (recordFragment != null && recordFragment.mRecAdapter != null) {

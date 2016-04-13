@@ -17,11 +17,11 @@ import android.widget.ProgressBar;
 import com.softrangers.sonarcloudmobile.R;
 import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.models.User;
-import com.softrangers.sonarcloudmobile.utils.api.DataSocketService;
-import com.softrangers.sonarcloudmobile.utils.ui.BaseActivity;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
+import com.softrangers.sonarcloudmobile.utils.api.AuthService;
 import com.softrangers.sonarcloudmobile.utils.api.ConnectionReceiver;
+import com.softrangers.sonarcloudmobile.utils.ui.BaseActivity;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -33,14 +33,14 @@ public class LoginActivity extends BaseActivity {
     private ProgressBar mProgressBar;
     private Button mSignIn;
     private User mUser;
-    public static DataSocketService dataSocketService;
+    public static AuthService authService;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
-        Intent intent = new Intent(this, DataSocketService.class);
-        bindService(intent, mDataServiceConnection, Context.BIND_AUTO_CREATE);
+        Intent intent = new Intent(this, AuthService.class);
+        bindService(intent, mAuthServiceConnection, Context.BIND_AUTO_CREATE);
 
         IntentFilter intentFilter = new IntentFilter(Api.Command.AUTHENTICATE);
         intentFilter.addAction(Api.Command.IDENTIFIER);
@@ -76,19 +76,20 @@ public class LoginActivity extends BaseActivity {
     }
 
     // needed to bind DataSocketService to current class
-    protected ServiceConnection mDataServiceConnection = new ServiceConnection() {
+    protected ServiceConnection mAuthServiceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             // get the service instance
-            dataSocketService = ((DataSocketService.LocalBinder) service).getService();
+            authService = ((AuthService.LocalBinder) service).getService();
         }
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
             // remove service instance
-            dataSocketService = null;
+            authService = null;
         }
     };
+
 
     BroadcastReceiver mLoginReceiver = new BroadcastReceiver() {
         @Override
@@ -156,7 +157,7 @@ public class LoginActivity extends BaseActivity {
                 .seq(SonarCloudApp.SEQ_VALUE)
                 .build().toJSON();
         // Send the request
-        dataSocketService.sendRequest(req);
+        authService.sendRequest(req);
     }
 
 
@@ -173,10 +174,25 @@ public class LoginActivity extends BaseActivity {
             SonarCloudApp.getInstance().saveUserLoginDate(mUser.getEmail(), mUser.getPassword());
 
             // request identifier from server
-            SonarCloudApp.getInstance().requestUserIdentifier();
+            requestUserIdentifier();
         } catch (JSONException e) {
             e.printStackTrace();
         }
+    }
+
+    public void requestUserIdentifier() {
+        String identifier = SonarCloudApp.getInstance().getIdentifier();
+        // Start building a request to either create a new or renew existing identifier
+        Request.Builder requestBuilder = new Request.Builder();
+        requestBuilder.command(Api.Command.IDENTIFIER);
+        requestBuilder.seq(SonarCloudApp.SEQ_VALUE);
+        if (SonarCloudApp.NO_IDENTIFIER.equals(identifier)) {
+            requestBuilder.action(Api.Action.NEW);
+        } else {
+            requestBuilder.action(Api.Action.RENEW);
+            requestBuilder.identifier(identifier);
+        }
+        authService.sendRequest(requestBuilder.build().toJSON());
     }
 
     /**
@@ -186,7 +202,7 @@ public class LoginActivity extends BaseActivity {
     public void onCommandFailure(final String message) {
         // show an alert dialog to user with server message
         alertUserAboutError(getString(R.string.login_error), message);
-        dataSocketService.restartConnection();
+        authService.restartConnection();
         // hide loading ui
         runOnUiThread(new Runnable() {
             @Override
@@ -233,7 +249,6 @@ public class LoginActivity extends BaseActivity {
             main.setAction(MainActivity.ACTION_LOGIN);
             setResult(RESULT_OK, main);
             SonarCloudApp.getInstance().saveUserLoginStatus(true, mUser.getId());
-            unbindService(mDataServiceConnection);
             finish();
         } catch (Exception e) {
             Snackbar.make(mSignIn, getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
@@ -245,7 +260,6 @@ public class LoginActivity extends BaseActivity {
         Intent intent = new Intent(this, MainActivity.class);
         intent.setAction(MainActivity.ACTION_LOGIN);
         setResult(RESULT_CANCELED, intent);
-        unbindService(mDataServiceConnection);
         finish();
         super.onBackPressed();
     }
@@ -254,5 +268,6 @@ public class LoginActivity extends BaseActivity {
     protected void onDestroy() {
         super.onDestroy();
         unregisterReceiver(mLoginReceiver);
+        unbindService(mAuthServiceConnection);
     }
 }

@@ -5,7 +5,6 @@ import android.os.Looper;
 import android.util.Log;
 
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
-import com.softrangers.sonarcloudmobile.utils.cache.DBManager;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -21,16 +20,12 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.security.SecureRandom;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 
 /**
  * Created by Eduard Albu on 07 04 2016
@@ -54,7 +49,7 @@ public class AudioSocket {
             // initialize socket factory and all-trust TrustyManager
             SecureRandom secureRandom = new SecureRandom();
             SSLContext sslContext = SSLContext.getInstance("TLS");
-            sslContext.init(null, getTrustManagers(), secureRandom);
+            sslContext.init(null, SonarCloudApp.getInstance().getTrustManagers(), secureRandom);
             sslSocketFactory = sslContext.getSocketFactory();
             mResponseExecutor = Executors.newFixedThreadPool(5);
             mRequestExecutor = Executors.newFixedThreadPool(5);
@@ -287,30 +282,5 @@ public class AudioSocket {
                 SonarCloudApp.getInstance().sendBroadcast(intent);
             }
         }
-    }
-
-    /**
-     * Create a TrustManager which will trust all certificates
-     * @return TrustManager[] with a trust-all certificates TrustManager object inside
-     */
-    private TrustManager[] getTrustManagers() {
-        return new TrustManager[]{
-                new X509TrustManager() {
-                    @Override
-                    public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException {
-
-                    }
-
-                    @Override
-                    public void checkServerTrusted(X509Certificate[] chain, String authType) throws CertificateException {
-
-                    }
-
-                    @Override
-                    public X509Certificate[] getAcceptedIssuers() {
-                        return null;
-                    }
-                }
-        };
     }
 }

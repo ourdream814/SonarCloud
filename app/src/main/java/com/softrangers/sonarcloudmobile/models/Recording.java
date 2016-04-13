@@ -29,6 +29,7 @@ public class Recording implements Parcelable {
     private String mFilePath;
     private String mRecordName;
     private boolean mIsLoading;
+    private int mProgress;
 
     public Recording() {}
 
@@ -48,6 +49,7 @@ public class Recording implements Parcelable {
         mFilePath = in.readString();
         mRecordName = in.readString();
         mIsLoading = in.readByte() != 0;
+        mProgress = in.readInt();
     }
 
     public static final Creator<Recording> CREATOR = new Creator<Recording>() {
@@ -186,6 +188,14 @@ public class Recording implements Parcelable {
         mIsLoading = loading;
     }
 
+    public int getProgress() {
+        return mProgress;
+    }
+
+    public void setProgress(int progress) {
+        mProgress = progress;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (o instanceof Recording) {
@@ -288,5 +298,6 @@ public class Recording implements Parcelable {
         dest.writeString(mFilePath);
         dest.writeString(mRecordName);
         dest.writeByte((byte) (mIsLoading ? 1 : 0));
+        dest.writeInt(mProgress);
     }
 }

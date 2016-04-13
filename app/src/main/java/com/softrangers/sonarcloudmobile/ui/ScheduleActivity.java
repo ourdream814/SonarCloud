@@ -3,11 +3,14 @@ package com.softrangers.sonarcloudmobile.ui;
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.LinearLayoutManager;
@@ -25,6 +28,7 @@ import com.softrangers.sonarcloudmobile.models.Recording;
 import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.models.Schedule;
 import com.softrangers.sonarcloudmobile.utils.api.AudioSocket;
+import com.softrangers.sonarcloudmobile.utils.api.DataSocketService;
 import com.softrangers.sonarcloudmobile.utils.ui.BaseActivity;
 import com.softrangers.sonarcloudmobile.utils.RepeatingCheck;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
@@ -64,12 +68,15 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
     private static Recording recording;
     private Request.Builder mRequestBuilder;
     private String mAction;
+    public static DataSocketService dataSocketService;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_schedule);
+        Intent socketIntent = new Intent(this, DataSocketService.class);
+        bindService(socketIntent, mDataServiceConnection, Context.BIND_AUTO_CREATE);
         IntentFilter dataIntentFilter = new IntentFilter(Api.Command.UPDATE_SCHEDULE);
         dataIntentFilter.addAction(Api.Command.CREATE_SCHEDULE);
         dataIntentFilter.addAction(Api.Command.SEND_AUDIO);
@@ -113,6 +120,21 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         }
         initializeList(mAdapter);
     }
+
+    // needed to bind DataSocketService to current class
+    protected ServiceConnection mDataServiceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            // get the service instance
+            dataSocketService = ((DataSocketService.LocalBinder) service).getService();
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            // remove service instance
+            dataSocketService = null;
+        }
+    };
 
     //---------------------------- Update schedule ----------------------------//
     /**
@@ -274,7 +296,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                     mRequestBuilder.time(schedule.getTime());
                 }
                 JSONObject request = mRequestBuilder.build().toJSON();
-                SonarCloudApp.dataSocketService.sendRequest(request);
+                dataSocketService.sendRequest(request);
                 break;
             }
             case ACTION_ADD_SCHEDULE: {
@@ -295,6 +317,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         setResult(RESULT_CANCELED, new Intent(mAction));
         unregisterReceiver(mBroadcastReceiver);
         unregisterReceiver(mAudioSendingReceiver);
+        unbindService(mDataServiceConnection);
         super.onBackPressed();
     }
 
@@ -529,7 +552,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
             }
             JSONObject request = requestBuilder.build().toJSON();
             request.put(Api.Options.PLAY_IMMEDIATELY, false).put(Api.Options.KEEP, schedule.getTime() == null);
-            SonarCloudApp.dataSocketService.sendRequest(request);
+            dataSocketService.sendRequest(request);
         } catch (Exception e) {
             onErrorOccurred();
             e.printStackTrace();
@@ -587,6 +610,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         unregisterReceiver(mAudioSendingReceiver);
         unregisterReceiver(mBroadcastReceiver);
         MainActivity.statusChanged = true;
+        unbindService(mDataServiceConnection);
         finish();
     }
 }

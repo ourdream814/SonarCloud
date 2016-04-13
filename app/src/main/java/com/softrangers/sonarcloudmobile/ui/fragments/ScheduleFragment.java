@@ -6,6 +6,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.support.design.widget.Snackbar;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -45,7 +48,7 @@ import java.util.ArrayList;
 
 public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheckedChangeListener,
         ScheduledRecordsAdapter.OnScheduleClickListener, DaysAdapter.OnDayClickListener,
-        ScheduleAllRecordingsAdapter.OnRecordClickListener, OpusPlayer.OnPlayListener {
+        ScheduleAllRecordingsAdapter.OnRecordClickListener {
 
     private static RelativeLayout scheduledLayout;
     private static RelativeLayout allScheduleLayout;
@@ -95,7 +98,6 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         mActivity.registerReceiver(mBroadcastReceiver, intentFilter);
         mDaysAdapter = new DaysAdapter();
         mOpusPlayer = new OpusPlayer();
-        mOpusPlayer.setOnPlayListener(this);
         initializeViews(mRootView);
         return mRootView;
     }
@@ -211,7 +213,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         for (Receiver receiver : receivers) {
             builder.receiverId(receiver.getReceiverId());
             // send request to server
-            SonarCloudApp.dataSocketService.sendRequest(builder.build().toJSON());
+            MainActivity.dataSocketService.sendRequest(builder.build().toJSON());
             try {
                 Thread.sleep(500);
             } catch (InterruptedException e) {
@@ -242,7 +244,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         for (Receiver receiver : receivers) {
             builder.receiverId(receiver.getReceiverId());
             // send request to server
-            SonarCloudApp.dataSocketService.sendRequest(builder.build().toJSON());
+            MainActivity.dataSocketService.sendRequest(builder.build().toJSON());
             try {
                 Thread.sleep(500);
             } catch (InterruptedException e) {
@@ -322,7 +324,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         startGettingAudioData(recording, seekBar, seekBarTime, position);
     }
 
-    BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
+    public BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             try {
@@ -385,7 +387,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     };
 
     public void clearLists() {
-        getActivity().runOnUiThread(new Runnable() {
+        mActivity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 scheduledRecordsAdapter.clearList();
@@ -437,11 +439,6 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
                 mActivity.getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
     }
 
-    @Override
-    public void onDetach() {
-        super.onDetach();
-        mActivity.unregisterReceiver(mBroadcastReceiver);
-    }
 
     /**
      * Swipe to delete implementation
@@ -500,7 +497,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         builder.command(Api.Command.DELETE_SCHEDULE);
         builder.scheduleId(schedule.getScheduleID());
         // send request to server
-        SonarCloudApp.dataSocketService.sendRequest(builder.build().toJSON());
+        MainActivity.dataSocketService.sendRequest(builder.build().toJSON());
     }
 
     @Override
@@ -535,6 +532,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
 
     @Override
     public void onItemClick(Recording recording, SeekBar seekBar, TextView seekBarTime, int position) {
+        if (AudioSocket.getInstance().isAudioConnectionReady()) AudioSocket.getInstance().closeAudioConnection();
         recording.setLoading(true);
         notifyAllRecordAdapter(position);
         AudioSocket.getInstance().setAudioConnection();
@@ -556,7 +554,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
             builder.command(Api.Command.GET_AUDIO).recordingID(recording.getRecordingId());
             JSONObject request = builder.build().toJSON();
             Log.i(this.getClass().getSimpleName(), "Get audio: " + request.toString());
-            SonarCloudApp.dataSocketService.sendRequest(request);
+            MainActivity.dataSocketService.sendRequest(request);
         }
     }
 
@@ -575,44 +573,29 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
 
     private void onAudioReady(String path) {
         clickedRecording.setFilePath(path);
-        mOpusPlayer.play(clickedRecording, clickedRecordPosition);
+        mOpusPlayer.play(clickedRecording, clickedRecordPosition, mHandler);
     }
 
-    @Override
-    public void onStartPlayback(Recording recording, int position) {
-        Log.i(this.getClass().getSimpleName(), "Start playback");
-        recording.setLoading(false);
-        notifyAllRecordAdapter(position);
-        AudioSocket.getInstance().closeAudioConnection();
-    }
-
-    @Override
-    public void onStopPlayback(Recording recording, int position) {
-        Log.i(this.getClass().getSimpleName(), "Stop playback");
-        recording.setLoading(false);
-        notifyAllRecordAdapter(position);
-        AudioSocket.getInstance().closeAudioConnection();
-    }
-
-    @Override
-    public void onPlaybackError(Recording recording, int position) {
-        Log.i(this.getClass().getSimpleName(), "Error playback");
-        recording.setLoading(false);
-        notifyAllRecordAdapter(position);
-        AudioSocket.getInstance().closeAudioConnection();
-    }
-
-    @Override
-    public void onPlaying(final Recording recording, int position, final long duration) {
-        getActivity().runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                int progress = (int) (duration / 1000);
-                mClickedItemSeekBar.setProgress(progress);
-                mClickedItemSeekBarTime.setText(recording.stringForTime(progress));
+    Handler mHandler = new Handler(Looper.getMainLooper()) {
+        @Override
+        public void handleMessage(final Message msg) {
+            Recording recording = ((Recording) msg.obj);
+            switch (msg.what) {
+                case OpusPlayer.STATE_STARTED:
+                case OpusPlayer.STATE_STOPPED:
+                    recording.setLoading(false);
+                    recording.setProgress(0);
+                    notifyAllRecordAdapter(msg.arg1);
+                    AudioSocket.getInstance().closeAudioConnection();
+                    break;
+                default:
+                    int progress = msg.what / 1000;
+                    recording.setProgress(progress);
+                    notifyAllRecordAdapter(msg.arg1);
+                    break;
             }
-        });
-    }
+        }
+    };
 
     private void notifyAllRecordAdapter(final int position) {
         getActivity().runOnUiThread(new Runnable() {
@@ -622,5 +605,11 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
                 scheduledRecordsAdapter.notifyItemChanged(position);
             }
         });
+    }
+
+    @Override
+    public void onDetach() {
+        super.onDetach();
+        mActivity.unregisterReceiver(mBroadcastReceiver);
     }
 }

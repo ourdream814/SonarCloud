@@ -25,6 +25,12 @@ import com.softrangers.sonarcloudmobile.utils.api.DataSocketService;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+
 /**
  * Created by Eduard Albu on 12 03 2016
  * project SonarCloud
@@ -51,8 +57,8 @@ public class SonarCloudApp extends Application {
     public static Typeface avenirMedium;
     private static SharedPreferences preferences;
     public static User user;
-    public static DataSocketService dataSocketService;
-    public static Intent dataSocketIntent;
+//    public static DataSocketService dataSocketService;
+//    public static Intent dataSocketIntent;
 
     private static AlarmManager alarmManager;
     private static PendingIntent pendingIntent;
@@ -66,26 +72,6 @@ public class SonarCloudApp extends Application {
         avenirMedium = Typeface.createFromAsset(getAssets(), "fonts/avenir_lt_65_medium_0.ttf");
         // initialize a preferences object
         preferences = getSharedPreferences(LOGIN_RESULT, MODE_PRIVATE);
-
-        // start socket service and connect to server
-        dataSocketIntent = new Intent(this, DataSocketService.class);
-        // bind current class to the DataSocketService
-        bindService(dataSocketIntent, mDataServiceConnection, Context.BIND_AUTO_CREATE);
-    }
-
-    public void requestUserIdentifier() {
-        String identifier = getIdentifier();
-        // Start building a request to either create a new or renew existing identifier
-        Request.Builder requestBuilder = new Request.Builder();
-        requestBuilder.command(Api.Command.IDENTIFIER);
-        requestBuilder.seq(SonarCloudApp.SEQ_VALUE);
-        if (SonarCloudApp.NO_IDENTIFIER.equals(identifier)) {
-            requestBuilder.action(Api.Action.NEW);
-        } else {
-            requestBuilder.action(Api.Action.RENEW);
-            requestBuilder.identifier(identifier);
-        }
-        dataSocketService.sendRequest(requestBuilder.build().toJSON());
     }
 
     /**
@@ -102,20 +88,20 @@ public class SonarCloudApp extends Application {
         }
     }
 
-    // needed to bind DataSocketService to current class
-    protected ServiceConnection mDataServiceConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            // get the service instance
-            dataSocketService = ((DataSocketService.LocalBinder) service).getService();
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            // remove service instance
-            dataSocketService = null;
-        }
-    };
+//    // needed to bind DataSocketService to current class
+//    protected ServiceConnection mDataServiceConnection = new ServiceConnection() {
+//        @Override
+//        public void onServiceConnected(ComponentName name, IBinder service) {
+//            // get the service instance
+//            dataSocketService = ((DataSocketService.LocalBinder) service).getService();
+//        }
+//
+//        @Override
+//        public void onServiceDisconnected(ComponentName name) {
+//            // remove service instance
+//            dataSocketService = null;
+//        }
+//    };
 
     /**
      * Check if application has permissions to use microphone
@@ -205,65 +191,6 @@ public class SonarCloudApp extends Application {
         editor.apply();
     }
 
-    BroadcastReceiver mLoginReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            try {
-                String action = intent.getAction();
-                JSONObject jsonResponse = new JSONObject(intent.getExtras().getString(action));
-                boolean success = jsonResponse.optBoolean("success", false);
-                if (!success) {
-                    return;
-                }
-                switch (action) {
-                    case Api.Command.AUTHENTICATE:
-                        onResponseSucceed(jsonResponse);
-                        break;
-                    case Api.Command.IDENTIFIER:
-                        onIdentifierReady(jsonResponse);
-                        break;
-                }
-            } catch (Exception e) {
-            }
-        }
-    };
-
-    /**
-     * Called to notify about server response
-     * @param response object which contains desired data
-     */
-    public void onResponseSucceed(JSONObject response) {
-        try {
-            // Get user id from the response object
-            String id = response.getString("userID");
-
-            user.setId(id);
-
-            // request identifier from server
-            requestUserIdentifier();
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void onIdentifierReady(JSONObject response) {
-        try {
-            // Save identifier and secret to app preferences
-            SonarCloudApp.getInstance().saveIdentifier(response.getString(Api.IDENTIFIER));
-            SonarCloudApp.getInstance().saveUserSecret(response.getString(Api.SECRET));
-
-            // save identifier and secret to user object for this session
-            user.setIdentifier(SonarCloudApp.getInstance().getIdentifier());
-            user.setSecret(SonarCloudApp.getInstance().getSavedData());
-
-            saveUserLoginStatus(true, user.getId());
-            startKeepingConnection();
-            unregisterReceiver(mLoginReceiver);
-            dataSocketService.restartConnection();
-        } catch (Exception e) {
-        }
-    }
-
     /**
      * Get user password from preferences
      * @return either saved password or an empty string
@@ -322,10 +249,35 @@ public class SonarCloudApp extends Application {
         alarmManager = null;
     }
 
+    /**
+     * Create a TrustManager which will trust all certificates
+     *
+     * @return TrustManager[] with a trust-all certificates TrustManager object inside
+     */
+    public TrustManager[] getTrustManagers() {
+        return new TrustManager[]{
+                new X509TrustManager() {
+                    @Override
+                    public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+
+                    }
+
+                    @Override
+                    public void checkServerTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+
+                    }
+
+                    @Override
+                    public X509Certificate[] getAcceptedIssuers() {
+                        return null;
+                    }
+                }
+        };
+    }
+
     @Override
     public void onTerminate() {
         super.onTerminate();
-        unbindService(mDataServiceConnection);
         stopKeepingConnection();
     }
 }

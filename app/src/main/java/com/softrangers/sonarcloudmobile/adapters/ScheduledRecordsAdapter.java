@@ -47,6 +47,8 @@ public class ScheduledRecordsAdapter extends RecyclerView.Adapter<ScheduledRecor
     }
 
     public void changeList(ArrayList<Schedule> recordings) {
+        currentSelectedPosition = NOT_SELECTED;
+        lastSelectedPosition = WAS_NOT_SELECTED;
         mSchedules.clear();
         mSchedules.addAll(recordings);
         notifyDataSetChanged();
@@ -58,16 +60,21 @@ public class ScheduledRecordsAdapter extends RecyclerView.Adapter<ScheduledRecor
     }
 
     public void clearList() {
+        currentSelectedPosition = NOT_SELECTED;
+        lastSelectedPosition = WAS_NOT_SELECTED;
         mSchedules.clear();
         notifyDataSetChanged();
     }
 
     public void addItem(Schedule recording, int position) {
+        if (position == currentSelectedPosition) currentSelectedPosition++;
         mSchedules.add(position, recording);
         notifyItemInserted(position);
     }
 
     public Schedule removeItem(int position) {
+        if (position == currentSelectedPosition) currentSelectedPosition = NOT_SELECTED;
+        if (position == lastSelectedPosition) lastSelectedPosition = WAS_NOT_SELECTED;
         Schedule recording = mSchedules.get(position);
         mSchedules.remove(position);
         notifyItemRemoved(position);
@@ -167,6 +174,7 @@ public class ScheduledRecordsAdapter extends RecyclerView.Adapter<ScheduledRecor
                     if (lastSelectedPosition != WAS_NOT_SELECTED
                             && lastSelectedPosition != currentSelectedPosition) {
                         mSchedules.get(lastSelectedPosition).setIsSelected(false);
+                        mSchedules.get(lastSelectedPosition).getRecording().setLoading(false);
                         notifyItemChanged(lastSelectedPosition);
                     }
                     notifyItemChanged(currentSelectedPosition);

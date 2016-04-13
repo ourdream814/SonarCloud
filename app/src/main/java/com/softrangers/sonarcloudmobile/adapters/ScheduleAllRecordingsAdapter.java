@@ -42,6 +42,8 @@ public class ScheduleAllRecordingsAdapter extends RecyclerView.Adapter<ScheduleA
     }
 
     public void changeList(ArrayList<Recording> recordings) {
+        currentSelectedItem = NOT_SELECTED;
+        lastSelectedItem = WAS_NOT_SELECTED;
         mRecordings.clear();
         mRecordings.addAll(recordings);
         notifyDataSetChanged();
@@ -63,16 +65,21 @@ public class ScheduleAllRecordingsAdapter extends RecyclerView.Adapter<ScheduleA
     }
 
     public void clearList() {
+        currentSelectedItem = NOT_SELECTED;
+        lastSelectedItem = WAS_NOT_SELECTED;
         mRecordings.clear();
         notifyDataSetChanged();
     }
 
     public void addItem(int position, Recording recording) {
+        if (currentSelectedItem == position) currentSelectedItem++;
         mRecordings.add(position, recording);
         notifyItemInserted(position);
     }
 
     public Recording removeItem(int position) {
+        if (currentSelectedItem == position) currentSelectedItem = NOT_SELECTED;
+        if (lastSelectedItem == position) lastSelectedItem = WAS_NOT_SELECTED;
         Recording recording = mRecordings.get(position);
         mRecordings.remove(position);
         notifyItemRemoved(position);
@@ -105,6 +112,8 @@ public class ScheduleAllRecordingsAdapter extends RecyclerView.Adapter<ScheduleA
 
         if (holder.mSeekBarLayout.getVisibility() == View.VISIBLE) {
             holder.mSeekBar.setMax(holder.mRecording.getLength());
+            holder.mSeekBar.setProgress(holder.mRecording.getProgress());
+            holder.mSeekBarTime.setText(holder.mRecording.stringForTime(holder.mRecording.getProgress()));
         }
 
         if (holder.mRecordTitle.getVisibility() == View.VISIBLE) {
@@ -154,6 +163,7 @@ public class ScheduleAllRecordingsAdapter extends RecyclerView.Adapter<ScheduleA
             notifyItemChanged(currentSelectedItem);
             if (lastSelectedItem != WAS_NOT_SELECTED && lastSelectedItem != currentSelectedItem) {
                 mRecordings.get(lastSelectedItem).setIsPlaying(false);
+                mRecordings.get(lastSelectedItem).setLoading(false);
                 notifyItemChanged(lastSelectedItem);
             }
             lastSelectedItem = currentSelectedItem;

@@ -38,16 +38,15 @@ public class LockAppActivity extends AppCompatActivity implements CompoundButton
     }
 
     public void onBackButtonClick(View view) {
-        Intent intent = new Intent(this, MainActivity.class);
-        intent.setAction("lock");
-        setResult(RESULT_OK, intent);
-        finish();
+        onBackPressed();
     }
 
     @Override
     public void onBackPressed() {
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.setAction("lock");
+        setResult(RESULT_OK, intent);
         super.onBackPressed();
-//        overridePendingTransition(R.anim.left_to_right, R.anim.right_to_left);
     }
 
     @Override

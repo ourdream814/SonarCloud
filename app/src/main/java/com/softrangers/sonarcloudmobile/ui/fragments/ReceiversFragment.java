@@ -1,6 +1,5 @@
 package com.softrangers.sonarcloudmobile.ui.fragments;
 
-import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -29,13 +28,13 @@ import com.softrangers.sonarcloudmobile.models.Receiver;
 import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.ui.AddGroupActivity;
 import com.softrangers.sonarcloudmobile.ui.MainActivity;
-import com.softrangers.sonarcloudmobile.utils.ui.BaseFragment;
-import com.softrangers.sonarcloudmobile.utils.cache.Constants;
-import com.softrangers.sonarcloudmobile.utils.cache.DBManager;
-import com.softrangers.sonarcloudmobile.utils.observers.GroupObserver;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
 import com.softrangers.sonarcloudmobile.utils.api.ConnectionReceiver;
+import com.softrangers.sonarcloudmobile.utils.cache.Constants;
+import com.softrangers.sonarcloudmobile.utils.cache.DBManager;
+import com.softrangers.sonarcloudmobile.utils.observers.GroupObserver;
+import com.softrangers.sonarcloudmobile.utils.ui.BaseFragment;
 import com.softrangers.sonarcloudmobile.utils.widgets.AnimatedExpandableListView;
 
 import org.json.JSONObject;
@@ -146,22 +145,6 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
     }
 
     @Override
-    public void onDetach() {
-        super.onDetach();
-        Log.d(this.getClass().getSimpleName(), "onDetach()");
-        mActivity.unregisterReceiver(mPAReceiver);
-    }
-
-    @Override
-    public void onViewStateRestored(@Nullable Bundle savedInstanceState) {
-        super.onViewStateRestored(savedInstanceState);
-        if (mPASystems == null || mPASystems.size() <= 0) {
-            getPAListFromServer();
-        }
-        Log.e(this.getClass().getSimpleName(), "onViewStateRestored()");
-    }
-
-    @Override
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putParcelableArrayList(PA_LIST_STATE, mPASystems);
@@ -223,7 +206,7 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
             Request.Builder builder = new Request.Builder()
                     .command(Api.Command.RECEIVER_GROUPS)
                     .userId(SonarCloudApp.user.getId());
-            SonarCloudApp.dataSocketService.sendRequest(builder.build().toJSON());
+            MainActivity.dataSocketService.sendRequest(builder.build().toJSON());
         }
     }
 
@@ -269,7 +252,6 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
 
     /**
      * Called when a group edit button was clicked
-     *
      * @param group    for which the button was clicked
      * @param position of the group in the list
      */
@@ -284,7 +266,6 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
 
     /**
      * Called when a group where added or edited
-     *
      * @param group either new or edited
      */
     @Override
@@ -315,7 +296,6 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
 
     /**
      * Called when server can't understand the command
-     *
      * @param message about server error
      */
     @Override
@@ -334,7 +314,6 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
 
     /**
      * Called when a receiver is clicked in the PAs list
-     *
      * @param receiver which is clicked
      * @param position of the receiver in the list
      */
@@ -404,10 +383,10 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
         Request.Builder builder = new Request.Builder();
         builder.command(Api.Command.DELETE_GROUP);
         builder.receiverGroupID(group.getGroupID());
-        SonarCloudApp.dataSocketService.sendRequest(builder.build().toJSON());
+        MainActivity.dataSocketService.sendRequest(builder.build().toJSON());
     }
 
-    BroadcastReceiver mPAReceiver = new BroadcastReceiver() {
+    public BroadcastReceiver mPAReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             try {
@@ -458,7 +437,7 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
             // Send the request to server
             if (lastRequest == null || !lastRequest.equals(request.toJSON().toString())) {
                 lastRequest = request.toJSON().toString();
-                SonarCloudApp.dataSocketService.sendRequest(request.toJSON());
+                MainActivity.dataSocketService.sendRequest(request.toJSON());
             }
         }
         response.remove("seq");
@@ -521,9 +500,9 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
                 requestBuilder.userId(SonarCloudApp.getInstance().userId());
                 requestBuilder.seq(SonarCloudApp.SEQ_VALUE);
                 // send request to server
-                if (SonarCloudApp.dataSocketService != null) {
+                if (MainActivity.dataSocketService != null) {
                     showLoading();
-                    SonarCloudApp.dataSocketService.sendRequest(requestBuilder.build().toJSON());
+                    MainActivity.dataSocketService.sendRequest(requestBuilder.build().toJSON());
                 }
             }
         }).start();
@@ -538,5 +517,11 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
         void onReceiverClicked(Receiver receiver);
 
         void onGroupClicked(Group group);
+    }
+
+    @Override
+    public void onDetach() {
+        super.onDetach();
+        mActivity.unregisterReceiver(mPAReceiver);
     }
 }

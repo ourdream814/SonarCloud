@@ -1,10 +1,13 @@
 package com.softrangers.sonarcloudmobile.ui;
 
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.support.design.widget.Snackbar;
 import android.view.View;
 import android.widget.Button;
@@ -17,9 +20,9 @@ import com.softrangers.sonarcloudmobile.models.Group;
 import com.softrangers.sonarcloudmobile.models.PASystem;
 import com.softrangers.sonarcloudmobile.models.Receiver;
 import com.softrangers.sonarcloudmobile.models.Request;
-import com.softrangers.sonarcloudmobile.utils.ui.BaseActivity;
-import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
+import com.softrangers.sonarcloudmobile.utils.api.DataSocketService;
+import com.softrangers.sonarcloudmobile.utils.ui.BaseActivity;
 
 import org.json.JSONObject;
 
@@ -44,12 +47,15 @@ public class AddGroupActivity extends BaseActivity {
     private Group mGroup;
     private ArrayList<PASystem> mPASystems;
     private ArrayList<Receiver> mReceivers;
+    public static DataSocketService dataSocketService;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_group);
-        IntentFilter intentFilter = new IntentFilter(Api.Command.CREATE_GROUP);
+        Intent socketIntent = new Intent(this, DataSocketService.class);
+        bindService(socketIntent, mDataServiceConnection, Context.BIND_AUTO_CREATE);
+        IntentFilter intentFilter = new IntentFilter(Api.Command.UPDATE_GROUP);
         intentFilter.addAction(Api.Command.CREATE_GROUP);
         intentFilter.addAction(Api.EXCEPTION);
         registerReceiver(mBroadcastReceiver, intentFilter);
@@ -78,6 +84,21 @@ public class AddGroupActivity extends BaseActivity {
                 break;
         }
     }
+
+    // needed to bind DataSocketService to current class
+    protected ServiceConnection mDataServiceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            // get the service instance
+            dataSocketService = ((DataSocketService.LocalBinder) service).getService();
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            // remove service instance
+            dataSocketService = null;
+        }
+    };
 
     private void setSelectedReceivers(ArrayList<Receiver> destination) {
         for (Receiver r : destination) {
@@ -172,7 +193,7 @@ public class AddGroupActivity extends BaseActivity {
             }
             builder.receivers(receivers);
             JSONObject object = builder.build().toJSON();
-            SonarCloudApp.dataSocketService.sendRequest(object);
+            dataSocketService.sendRequest(object);
             showLoading();
         }
     };
@@ -246,6 +267,12 @@ public class AddGroupActivity extends BaseActivity {
         setResult(RESULT_CANCELED, intent);
         unregisterReceiver(mBroadcastReceiver);
         super.onBackPressed();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unbindService(mDataServiceConnection);
     }
 
     private void onResponseSucceed(JSONObject response) {

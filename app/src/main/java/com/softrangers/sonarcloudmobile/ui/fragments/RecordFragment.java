@@ -6,6 +6,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
 import android.support.v4.view.MotionEventCompat;
@@ -53,7 +56,7 @@ import java.util.ArrayList;
 public class RecordFragment extends Fragment implements View.OnClickListener,
         AnnouncementRecAdapter.OnAnnouncementRecordInteraction,
         RadioGroup.OnCheckedChangeListener, View.OnTouchListener,
-        OpusRecorder.OnRecordListener, OpusPlayer.OnPlayListener {
+        OpusRecorder.OnRecordListener {
 
     private static final int ADD_SCHEDULE_REQUEST_CODE = 1813;
     private static final int SAMPLE_RATE = 48000;
@@ -130,7 +133,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         opusRecorder = new OpusRecorder();
         opusRecorder.setOnRecordListener(this);
         mOpusPlayer = new OpusPlayer();
-        mOpusPlayer.setOnPlayListener(this);
         // Chronometers for each view
         mRecordChronometer = (MillisChronometer) view.findViewById(R.id.make_announcement_chronometer);
         mStreamingChronometer = (MillisChronometer) view.findViewById(R.id.streaming_chronometer);
@@ -245,8 +247,21 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
      */
     @Override
     public void onItemClick(Recording recording, int position, boolean isPlaying) {
-        mOpusPlayer.play(recording, position);
+        mOpusPlayer.play(recording, position, mHandler);
     }
+
+    Handler mHandler = new Handler(Looper.getMainLooper()) {
+        @Override
+        public void handleMessage(final Message msg) {
+            switch (msg.what) {
+                case OpusPlayer.STATE_STARTED:
+                case OpusPlayer.STATE_STOPPED:
+                    ((Recording) msg.obj).setLoading(false);
+                    notifyRecordingsAdapter(msg.arg1);
+                    break;
+            }
+        }
+    };
 
     /**
      * Called when schedule button for a record within the list is clicked
@@ -593,26 +608,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         }
     }
 
-    @Override
-    public void onStartPlayback(Recording recording, int position) {
-        notifyRecordingsAdapter(position);
-    }
-
-    @Override
-    public void onStopPlayback(Recording recording, int position) {
-        notifyRecordingsAdapter(position);
-    }
-
-    @Override
-    public void onPlaybackError(Recording recording, int position) {
-        notifyRecordingsAdapter(position);
-    }
-
-    @Override
-    public void onPlaying(Recording recording, int position, long duration) {
-
-    }
-
     /**
      * Used to track the streaming process state
      */
@@ -693,7 +688,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
     private ImageButton mSendButton;
 
     // receiver for server responses
-    BroadcastReceiver mAudioSendingReceiver = new BroadcastReceiver() {
+    public BroadcastReceiver mAudioSendingReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             try {
@@ -769,7 +764,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
             }
             JSONObject request = requestBuilder.build().toJSON();
             request.put(Api.Options.PLAY_IMMEDIATELY, true).put(Api.Options.KEEP, false);
-            SonarCloudApp.dataSocketService.sendRequest(request);
+            MainActivity.dataSocketService.sendRequest(request);
         } catch (Exception e) {
             isSending = false;
             if (mSendButton != null && mSendingProgress != null) {
@@ -880,6 +875,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
      * @param message with the problem description
      */
     private void onCommandFailure(String message) {
+        mActivity.dismissLoading();
         isSending = false;
         isServerReady = false;
         if (message != null) {
@@ -896,7 +892,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
      * Called when an exception occurs while sending the audio
      */
     private void onErrorOccurred() {
-
+        mActivity.dismissLoading();
         isSending = false;
         isServerReady = false;
         if (mSendButton != null && mSendingProgress != null) {
@@ -906,17 +902,17 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         }
     }
 
-    @Override
-    public void onDetach() {
-        super.onDetach();
-        mActivity.unregisterReceiver(mAudioSendingReceiver);
-    }
-
     enum SelectedLayout {
         RECORDING, STREAMING, PTT
     }
 
     enum RecordingLayout {
         RECORDINGS, STREAMING, PUSH_TO_TALK, NOT_RECORDING
+    }
+
+    @Override
+    public void onDetach() {
+        super.onDetach();
+        mActivity.unregisterReceiver(mAudioSendingReceiver);
     }
 }

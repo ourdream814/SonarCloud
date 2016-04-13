@@ -3,6 +3,11 @@ package com.softrangers.sonarcloudmobile.utils.opus;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.softrangers.sonarcloudmobile.models.Recording;
@@ -22,6 +27,7 @@ public class OpusPlayer {
     private static final int SAMPLE_RATE = 48000;
     private static final int CHANNEL = 1;
     private OnPlayListener mOnPlayListener;
+    public static final int STATE_STARTED = 1, STATE_STOPPED = 0;
 
     public void setOnPlayListener(OnPlayListener onPlayListener) {
         mOnPlayListener = onPlayListener;
@@ -39,7 +45,30 @@ public class OpusPlayer {
             @Override
             public void run() {
                 try {
-                    playAudio(recording, position);
+                    playAudio(recording, position, null);
+                } catch (Exception e) {
+                    e.printStackTrace();
+
+                }
+            }
+        }).start();
+    }
+
+    public void play(final Recording recording, final int position, @NonNull final Handler handler) {
+        if (recording.isPlaying()) {
+            recording.setIsPlaying(false);
+            Message message = handler.obtainMessage();
+            message.what = STATE_STOPPED;
+            message.arg1 = position;
+            message.obj = recording;
+            handler.sendMessage(message);
+            return;
+        }
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    playAudio(recording, position, handler);
                 } catch (Exception e) {
                     e.printStackTrace();
 
@@ -54,7 +83,7 @@ public class OpusPlayer {
      * @param recording which contains a file path
      * @param position  of the recording in the list, used to update UI
      */
-    private void playAudio(Recording recording, int position) throws Exception {
+    private void playAudio(Recording recording, int position, @Nullable Handler handler) throws Exception {
         int channelOption;
         File file = new File(recording.getFilePath());
         int size = (int) file.length();
@@ -83,7 +112,13 @@ public class OpusPlayer {
 
         // Now figure our lives
         recording.setIsPlaying(true);
-        if (mOnPlayListener != null) {
+        if (handler != null) {
+            Message message = handler.obtainMessage();
+            message.what = STATE_STARTED;
+            message.arg1 = position;
+            message.obj = recording;
+            handler.sendMessage(message);
+        } else if (mOnPlayListener != null) {
             mOnPlayListener.onStartPlayback(recording, position);
         }
         audioTrack.play();
@@ -139,7 +174,15 @@ public class OpusPlayer {
                     // get track current position and call onPlaying() method to update UI
                     long duration = (audioTrack.getPlaybackHeadPosition() / audioTrack.getSampleRate()) * 1000;
                     if (lastDuration < duration) {
-                        if (mOnPlayListener != null) mOnPlayListener.onPlaying(recording, position, duration);
+                        if (handler != null) {
+                            Message message = handler.obtainMessage();
+                            message.what = (int) duration;
+                            message.arg1 = position;
+                            message.obj = recording;
+                            handler.sendMessage(message);
+                        } else if (mOnPlayListener != null) {
+                            mOnPlayListener.onPlaying(recording, position, duration);
+                        }
                         lastDuration = duration;
                     }
                     // We are done with our buffer
@@ -147,11 +190,16 @@ public class OpusPlayer {
                 } // Else fill more
             }
         }
-
         audioTrack.stop();
         audioTrack.release();
         recording.setIsPlaying(false);
-        if (mOnPlayListener != null) {
+        if (handler != null) {
+            Message message = handler.obtainMessage();
+            message.what = STATE_STOPPED;
+            message.arg1 = position;
+            message.obj = recording;
+            handler.sendMessage(message);
+        } else if (mOnPlayListener != null) {
             mOnPlayListener.onStopPlayback(recording, position);
         }
         // Get rid of this
