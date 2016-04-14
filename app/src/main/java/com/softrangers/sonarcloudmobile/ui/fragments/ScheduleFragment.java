@@ -206,7 +206,12 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
             }
         });
         // clear current scheduled list
-        scheduledRecordsAdapter.clearList();
+        mActivity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                scheduledRecordsAdapter.clearList();
+            }
+        });
         // build a request with provided receivers
         Request.Builder builder = new Request.Builder();
         builder.command(Api.Command.SCHEDULES);

@@ -409,6 +409,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                 numberPicker.setMaxValue(repeatValues.length - 1);
                 numberPicker.setValue(currentValuePosition);
                 numberPicker.setDisplayedValues(getResources().getStringArray(R.array.repeat_values));
+                numberPicker.setDescendantFocusability(NumberPicker.FOCUS_BLOCK_DESCENDANTS);
                 numberPicker.setOnValueChangedListener(new NumberPicker.OnValueChangeListener() {
                     @Override
                     public void onValueChange(NumberPicker picker, int oldVal, int newVal) {
