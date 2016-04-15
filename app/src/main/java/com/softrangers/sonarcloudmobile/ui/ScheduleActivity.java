@@ -69,6 +69,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
     private Request.Builder mRequestBuilder;
     private String mAction;
     public static DataSocketService dataSocketService;
+    private static int repeatingOption;
 
 
     @Override
@@ -169,6 +170,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
 
     /**
      * Called by {@link ScheduleActivity#mBroadcastReceiver} when the response is successful
+     *
      * @param response as JSON which is received from server
      */
     private void onResponseSucceed(JSONObject response) {
@@ -187,6 +189,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
     /**
      * Called by {@link ScheduleActivity#mBroadcastReceiver} when the server can't execute the
      * command for some reasons and the response status is false
+     *
      * @param message either message from server or {@link com.softrangers.sonarcloudmobile.R.string#unknown_error}
      */
     private void onCommandFailure(String message) {
@@ -410,19 +413,21 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                 numberPicker.setValue(currentValuePosition);
                 numberPicker.setDisplayedValues(getResources().getStringArray(R.array.repeat_values));
                 numberPicker.setDescendantFocusability(NumberPicker.FOCUS_BLOCK_DESCENDANTS);
+                final int currentOption = schedule.getRepeatOption();
                 numberPicker.setOnValueChangedListener(new NumberPicker.OnValueChangeListener() {
                     @Override
                     public void onValueChange(NumberPicker picker, int oldVal, int newVal) {
-                        mAdapter.getItem(position).setSubtitle(repeatValues[newVal]);
-                        mAdapter.notifyItemChanged(position);
-                        schedule = RepeatingCheck.setRepeating(schedule, newVal);
-                        schedule.setRepeatOption();
+                        repeatingOption = newVal;
                     }
                 });
                 new AlertDialog.Builder(this).setView(numberPicker).setPositiveButton("OK",
                         new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
+                                mAdapter.getItem(position).setSubtitle(repeatValues[repeatingOption]);
+                                mAdapter.notifyItemChanged(position);
+                                schedule = RepeatingCheck.setRepeating(schedule, repeatingOption);
+                                schedule.setRepeatOption();
                                 if (!mAdapter.getItem(position).getSubtitle().equalsIgnoreCase(repeatValues[0])) {
                                     Schedule schedule = new Schedule();
                                     schedule.setRowType(Schedule.RowType.ITEM);
@@ -434,8 +439,16 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                                     mAdapter.removeItem(position + 1);
                                 }
                             }
-                        })
-                        .setNegativeButton("Cancel", null).show();
+                        }).setNegativeButton("Cancel",
+                                new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialogInterface, int i) {
+                                        mAdapter.getItem(position).setSubtitle(repeatValues[currentOption]);
+                                        mAdapter.notifyItemChanged(position);
+                                        schedule = RepeatingCheck.setRepeating(schedule, currentOption);
+                                        schedule.setRepeatOption();
+                                    }
+                                }).show();
                 break;
             case REPEAT_UNTIL:
                 DatePickerDialog pickerDialog = new DatePickerDialog(
@@ -506,6 +519,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
 
     /**
      * Convert the {@link ScheduleActivity#schedule} into a JSON object for adding a new schedule
+     *
      * @return a JSON object from schedule object
      */
     private JSONObject buildScheduleObject() {

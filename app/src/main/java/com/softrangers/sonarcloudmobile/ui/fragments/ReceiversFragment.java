@@ -530,7 +530,7 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
 
     @Override
     public void onConnectionFailed() {
-        Snackbar.make(mReceiversLayout, "Can\'t connect to seerver, please check your internet connnection", Snackbar.LENGTH_SHORT).show();
+        Snackbar.make(mReceiversLayout, "Can\'t connect to server, please check your internet connection.", Snackbar.LENGTH_SHORT).show();
         hideLoading();
         mActivity.dismissLoading();
     }

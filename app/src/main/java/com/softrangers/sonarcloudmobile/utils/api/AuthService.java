@@ -126,7 +126,6 @@ public class AuthService extends Service {
                         } finally {
                             new Connection();
                         }
-                        return;
                     }
                 }, 10000);
                 // create a new instance of socket and connect it to server

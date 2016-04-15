@@ -308,12 +308,12 @@ public class LoginActivity extends BaseActivity implements ConnectionReceiver.On
         // Disable Sign In button while loading
         mSignIn.setClickable(true);
         mSignIn.setVisibility(View.VISIBLE);
-        Snackbar.make(mSignIn, "Can\'t connect to seerver, please check your internet connnection", Snackbar.LENGTH_SHORT).show();
+        Snackbar.make(mSignIn, "Can\'t connect to server, please check your internet connection", Snackbar.LENGTH_SHORT).show();
     }
 
     @Override
     public void onConnectTimeOut() {
-        Snackbar.make(mSignIn, "Connection time out, trying to connect", Snackbar.LENGTH_LONG).setAction("CANCEL",
+        Snackbar.make(mSignIn, "Connection time out, trying to reconnect", Snackbar.LENGTH_LONG).setAction("CANCEL",
                 new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {

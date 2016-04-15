@@ -622,7 +622,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
 
     @Override
     public void onInternetConnectionRestored() {
-        Snackbar.make(mLoadingProgress, "Internet connectio restored",
+        Snackbar.make(mLoadingProgress, "Internet connection restored",
                 Snackbar.LENGTH_SHORT).show();
         MainActivity.dataSocketService.restartConnection();
     }
@@ -644,7 +644,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     @Override
     public void onConnectionFailed() {
         hideLoading();
-        Snackbar.make(mLoadingProgress, "Can\'t connect to seerver, please check your internet connnection", Snackbar.LENGTH_SHORT).show();
+        Snackbar.make(mLoadingProgress, "Can\'t connect to server, please check your internet connection", Snackbar.LENGTH_SHORT).show();
     }
 
     @Override

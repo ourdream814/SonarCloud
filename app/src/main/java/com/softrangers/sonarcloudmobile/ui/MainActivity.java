@@ -488,12 +488,12 @@ public class MainActivity extends BaseActivity implements
     public void onConnectionFailed() {
         isSocketConnected = false;
         dismissLoading();
-        Snackbar.make(mReceiversSelector, "Can\'t connect to seerver, please check your internet connnection", Snackbar.LENGTH_SHORT).show();
+        Snackbar.make(mReceiversSelector, "Can\'t connect to server.", Snackbar.LENGTH_SHORT).show();
     }
 
     @Override
     public void onConnectTimeOut() {
-        Snackbar.make(mReceiversSelector, "Connection time out, trying to connect", Snackbar.LENGTH_LONG).setAction("CANCEL",
+        Snackbar.make(mReceiversSelector, "Connection time out, trying to reconnect", Snackbar.LENGTH_LONG).setAction("CANCEL",
                 new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
