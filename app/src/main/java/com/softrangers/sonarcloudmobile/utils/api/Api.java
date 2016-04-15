@@ -32,7 +32,9 @@ public class Api {
 
     public static final String REQUEST_MESSAGE = "json_request";
     public static final String CONNECTION_SUCCEED = "com.softrangers.sonarcloudmobile.CONNECTED";
-    public static final String CONNECTIO_FAILED = "com.softrangers.sonarcloudmobile.CONNECTION_FAILED";
+    public static final String CONNECTION_FAILED = "com.softrangers.sonarcloudmobile.CONNECTION_FAILED";
+    public static final String CONNECTION_TIME_OUT = "com.softrangers.sonarcloudmobile.CONNECTION_TIME_OUT";
+    public static final String CONNECTION_LOST = "com.softrangers.sonarcloudmobile.CONNECTION_LOST";
     public static final String RESPONSE_BROADCAST = "com.softrangers.sonarcloudmobile.RESPONSE_BROADCAST";
     public static final String RESPONSE_MESSAGE = "json_response";
 

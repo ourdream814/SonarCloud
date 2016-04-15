@@ -71,6 +71,7 @@ public class MainActivity extends BaseActivity implements
     private static SettingsFragment settingsFragment;
 
     public static DataSocketService dataSocketService;
+    private static boolean isSocketConnected;
 
     // set selected items to send the record to them
     public static ArrayList<Receiver> selectedReceivers = new ArrayList<>();
@@ -99,13 +100,13 @@ public class MainActivity extends BaseActivity implements
 
         if (savedInstanceState != null) {
             receiversFragment = (ReceiversFragment) getSupportFragmentManager().getFragment(savedInstanceState,
-                    receiversFragment.getClass().getSimpleName());
+                    "ReceiversFragment");
             recordFragment = (RecordFragment) getSupportFragmentManager().getFragment(savedInstanceState,
-                    recordFragment.getClass().getSimpleName());
+                    "RecordFragment");
             scheduleFragment = (ScheduleFragment) getSupportFragmentManager().getFragment(savedInstanceState,
-                    scheduleFragment.getClass().getSimpleName());
+                    "ScheduleFragment");
             settingsFragment = (SettingsFragment) getSupportFragmentManager().getFragment(savedInstanceState,
-                    settingsFragment.getClass().getSimpleName());
+                    "SettingsFragment");
         } else {
             receiversFragment = new ReceiversFragment();
             recordFragment = new RecordFragment();
@@ -124,7 +125,7 @@ public class MainActivity extends BaseActivity implements
         }
 
         registerReceiver(mLoginReceiver, intentFilter);
-
+        ConnectionReceiver.getInstance().addOnConnectedListener(this);
         if (dataSocketService != null) {
             dataSocketService.restartConnection();
         }
@@ -151,10 +152,10 @@ public class MainActivity extends BaseActivity implements
     @Override
     public void onSaveInstanceState(Bundle outState, PersistableBundle outPersistentState) {
         super.onSaveInstanceState(outState, outPersistentState);
-        getSupportFragmentManager().putFragment(outState, receiversFragment.getClass().getSimpleName(), receiversFragment);
-        getSupportFragmentManager().putFragment(outState, recordFragment.getClass().getSimpleName(), recordFragment);
-        getSupportFragmentManager().putFragment(outState, scheduleFragment.getClass().getSimpleName(), scheduleFragment);
-        getSupportFragmentManager().putFragment(outState, settingsFragment.getClass().getSimpleName(), settingsFragment);
+        getSupportFragmentManager().putFragment(outState, "ReceiversFragment", receiversFragment);
+        getSupportFragmentManager().putFragment(outState, "RecordFragment", recordFragment);
+        getSupportFragmentManager().putFragment(outState, "ScheduleFragment", scheduleFragment);
+        getSupportFragmentManager().putFragment(outState, "SettingsFragment", settingsFragment);
         outState.putParcelable(USER_STATE, SonarCloudApp.user);
     }
 
@@ -449,6 +450,7 @@ public class MainActivity extends BaseActivity implements
         try {
             selectedReceivers = null;
             selectedGroup = null;
+            ConnectionReceiver.getInstance().removeOnResponseListener(this);
             SonarCloudApp.getInstance().stopKeepingConnection();
             unregisterReceiver(mLoginReceiver);
             unbindService(mDataServiceConnection);
@@ -459,12 +461,58 @@ public class MainActivity extends BaseActivity implements
 
     //------------------- Notifiers -------------------//
 
+    @Override
+    public void onInternetConnectionRestored() {
+        Snackbar.make(mReceiversSelector, "Internet connection restored",
+                Snackbar.LENGTH_SHORT).show();
+        dataSocketService.restartConnection();
+        showLoading();
+    }
+
+    @Override
+    public void onInternetConnectionLost() {
+        Snackbar.make(mReceiversSelector, "Internet connection lost",
+                Snackbar.LENGTH_SHORT).show();
+    }
+
     /**
      * Called when socket connection is established to notify that we can start the login process
      */
     @Override
     public void onSocketConnected() {
+        isSocketConnected = true;
+        dismissLoading();
+    }
 
+    @Override
+    public void onConnectionFailed() {
+        isSocketConnected = false;
+        dismissLoading();
+        Snackbar.make(mReceiversSelector, "Can\'t connect to seerver, please check your internet connnection", Snackbar.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onConnectTimeOut() {
+        Snackbar.make(mReceiversSelector, "Connection time out, trying to connect", Snackbar.LENGTH_LONG).setAction("CANCEL",
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+
+                    }
+                }).setActionTextColor(getResources()
+                .getColor(R.color.colorAlertAction))
+                .setCallback(new Snackbar.Callback() {
+                    @Override
+                    public void onDismissed(Snackbar snackbar, int event) {
+                        switch (event) {
+                            case DISMISS_EVENT_TIMEOUT:
+                            case DISMISS_EVENT_CONSECUTIVE:
+                            case DISMISS_EVENT_MANUAL:
+                                dataSocketService.restartConnection();
+                                break;
+                        }
+                    }
+                }).show();
     }
 
     @Override

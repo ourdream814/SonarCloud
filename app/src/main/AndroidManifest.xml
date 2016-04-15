@@ -3,6 +3,7 @@
           xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
@@ -43,7 +44,11 @@
             android:enabled="true"
             android:exported="false">
             <intent-filter>
+                <action android:name="android.net.conn.CONNECTIVITY_CHANGE"/>
+                <action android:name="com.softrangers.sonarcloudmobile.CONNECTION_FAILED"/>
                 <action android:name="com.softrangers.sonarcloudmobile.CONNECTED"/>
+                <action android:name="com.softrangers.sonarcloudmobile.CONNECTION_TIME_OUT"/>
+                <action android:name="com.softrangers.sonarcloudmobile.CONNECTION_LOST"/>
             </intent-filter>
         </receiver>
 

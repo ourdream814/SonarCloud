@@ -203,10 +203,12 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
         // Build a request for getting groups
         if (always || mGroups == null) {
             showLoading();
-            Request.Builder builder = new Request.Builder()
-                    .command(Api.Command.RECEIVER_GROUPS)
-                    .userId(SonarCloudApp.user.getId());
-            MainActivity.dataSocketService.sendRequest(builder.build().toJSON());
+            if (SonarCloudApp.user != null) {
+                Request.Builder builder = new Request.Builder()
+                        .command(Api.Command.RECEIVER_GROUPS)
+                        .userId(SonarCloudApp.user.getId());
+                MainActivity.dataSocketService.sendRequest(builder.build().toJSON());
+            }
         }
     }
 
@@ -509,8 +511,33 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
     }
 
     @Override
+    public void onInternetConnectionRestored() {
+        Snackbar.make(mReceiversLayout, "Internet connection restored",
+                Snackbar.LENGTH_SHORT).show();
+        MainActivity.dataSocketService.restartConnection();
+    }
+
+    @Override
+    public void onInternetConnectionLost() {
+        Snackbar.make(mReceiversLayout, "Internet connection lost",
+                Snackbar.LENGTH_SHORT).show();
+    }
+
+    @Override
     public void onSocketConnected() {
         getPAListFromServer();
+    }
+
+    @Override
+    public void onConnectionFailed() {
+        Snackbar.make(mReceiversLayout, "Can\'t connect to seerver, please check your internet connnection", Snackbar.LENGTH_SHORT).show();
+        hideLoading();
+        mActivity.dismissLoading();
+    }
+
+    @Override
+    public void onConnectTimeOut() {
+
     }
 
     public interface OnRecordFragmentListener {
@@ -522,6 +549,7 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
     @Override
     public void onDetach() {
         super.onDetach();
+        ConnectionReceiver.getInstance().removeOnResponseListener(this);
         mActivity.unregisterReceiver(mPAReceiver);
     }
 }

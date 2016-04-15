@@ -1,6 +1,7 @@
 package com.softrangers.sonarcloudmobile.utils.api;
 
 import android.content.Intent;
+import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
@@ -69,7 +70,13 @@ public class AudioSocket {
      * @param request to send
      */
     public void sendRequest(JSONObject request) {
-        mRequestExecutor.execute(new SendRequest(request));
+        if (isAudioConnectionReady() && SonarCloudApp.getInstance().isConnected()) {
+            mRequestExecutor.execute(new SendRequest(request));
+        } else {
+            Intent intent = new Intent(SonarCloudApp.getInstance().getBaseContext(), ConnectionReceiver.class);
+            intent.setAction(Api.CONNECTION_FAILED);
+            SonarCloudApp.getInstance().sendBroadcast(intent);
+        }
     }
 
     public boolean isAudioConnectionReady() {
@@ -85,7 +92,13 @@ public class AudioSocket {
     }
 
     public void startReadingAudioData() {
-        new ReadAudioData();
+        if (isAudioConnectionReady() && SonarCloudApp.getInstance().isConnected()) {
+            new ReadAudioData();
+        } else {
+            Intent intent = new Intent(SonarCloudApp.getInstance().getBaseContext(), ConnectionReceiver.class);
+            intent.setAction(Api.CONNECTION_FAILED);
+            SonarCloudApp.getInstance().sendBroadcast(intent);
+        }
     }
 
     public void closeAudioConnection() {
@@ -108,7 +121,13 @@ public class AudioSocket {
      * @param audioBytes which needs to be sent
      */
     public void sendAudio(byte[] audioBytes) {
-        new SendAudio(audioBytes);
+        if (isAudioConnectionReady() && SonarCloudApp.getInstance().isConnected()) {
+            new SendAudio(audioBytes);
+        } else {
+            Intent intent = new Intent(SonarCloudApp.getInstance().getBaseContext(), ConnectionReceiver.class);
+            intent.setAction(Api.CONNECTION_FAILED);
+            SonarCloudApp.getInstance().sendBroadcast(intent);
+        }
     }
 
     /**
@@ -122,16 +141,43 @@ public class AudioSocket {
 
         @Override
         public void run() {
+            final Intent intent = new Intent(SonarCloudApp.getInstance().getBaseContext(), ConnectionReceiver.class);
             try {
                 Looper.prepare();
+                if (!SonarCloudApp.getInstance().isConnected()) {
+                    intent.setAction(Api.CONNECTION_FAILED);
+                    SonarCloudApp.getInstance().sendBroadcast(intent);
+                    return;
+                }
+                new Handler().postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (isAudioConnectionReady()) return;
+                        intent.setAction(Api.CONNECTION_FAILED);
+                        SonarCloudApp.getInstance().sendBroadcast(intent);
+                        try {
+                            if (audioSocket != null)
+                                audioSocket.close();
+                            audioSocket = null;
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        return;
+                    }
+                }, 4000);
+
                 audioSocket = (SSLSocket) sslSocketFactory.createSocket(
                         new Socket(Api.URL, Api.AUDIO_PORT), Api.M_URL, Api.AUDIO_PORT, true
                 );
                 readIn = new BufferedReader(new InputStreamReader(audioSocket.getInputStream()));
                 Log.i(this.getClass().getSimpleName(), "Audio socket connected");
             } catch (Exception e) {
+                intent.setAction(Api.CONNECTION_FAILED);
+                SonarCloudApp.getInstance().sendBroadcast(intent);
                 e.printStackTrace();
                 Log.e(this.getClass().getSimpleName(), "Connection failed: " + e.getMessage());
+            } finally {
+                Looper.loop();
             }
         }
     }
@@ -141,6 +187,7 @@ public class AudioSocket {
      */
     class SendAudio implements Runnable {
         byte[] mBytes;
+
         public SendAudio(byte[] bytes) {
             mBytes = bytes;
             new Thread(this, this.getClass().getSimpleName()).start();
@@ -182,6 +229,7 @@ public class AudioSocket {
 
         /**
          * Constructor
+         *
          * @param message for server
          */
         public SendRequest(JSONObject message) {
@@ -256,6 +304,7 @@ public class AudioSocket {
     class ReadAudioData implements Runnable {
 
         final File mFile;
+
         public ReadAudioData() {
             File dir = new File(SonarCloudApp.getInstance().getCacheDir().getAbsolutePath() + File.separator + "tmp");
             dir.mkdir();

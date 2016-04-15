@@ -26,7 +26,7 @@ import com.softrangers.sonarcloudmobile.utils.ui.BaseActivity;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-public class LoginActivity extends BaseActivity {
+public class LoginActivity extends BaseActivity implements ConnectionReceiver.OnConnected {
 
     private EditText mEmail;
     private EditText mPassword;
@@ -34,6 +34,7 @@ public class LoginActivity extends BaseActivity {
     private Button mSignIn;
     private User mUser;
     public static AuthService authService;
+    public static boolean isSocketConnected;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,6 +49,7 @@ public class LoginActivity extends BaseActivity {
         registerReceiver(mLoginReceiver, intentFilter);
 
         ConnectionReceiver.getInstance().removeAllListeners();
+        ConnectionReceiver.getInstance().addOnConnectedListener(this);
 
         // Instantiate email input field
         mEmail = (EditText) findViewById(R.id.email_label);
@@ -119,6 +121,7 @@ public class LoginActivity extends BaseActivity {
 
     /**
      * Called when the Sig In button is pressed
+     *
      * @param view link to Sign In button instance
      */
     public void sigIn(View view) throws JSONException {
@@ -163,6 +166,7 @@ public class LoginActivity extends BaseActivity {
 
     /**
      * Called to notify about server response
+     *
      * @param response object which contains desired data
      */
     public void onResponseSucceed(JSONObject response) {
@@ -197,6 +201,7 @@ public class LoginActivity extends BaseActivity {
 
     /**
      * Called to notify about server error
+     *
      * @param message about the occurred error
      */
     public void onCommandFailure(final String message) {
@@ -260,6 +265,7 @@ public class LoginActivity extends BaseActivity {
         Intent intent = new Intent(this, MainActivity.class);
         intent.setAction(MainActivity.ACTION_LOGIN);
         setResult(RESULT_CANCELED, intent);
+
         finish();
         super.onBackPressed();
     }
@@ -267,7 +273,65 @@ public class LoginActivity extends BaseActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        ConnectionReceiver.getInstance().removeOnResponseListener(this);
         unregisterReceiver(mLoginReceiver);
         unbindService(mAuthServiceConnection);
+    }
+
+    @Override
+    public void onInternetConnectionRestored() {
+        Snackbar.make(mSignIn, "Internet connection restored",
+                Snackbar.LENGTH_SHORT).show();
+        authService.restartConnection();
+        showLoading();
+    }
+
+    @Override
+    public void onInternetConnectionLost() {
+        Snackbar.make(mSignIn, "Internet connection lost",
+                Snackbar.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onSocketConnected() {
+        isSocketConnected = true;
+        dismissLoading();
+    }
+
+    @Override
+    public void onConnectionFailed() {
+        isSocketConnected = false;
+        dismissLoading();
+        // Show visual progress
+        mProgressBar.setVisibility(View.GONE);
+
+        // Disable Sign In button while loading
+        mSignIn.setClickable(true);
+        mSignIn.setVisibility(View.VISIBLE);
+        Snackbar.make(mSignIn, "Can\'t connect to seerver, please check your internet connnection", Snackbar.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onConnectTimeOut() {
+        Snackbar.make(mSignIn, "Connection time out, trying to connect", Snackbar.LENGTH_LONG).setAction("CANCEL",
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+
+                    }
+                }).setActionTextColor(getResources()
+                .getColor(R.color.colorAlertAction))
+                .setCallback(new Snackbar.Callback() {
+                    @Override
+                    public void onDismissed(Snackbar snackbar, int event) {
+                        switch (event) {
+                            case DISMISS_EVENT_TIMEOUT:
+                            case DISMISS_EVENT_CONSECUTIVE:
+                            case DISMISS_EVENT_MANUAL:
+                                authService.restartConnection();
+                                break;
+                        }
+                    }
+                }).show();
     }
 }

@@ -36,6 +36,7 @@ import com.softrangers.sonarcloudmobile.models.Schedule;
 import com.softrangers.sonarcloudmobile.ui.MainActivity;
 import com.softrangers.sonarcloudmobile.ui.ScheduleActivity;
 import com.softrangers.sonarcloudmobile.utils.api.AudioSocket;
+import com.softrangers.sonarcloudmobile.utils.api.ConnectionReceiver;
 import com.softrangers.sonarcloudmobile.utils.ui.BaseFragment;
 import com.softrangers.sonarcloudmobile.utils.opus.OpusPlayer;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
@@ -48,7 +49,7 @@ import java.util.ArrayList;
 
 public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheckedChangeListener,
         ScheduledRecordsAdapter.OnScheduleClickListener, DaysAdapter.OnDayClickListener,
-        ScheduleAllRecordingsAdapter.OnRecordClickListener {
+        ScheduleAllRecordingsAdapter.OnRecordClickListener, ConnectionReceiver.OnConnected {
 
     private static RelativeLayout scheduledLayout;
     private static RelativeLayout allScheduleLayout;
@@ -88,6 +89,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         // Inflate the layout for this fragment
         mRootView = inflater.inflate(R.layout.fragment_schedule, container, false);
         mActivity = (MainActivity) getActivity();
+        ConnectionReceiver.getInstance().addOnConnectedListener(this);
         IntentFilter intentFilter = new IntentFilter(Api.Command.RECORDINGS);
         intentFilter.addAction(Api.Command.SCHEDULES);
         intentFilter.addAction(Api.EXCEPTION);
@@ -616,5 +618,37 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     public void onDetach() {
         super.onDetach();
         mActivity.unregisterReceiver(mBroadcastReceiver);
+    }
+
+    @Override
+    public void onInternetConnectionRestored() {
+        Snackbar.make(mLoadingProgress, "Internet connectio restored",
+                Snackbar.LENGTH_SHORT).show();
+        MainActivity.dataSocketService.restartConnection();
+    }
+
+    @Override
+    public void onInternetConnectionLost() {
+        Snackbar.make(mLoadingProgress, "Internet connection lost",
+                Snackbar.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onSocketConnected() {
+        ArrayList<Receiver> receivers = new ArrayList<>();
+        if (MainActivity.selectedReceivers.size() > 0) receivers = MainActivity.selectedReceivers;
+        else if (MainActivity.selectedGroup != null) receivers = MainActivity.selectedGroup.getReceivers();
+        getAllRecordingsFromServer(receivers);
+    }
+
+    @Override
+    public void onConnectionFailed() {
+        hideLoading();
+        Snackbar.make(mLoadingProgress, "Can\'t connect to seerver, please check your internet connnection", Snackbar.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onConnectTimeOut() {
+
     }
 }

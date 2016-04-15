@@ -3,7 +3,9 @@ package com.softrangers.sonarcloudmobile.utils.api;
 import android.app.Service;
 import android.content.Intent;
 import android.os.Binder;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
@@ -59,7 +61,14 @@ public class AuthService extends Service {
      * @param request to send
      */
     public void sendRequest(JSONObject request) {
-        mRequestExecutor.execute(new SendRequest(request));
+        if (isConnected && SonarCloudApp.getInstance().isConnected()) {
+            mRequestExecutor.execute(new SendRequest(request));
+        } else {
+            Intent intent = new Intent(this, ConnectionReceiver.class);
+            intent.setAction(Api.CONNECTION_FAILED);
+            sendBroadcast(intent);
+            new Connection();
+        }
     }
 
     /**
@@ -92,20 +101,48 @@ public class AuthService extends Service {
 
         @Override
         public void run() {
+            final Intent intent = new Intent(AuthService.this, ConnectionReceiver.class);
             try {
+                if (!SonarCloudApp.getInstance().isConnected()) {
+                    intent.setAction(Api.CONNECTION_FAILED);
+                    sendBroadcast(intent);
+                    isConnected = false;
+                    return;
+                }
+                Looper.prepare();
+                new Handler().postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (isConnected) return;
+                        intent.setAction(Api.CONNECTION_TIME_OUT);
+                        sendBroadcast(intent);
+                        isConnected = false;
+                        try {
+                            if (dataSocket != null)
+                                dataSocket.close();
+                            dataSocket = null;
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        } finally {
+                            new Connection();
+                        }
+                        return;
+                    }
+                }, 10000);
                 // create a new instance of socket and connect it to server
                 dataSocket = (SSLSocket) sslSocketFactory.createSocket(
                         new Socket(Api.URL, Api.PORT), Api.URL, Api.PORT, false
                 );
                 dataSocket.setKeepAlive(true);
                 dataSocket.setUseClientMode(true);
+                isConnected = true;
 
-                Intent intent = new Intent(AuthService.this, ConnectionReceiver.class);
                 intent.setAction(Api.CONNECTION_SUCCEED);
                 sendBroadcast(intent);
-                isConnected = true;
             } catch (Exception e) {
                 Log.e(this.getClass().getSimpleName(), e.getMessage());
+                intent.setAction(Api.CONNECTION_FAILED);
+                sendBroadcast(intent);
                 isConnected = false;
             }
         }

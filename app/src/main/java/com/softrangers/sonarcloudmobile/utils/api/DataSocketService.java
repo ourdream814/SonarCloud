@@ -2,8 +2,8 @@ package com.softrangers.sonarcloudmobile.utils.api;
 
 import android.app.Service;
 import android.content.Intent;
-import android.os.AsyncTask;
 import android.os.Binder;
+import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.support.annotation.Nullable;
@@ -20,18 +20,13 @@ import java.io.BufferedWriter;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
-import java.net.SocketAddress;
 import java.security.SecureRandom;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 
 /**
  * Created by Eduard Albu on 14 03 2016
@@ -70,7 +65,14 @@ public class DataSocketService extends Service {
      * @param request to send
      */
     public void sendRequest(JSONObject request) {
-        mRequestExecutor.execute(new SendRequest(request));
+        if (isConnected && SonarCloudApp.getInstance().isConnected()) {
+            mRequestExecutor.execute(new SendRequest(request));
+        } else {
+            Intent intent = new Intent(DataSocketService.this, ConnectionReceiver.class);
+            intent.setAction(Api.CONNECTION_FAILED);
+            sendBroadcast(intent);
+            new Connection();
+        }
     }
 
     /**
@@ -103,7 +105,34 @@ public class DataSocketService extends Service {
 
         @Override
         public void run() {
+            final Intent intent = new Intent(DataSocketService.this, ConnectionReceiver.class);
             try {
+                if (!SonarCloudApp.getInstance().isConnected()) {
+                    intent.setAction(Api.CONNECTION_FAILED);
+                    sendBroadcast(intent);
+                    isConnected = false;
+                    return;
+                }
+                Looper.prepare();
+                new Handler().postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (isConnected) return;
+                        intent.setAction(Api.CONNECTION_TIME_OUT);
+                        sendBroadcast(intent);
+                        isConnected = false;
+                        try {
+                            if (dataSocket != null)
+                                dataSocket.close();
+                            dataSocket = null;
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        } finally {
+                            restartConnection();
+                        }
+                        return;
+                    }
+                }, 10000);
                 // create a new instance of socket and connect it to server
                 dataSocket = (SSLSocket) sslSocketFactory.createSocket(
                         new Socket(Api.URL, Api.PORT), Api.URL, Api.PORT, false
@@ -117,6 +146,8 @@ public class DataSocketService extends Service {
                 readIn = new BufferedReader(new InputStreamReader(dataSocket.getInputStream()));
                 writeOut = new BufferedWriter(new OutputStreamWriter(dataSocket.getOutputStream()));
 
+                isConnected = true;
+
                 if (SonarCloudApp.getInstance().isLoggedIn()) {
                     Request.Builder builder = new Request.Builder();
                     builder.command(Api.Command.AUTHENTICATE);
@@ -125,12 +156,13 @@ public class DataSocketService extends Service {
                     sendRequest(builder.build().toJSON());
                 }
 
-                Intent intent = new Intent(DataSocketService.this, ConnectionReceiver.class);
                 intent.setAction(Api.CONNECTION_SUCCEED);
                 sendBroadcast(intent);
-                isConnected = true;
             } catch (Exception e) {
                 Log.e(this.getClass().getSimpleName(), e.getMessage());
+                intent.setAction(Api.CONNECTION_FAILED);
+                sendBroadcast(intent);
+                isConnected = false;
                 isConnected = false;
             }
         }

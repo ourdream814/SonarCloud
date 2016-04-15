@@ -12,7 +12,11 @@ import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Typeface;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
 
@@ -21,6 +25,7 @@ import com.softrangers.sonarcloudmobile.models.User;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
 import com.softrangers.sonarcloudmobile.utils.api.ConnectionKeeper;
 import com.softrangers.sonarcloudmobile.utils.api.DataSocketService;
+import com.softrangers.sonarcloudmobile.utils.widgets.InternetConnectionStatusbarListener;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -57,8 +62,6 @@ public class SonarCloudApp extends Application {
     public static Typeface avenirMedium;
     private static SharedPreferences preferences;
     public static User user;
-//    public static DataSocketService dataSocketService;
-//    public static Intent dataSocketIntent;
 
     private static AlarmManager alarmManager;
     private static PendingIntent pendingIntent;
@@ -72,6 +75,17 @@ public class SonarCloudApp extends Application {
         avenirMedium = Typeface.createFromAsset(getAssets(), "fonts/avenir_lt_65_medium_0.ttf");
         // initialize a preferences object
         preferences = getSharedPreferences(LOGIN_RESULT, MODE_PRIVATE);
+    }
+
+    public boolean isConnected() {
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo networkInfo = cm.getActiveNetworkInfo();
+        if (networkInfo != null && networkInfo.isConnected()) {
+            // Wifi is connected
+            return true;
+        } else {
+            return false;
+        }
     }
 
     /**
