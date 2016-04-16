@@ -73,8 +73,7 @@
         android:id="@+id/schedules_loadingProgress"
         android:layout_width="30dp"
         android:layout_height="30dp"
-        android:layout_below="@+id/schedule_list_selector"
+        android:layout_centerVertical="true"
         android:layout_centerHorizontal="true"
-        android:layout_marginTop="20dp"
         android:visibility="gone"/>
 </RelativeLayout>

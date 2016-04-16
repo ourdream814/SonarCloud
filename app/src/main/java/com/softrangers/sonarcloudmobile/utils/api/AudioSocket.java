@@ -76,6 +76,7 @@ public class AudioSocket {
             Intent intent = new Intent(SonarCloudApp.getInstance().getBaseContext(), ConnectionReceiver.class);
             intent.setAction(Api.CONNECTION_FAILED);
             SonarCloudApp.getInstance().sendBroadcast(intent);
+            Log.e(this.getClass().getSimpleName(), "sendRequest(): Disconnected");
         }
     }
 
@@ -98,6 +99,7 @@ public class AudioSocket {
             Intent intent = new Intent(SonarCloudApp.getInstance().getBaseContext(), ConnectionReceiver.class);
             intent.setAction(Api.CONNECTION_FAILED);
             SonarCloudApp.getInstance().sendBroadcast(intent);
+            Log.e(this.getClass().getSimpleName(), "startReadingAudioData()");
         }
     }
 
@@ -108,6 +110,7 @@ public class AudioSocket {
                 try {
                     if (audioSocket != null)
                         audioSocket.close();
+                    audioSocket = null;
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -127,6 +130,7 @@ public class AudioSocket {
             Intent intent = new Intent(SonarCloudApp.getInstance().getBaseContext(), ConnectionReceiver.class);
             intent.setAction(Api.CONNECTION_FAILED);
             SonarCloudApp.getInstance().sendBroadcast(intent);
+            Log.e(this.getClass().getSimpleName(), "sendAudio()");
         }
     }
 
@@ -146,35 +150,15 @@ public class AudioSocket {
                 Looper.prepare();
                 if (!SonarCloudApp.getInstance().isConnected()) {
                     intent.setAction(Api.CONNECTION_FAILED);
+                    Log.e(this.getClass().getSimpleName(), "AudioConnection.run()");
                     SonarCloudApp.getInstance().sendBroadcast(intent);
                     return;
                 }
-                new Handler().postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (isAudioConnectionReady()) return;
-                        intent.setAction(Api.CONNECTION_FAILED);
-                        SonarCloudApp.getInstance().sendBroadcast(intent);
-                        try {
-                            if (audioSocket != null)
-                                audioSocket.close();
-                            audioSocket = null;
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                        return;
-                    }
-                }, 4000);
-
                 audioSocket = (SSLSocket) sslSocketFactory.createSocket(
                         new Socket(Api.URL, Api.AUDIO_PORT), Api.M_URL, Api.AUDIO_PORT, true
                 );
-                readIn = new BufferedReader(new InputStreamReader(audioSocket.getInputStream()));
                 Log.i(this.getClass().getSimpleName(), "Audio socket connected");
             } catch (Exception e) {
-                intent.setAction(Api.CONNECTION_FAILED);
-                SonarCloudApp.getInstance().sendBroadcast(intent);
-                e.printStackTrace();
                 Log.e(this.getClass().getSimpleName(), "Connection failed: " + e.getMessage());
             } finally {
                 Looper.loop();
@@ -254,6 +238,7 @@ public class AudioSocket {
                     // send the request to server through writer object
                     writeOut.write(message.toString() + "\n");
                     writeOut.flush();
+                    readIn = new BufferedReader(new InputStreamReader(audioSocket.getInputStream()));
                     Log.i(this.getClass().getSimpleName(), "Request sent successfully");
                     mResponseExecutor.execute(new ReceiveMessage(readIn, message));
                 }

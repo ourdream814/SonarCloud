@@ -71,6 +71,7 @@ public class DataSocketService extends Service {
             Intent intent = new Intent(DataSocketService.this, ConnectionReceiver.class);
             intent.setAction(Api.CONNECTION_FAILED);
             sendBroadcast(intent);
+            Log.e(this.getClass().getSimpleName(), request.toString());
             new Connection();
         }
     }
@@ -110,6 +111,7 @@ public class DataSocketService extends Service {
                 if (!SonarCloudApp.getInstance().isConnected()) {
                     intent.setAction(Api.CONNECTION_FAILED);
                     sendBroadcast(intent);
+                    Log.e(this.getClass().getSimpleName(), "No internet connection");
                     isConnected = false;
                     return;
                 }

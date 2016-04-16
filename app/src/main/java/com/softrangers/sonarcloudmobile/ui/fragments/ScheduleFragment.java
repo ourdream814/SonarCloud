@@ -95,6 +95,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         intentFilter.addAction(Api.EXCEPTION);
         intentFilter.addAction(ScheduleActivity.ACTION_EDIT_SCHEDULE);
         intentFilter.addAction(ScheduleActivity.ACTION_ADD_SCHEDULE);
+        intentFilter.addAction(Api.Command.DELETE_SCHEDULE);
         intentFilter.addAction(Api.Command.GET_AUDIO);
         intentFilter.addAction(Api.AUDIO_READY_TO_PLAY);
         mActivity.registerReceiver(mBroadcastReceiver, intentFilter);
@@ -373,7 +374,19 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
                                     onAudioDetailsReceived(jsonResponse);
                                     break;
                                 }
+                                case Api.Command.DELETE_SCHEDULE: {
+                                    allSchedules.clear();
+                                    hideLoading();
+                                    if (MainActivity.selectedGroup == null && MainActivity.selectedReceivers.size() > 0) {
+                                        getAllScheduledRecords(MainActivity.selectedReceivers);
+                                    } else if (MainActivity.selectedGroup != null && MainActivity.selectedReceivers.size() <= 0) {
+                                        getAllScheduledRecords(MainActivity.selectedGroup.getReceivers());
+                                    }
+                                    MainActivity.statusChanged = true;
+                                    break;
+                                }
                                 case Api.EXCEPTION: {
+                                    hideLoading();
                                     String message = jsonResponse.optString("message");
                                     if (message.equalsIgnoreCase("Ready for data.")) {
                                         AudioSocket.getInstance().startReadingAudioData();
@@ -460,6 +473,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         public void onSwiped(final RecyclerView.ViewHolder viewHolder, int direction) {
             // get the swiped position
             final int position = viewHolder.getAdapterPosition();
+
             // remove the item for the above position from adapter but store it in an object to
             // be able to restore it in case user clicks "Undo" button
             final Schedule schedule = scheduledRecordsAdapter.removeItem(position);
@@ -485,6 +499,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
                                 case DISMISS_EVENT_TIMEOUT:
                                 case DISMISS_EVENT_CONSECUTIVE:
                                 case DISMISS_EVENT_MANUAL:
+                                    showLoading();
                                     deleteScheduleFromServer(schedule);
                                     break;
                             }
@@ -539,7 +554,8 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
 
     @Override
     public void onItemClick(Recording recording, SeekBar seekBar, TextView seekBarTime, int position) {
-        if (AudioSocket.getInstance().isAudioConnectionReady()) AudioSocket.getInstance().closeAudioConnection();
+        if (AudioSocket.getInstance().isAudioConnectionReady())
+            AudioSocket.getInstance().closeAudioConnection();
         recording.setLoading(true);
         notifyAllRecordAdapter(position);
         AudioSocket.getInstance().setAudioConnection();
@@ -637,7 +653,8 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     public void onSocketConnected() {
         ArrayList<Receiver> receivers = new ArrayList<>();
         if (MainActivity.selectedReceivers.size() > 0) receivers = MainActivity.selectedReceivers;
-        else if (MainActivity.selectedGroup != null) receivers = MainActivity.selectedGroup.getReceivers();
+        else if (MainActivity.selectedGroup != null)
+            receivers = MainActivity.selectedGroup.getReceivers();
         getAllRecordingsFromServer(receivers);
     }
 

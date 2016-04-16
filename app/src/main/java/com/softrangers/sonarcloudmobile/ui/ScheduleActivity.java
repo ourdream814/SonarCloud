@@ -61,6 +61,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
     private static final int CHANNEL = 1;
     public static final String SCHEDULE_EXTRAS = "key for schedule extras";
     private static SimpleDateFormat serverFormat;
+    public static boolean fromScheduleActivity;
 
     private RecyclerView mRecyclerView;
     private ScheduleEditAdapter mAdapter;
@@ -183,6 +184,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         unregisterReceiver(mBroadcastReceiver);
         unregisterReceiver(mAudioSendingReceiver);
         MainActivity.statusChanged = true;
+        unbindService(mDataServiceConnection);
         finish();
     }
 
@@ -304,6 +306,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
             }
             case ACTION_ADD_SCHEDULE: {
                 startSendingAudioProcess();
+                break;
             }
         }
     }
@@ -339,9 +342,10 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         final Calendar calendar = Calendar.getInstance();
         calendar.setTimeInMillis(date.getTime());
         if (mAction.equals(ACTION_EDIT_SCHEDULE)) {
-            if (schedule.getRepeatOption() > 0)
-                calendar.setTimeInMillis(schedule.getScheduleDate().getTime());
-            else calendar.setTimeInMillis(schedule.getScheduleTime().getTime());
+            if (schedule.getRepeatOption() > 0) {
+                if (schedule.getScheduleDate() != null)
+                    calendar.setTimeInMillis(schedule.getScheduleDate().getTime());
+            } else calendar.setTimeInMillis(schedule.getScheduleTime().getTime());
         }
         switch (itemTitle) {
             case DATE: {
@@ -424,31 +428,39 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                         new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
-                                mAdapter.getItem(position).setSubtitle(repeatValues[repeatingOption]);
-                                mAdapter.notifyItemChanged(position);
-                                schedule = RepeatingCheck.setRepeating(schedule, repeatingOption);
-                                schedule.setRepeatOption();
-                                if (!mAdapter.getItem(position).getSubtitle().equalsIgnoreCase(repeatValues[0])) {
-                                    Schedule schedule = new Schedule();
-                                    schedule.setRowType(Schedule.RowType.ITEM);
-                                    schedule.setTitle(getString(R.string.repeat_until));
-                                    if (mAdapter.getItemCount() != position + 2) {
-                                        mAdapter.addItem(schedule);
+                                try {
+                                    mAdapter.getItem(position).setSubtitle(repeatValues[repeatingOption]);
+                                    mAdapter.notifyItemChanged(position);
+                                    schedule = RepeatingCheck.setRepeating(schedule, repeatingOption);
+                                    schedule.setRepeatOption();
+                                    if (!mAdapter.getItem(position).getSubtitle().equalsIgnoreCase(repeatValues[0])) {
+                                        Schedule schedule = new Schedule();
+                                        schedule.setRowType(Schedule.RowType.ITEM);
+                                        schedule.setTitle(getString(R.string.repeat_until));
+                                        if (mAdapter.getItemCount() != position + 2) {
+                                            mAdapter.addItem(schedule);
+                                        }
+                                    } else if (mAdapter.getItemCount() > (position + 1)) {
+                                        mAdapter.removeItem(position + 1);
                                     }
-                                } else if (mAdapter.getItemCount() > (position + 1)) {
-                                    mAdapter.removeItem(position + 1);
+                                } catch (Exception e) {
+                                    e.printStackTrace();
                                 }
                             }
                         }).setNegativeButton("Cancel",
-                                new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialogInterface, int i) {
-                                        mAdapter.getItem(position).setSubtitle(repeatValues[currentOption]);
-                                        mAdapter.notifyItemChanged(position);
-                                        schedule = RepeatingCheck.setRepeating(schedule, currentOption);
-                                        schedule.setRepeatOption();
-                                    }
-                                }).show();
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                try {
+                                    mAdapter.getItem(position).setSubtitle(repeatValues[currentOption]);
+                                    mAdapter.notifyItemChanged(position);
+                                    schedule = RepeatingCheck.setRepeating(schedule, currentOption);
+                                    schedule.setRepeatOption();
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }).show();
                 break;
             case REPEAT_UNTIL:
                 DatePickerDialog pickerDialog = new DatePickerDialog(
@@ -548,6 +560,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
      * Start the sending process
      */
     private void startSendingAudioProcess() {
+        fromScheduleActivity = true;
         try {
             Request.Builder requestBuilder = new Request.Builder()
                     .command(Api.Command.SEND_AUDIO)
@@ -615,6 +628,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
      * Called when the data is sent
      */
     private void onAudioSent() {
+        dismissLoading();
         MainActivity.statusChanged = true;
         File file = new File(recording.getFilePath());
         file.delete();

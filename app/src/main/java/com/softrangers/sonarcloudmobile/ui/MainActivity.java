@@ -35,6 +35,7 @@ import com.softrangers.sonarcloudmobile.ui.fragments.ScheduleFragment;
 import com.softrangers.sonarcloudmobile.ui.fragments.SettingsFragment;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
+import com.softrangers.sonarcloudmobile.utils.api.AudioSocket;
 import com.softrangers.sonarcloudmobile.utils.api.ConnectionReceiver;
 import com.softrangers.sonarcloudmobile.utils.api.DataSocketService;
 import com.softrangers.sonarcloudmobile.utils.observers.GroupObserver;
@@ -214,16 +215,19 @@ public class MainActivity extends BaseActivity implements
     public void onBottomButtonsClick(View view) {
         switch (view.getId()) {
             case R.id.bottom_PASystems_selector:
+                AudioSocket.getInstance().closeAudioConnection();
                 changeFragment(receiversFragment);
                 mSelectedFragment = SelectedFragment.RECEIVERS;
                 invalidateViews();
                 break;
             case R.id.bottom_announcements_selector:
+                AudioSocket.getInstance().closeAudioConnection();
                 changeFragment(recordFragment);
                 mSelectedFragment = SelectedFragment.ANNOUNCEMENTS;
                 invalidateViews();
                 break;
             case R.id.bottom_recordings_selector:
+                AudioSocket.getInstance().closeAudioConnection();
                 changeFragment(scheduleFragment);
                 mSelectedFragment = SelectedFragment.RECORDINGS;
                 invalidateViews();
@@ -242,6 +246,7 @@ public class MainActivity extends BaseActivity implements
                 }
                 break;
             case R.id.bottom_settings_selector:
+                AudioSocket.getInstance().closeAudioConnection();
                 changeFragment(settingsFragment);
                 mSelectedFragment = SelectedFragment.SETTINGS;
                 invalidateViews();
@@ -551,6 +556,7 @@ public class MainActivity extends BaseActivity implements
                         if (recordFragment != null && recordFragment.mRecAdapter != null) {
                             recordFragment.mRecAdapter.refreshList(recordFragment.getRecordedFileList());
                         }
+                        registerReceiver(recordFragment.mAudioSendingReceiver, recordFragment.getIntentFilter());
                         break;
                     case ScheduleActivity.ACTION_EDIT_SCHEDULE:
                         if (selectedGroup != null)
@@ -565,6 +571,8 @@ public class MainActivity extends BaseActivity implements
                     SonarCloudApp.getInstance().stopKeepingConnection();
                     unbindService(mDataServiceConnection);
                     finish();
+                } else if (action.equals(ScheduleActivity.ACTION_ADD_SCHEDULE)) {
+                    registerReceiver(recordFragment.mAudioSendingReceiver, recordFragment.getIntentFilter());
                 }
                 break;
         }

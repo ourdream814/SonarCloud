@@ -158,7 +158,7 @@ public class Schedule implements Parcelable, Cloneable {
         if (stringDate == null) return date;
         if (!stringDate.equalsIgnoreCase("null")) {
             String editedDate = stringDate.replace("T", " ");
-            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault());
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss'Z'", Locale.getDefault());
             try {
                 date = dateFormat.parse(editedDate);
             } catch (Exception e) {
@@ -437,6 +437,8 @@ public class Schedule implements Parcelable, Cloneable {
 
     public static ArrayList<Schedule> build(JSONObject response) {
         ArrayList<Schedule> schedules = new ArrayList<>();
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
+        dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
         try {
             JSONArray schedulesArray = response.getJSONArray("schedules");
             for (int i = 0; i < schedulesArray.length(); i++) {
@@ -448,11 +450,11 @@ public class Schedule implements Parcelable, Cloneable {
 
                 schedule.setStartDate(object.getString("startDate"));
                 if (schedule.startDate != null && !schedule.startDate.equals("null"))
-                    schedule.setScheduleStartDate(schedule.getFormattedDate(schedule.startDate));
+                    schedule.setScheduleStartDate(dateFormat.parse(schedule.startDate));
 
                 schedule.setEndDate(object.getString("endDate"));
                 if (schedule.endDate != null && !schedule.endDate.equals("null"))
-                    schedule.setScheduleEndDate(schedule.getFormattedDate(schedule.endDate));
+                    schedule.setScheduleEndDate(dateFormat.parse(schedule.endDate));
 
                 schedule.setMinute(object.getString("minute"));
                 schedule.setHour(object.getString("hour"));
@@ -462,7 +464,7 @@ public class Schedule implements Parcelable, Cloneable {
 
                 schedule.setTime(object.getString("time"));
                 if (schedule.isOneTimeSchedule())
-                    schedule.setScheduleTime(schedule.getFormattedDate(schedule.time));
+                    schedule.setScheduleTime(dateFormat.parse(schedule.time));
 
                 schedule.setDeleteAfter(object.getBoolean("deleteAfter"));
                 schedule.setCreated(object.getString("created"));
@@ -482,26 +484,53 @@ public class Schedule implements Parcelable, Cloneable {
         return schedules;
     }
 
-    public static Schedule buildSingle(JSONObject response) {
+    public static Schedule buildSingle(JSONObject object) {
         Schedule schedule = new Schedule();
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZZZ", Locale.US);
+        SimpleDateFormat secondFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
         try {
-            schedule.setScheduleID(response.getInt("scheduleID"));
-            schedule.setRecordingID(response.getInt("recordingID"));
-            schedule.setReceiverID(response.getInt("receiverID"));
-            schedule.setStartDate(response.getString("startDate"));
-            schedule.setEndDate(response.getString("endDate"));
-            schedule.setMinute(response.getString("minute"));
-            schedule.setHour(response.getString("hour"));
-            schedule.setDay(response.getString("day"));
-            schedule.setMonth(response.getString("month"));
-            schedule.setWday(response.getString("wday"));
-            schedule.setTime(response.getString("time"));
-            schedule.setDeleteAfter(response.getBoolean("deleteAfter"));
-            schedule.setCreated(response.getString("created"));
-            schedule.setModified(response.getString("modified"));
-            schedule.setRecording(Recording.buildSingle(response.getJSONObject("recording")));
+            schedule.setScheduleID(object.getInt("scheduleID"));
+            schedule.setRecordingID(object.getInt("recordingID"));
+            schedule.setReceiverID(object.getInt("receiverID"));
+
+            schedule.setStartDate(object.getString("startDate"));
+            if (schedule.startDate != null && !schedule.startDate.equals("null")) {
+                try {
+                    schedule.setScheduleStartDate(dateFormat.parse(schedule.startDate));
+                } catch (Exception e) {
+                    schedule.setScheduleStartDate(secondFormat.parse(schedule.startDate));
+                }
+            }
+
+            schedule.setEndDate(object.getString("endDate"));
+            if (schedule.endDate != null && !schedule.endDate.equals("null")) {
+                try {
+                    schedule.setScheduleEndDate(dateFormat.parse(schedule.endDate));
+                } catch (Exception e) {
+                    schedule.setScheduleEndDate(secondFormat.parse(schedule.endDate));
+                }
+            }
+
+            schedule.setMinute(object.getString("minute"));
+            schedule.setHour(object.getString("hour"));
+            schedule.setDay(object.getString("day"));
+            schedule.setMonth(object.getString("month"));
+            schedule.setWday(object.getString("wday"));
+
+            schedule.setTime(object.optString("time", "null"));
+            if (schedule.isOneTimeSchedule() && schedule.getTime().equals("null"))
+                schedule.setScheduleTime(dateFormat.parse(schedule.time));
+
+            schedule.setDeleteAfter(object.getBoolean("deleteAfter"));
+            schedule.setCreated(object.getString("created"));
+            schedule.setModified(object.getString("modified"));
+            schedule.setRecording(Recording.buildSingle(object.optJSONObject("recording")));
             schedule.setRepeatOption();
-            schedule = RepeatingCheck.setRepeating(schedule, schedule.getRepeatOption());
+
+            if (schedule.time == null || schedule.time.equals("null")) {
+                schedule.parseCronJob();
+            }
+
         } catch (Exception e) {
             e.printStackTrace();
         }

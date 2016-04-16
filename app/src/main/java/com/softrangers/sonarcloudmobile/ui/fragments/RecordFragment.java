@@ -100,11 +100,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         PATH = mActivity.getCacheDir().getAbsolutePath()
                 + File.separator + RECORDINGS + File.separator;
         // Register the receiver with intent filters
-        IntentFilter intentFilter = new IntentFilter(Api.Command.SEND_AUDIO);
-        intentFilter.addAction(Api.Command.SEND);
-        intentFilter.addAction(Api.EXCEPTION);
-        intentFilter.addAction(Api.AUDIO_DATA_RESULT);
-        mActivity.registerReceiver(mAudioSendingReceiver, intentFilter);
+        mActivity.registerReceiver(mAudioSendingReceiver, getIntentFilter());
         // set default states for all layouts included in current fragment
         mStreamingState = StreamingState.WAITING;
         // Link all views and set listeners
@@ -152,6 +148,13 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         return view;
     }
 
+    public IntentFilter getIntentFilter() {
+        IntentFilter intentFilter = new IntentFilter(Api.Command.SEND_AUDIO);
+        intentFilter.addAction(Api.Command.SEND);
+        intentFilter.addAction(Api.EXCEPTION);
+        intentFilter.addAction(Api.AUDIO_DATA_RESULT);
+        return intentFilter;
+    }
 
     //---------------- Common methods ----------------//
 
@@ -274,11 +277,11 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
             Toast.makeText(mActivity, mActivity.getString(R.string.please_select_pa), Toast.LENGTH_SHORT).show();
             return;
         }
-        // TODO: 3/23/16 open schedule activity with add new schedule action
         Intent addSchedule = new Intent(mActivity, ScheduleActivity.class);
         addSchedule.setAction(ScheduleActivity.ACTION_ADD_SCHEDULE);
         addSchedule.putExtra(ScheduleActivity.RECORD_BUNDLE, recording);
         mActivity.startActivityForResult(addSchedule, ADD_SCHEDULE_REQUEST_CODE);
+//        mActivity.unregisterReceiver(mAudioSendingReceiver);
     }
 
     /**
@@ -633,7 +636,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
             return false;
         }
         // do not start recording if server is not ready for data
-        if (!isServerReady) {
+        if (!AudioSocket.getInstance().isAudioConnectionReady()) {
             startSendingAudioProcess(null, null, null);
             return false;
         }
@@ -692,6 +695,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         @Override
         public void onReceive(Context context, Intent intent) {
             try {
+                if (ScheduleActivity.fromScheduleActivity) return;
                 if (mActivity.mSelectedFragment == MainActivity.SelectedFragment.ANNOUNCEMENTS) {
                     String action = intent.getAction();
                     if (action.equals(Api.AUDIO_DATA_RESULT)) {
@@ -854,7 +858,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
             case PTT:
             case RECORDING: {
                 MainActivity.statusChanged = true;
-                AudioSocket.getInstance().closeAudioConnection();
                 Snackbar.make(mRecordAndSend, mActivity.getString(R.string.audio_sent), Snackbar.LENGTH_SHORT).show();
                 if (mSendButton != null && mSendingProgress != null) {
                     mSendButton.setVisibility(View.VISIBLE);
