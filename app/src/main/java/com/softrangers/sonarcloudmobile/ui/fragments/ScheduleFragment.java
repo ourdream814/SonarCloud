@@ -668,4 +668,9 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     public void onConnectTimeOut() {
 
     }
+
+    @Override
+    public void onAudioConnectionClosed() {
+        clickedRecording.setLoading(false);
+    }
 }

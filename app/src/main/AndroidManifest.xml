@@ -49,6 +49,7 @@
                 <action android:name="com.softrangers.sonarcloudmobile.CONNECTED"/>
                 <action android:name="com.softrangers.sonarcloudmobile.CONNECTION_TIME_OUT"/>
                 <action android:name="com.softrangers.sonarcloudmobile.CONNECTION_LOST"/>
+                <action android:name="com.softrangers.sonarcloudmobile.AUDIO_CONNECTION_CLOSED"/>
             </intent-filter>
         </receiver>
 

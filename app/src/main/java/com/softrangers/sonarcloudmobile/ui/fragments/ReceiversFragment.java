@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
 import android.support.design.widget.Snackbar;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -31,8 +30,6 @@ import com.softrangers.sonarcloudmobile.ui.MainActivity;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
 import com.softrangers.sonarcloudmobile.utils.api.ConnectionReceiver;
-import com.softrangers.sonarcloudmobile.utils.cache.Constants;
-import com.softrangers.sonarcloudmobile.utils.cache.DBManager;
 import com.softrangers.sonarcloudmobile.utils.observers.GroupObserver;
 import com.softrangers.sonarcloudmobile.utils.ui.BaseFragment;
 import com.softrangers.sonarcloudmobile.utils.widgets.AnimatedExpandableListView;
@@ -444,9 +441,6 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
         }
         response.remove("seq");
         jsonRequest.remove("seq");
-        String[] columns = {Constants.REQUEST, Constants.RESPONSE};
-        String[] values = {jsonRequest.toString(), response.toString()};
-        DBManager.getInstance().insertInTable(Constants.RESPONSE_TABLE, values, columns);
         setUpReceiversListView(mPASystems);
     }
 
@@ -470,9 +464,6 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
             }
             response.remove("seq");
             jsonRequest.remove("seq");
-            String[] columns = {Constants.REQUEST, Constants.RESPONSE};
-            String[] values = {jsonRequest.toString(), response.toString()};
-            DBManager.getInstance().insertInTable(Constants.RESPONSE_TABLE, values, columns);
             setUpReceiversListView(mPASystems);
             mReceiverListAdapter.notifyDataSetChanged();
         } catch (Exception e) {
@@ -486,9 +477,6 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
         setUpGroupsListView(mGroups);
         response.remove("seq");
         jsonRequest.remove("seq");
-        String[] columns = {Constants.REQUEST, Constants.RESPONSE};
-        String[] values = {jsonRequest.toString(), response.toString()};
-        DBManager.getInstance().insertInTable(Constants.RESPONSE_TABLE, values, columns);
         setUpReceiversListView(mPASystems);
     }
 
@@ -530,7 +518,7 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
 
     @Override
     public void onConnectionFailed() {
-        Snackbar.make(mReceiversLayout, "Can\'t connect to server, please check your internet connection.", Snackbar.LENGTH_SHORT).show();
+//        Snackbar.make(mReceiversLayout, "Can\'t connect to server.", Snackbar.LENGTH_SHORT).show();
         hideLoading();
         mActivity.dismissLoading();
     }
@@ -538,6 +526,11 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
     @Override
     public void onConnectTimeOut() {
 
+    }
+
+    @Override
+    public void onAudioConnectionClosed() {
+        mActivity.dismissLoading();
     }
 
     public interface OnRecordFragmentListener {

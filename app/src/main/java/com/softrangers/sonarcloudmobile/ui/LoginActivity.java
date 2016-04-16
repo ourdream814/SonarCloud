@@ -334,4 +334,9 @@ public class LoginActivity extends BaseActivity implements ConnectionReceiver.On
                     }
                 }).show();
     }
+
+    @Override
+    public void onAudioConnectionClosed() {
+        dismissLoading();
+    }
 }

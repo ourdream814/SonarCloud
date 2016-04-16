@@ -109,9 +109,8 @@ public class DataSocketService extends Service {
             final Intent intent = new Intent(DataSocketService.this, ConnectionReceiver.class);
             try {
                 if (!SonarCloudApp.getInstance().isConnected()) {
-                    intent.setAction(Api.CONNECTION_FAILED);
+                    intent.setAction(Api.CONNECTION_LOST);
                     sendBroadcast(intent);
-                    Log.e(this.getClass().getSimpleName(), "No internet connection");
                     isConnected = false;
                     return;
                 }
@@ -132,12 +131,11 @@ public class DataSocketService extends Service {
                         } finally {
                             restartConnection();
                         }
-                        return;
                     }
                 }, 10000);
                 // create a new instance of socket and connect it to server
                 dataSocket = (SSLSocket) sslSocketFactory.createSocket(
-                        new Socket(Api.URL, Api.PORT), Api.URL, Api.PORT, false
+                        new Socket(Api.M_URL, Api.PORT), Api.M_URL, Api.PORT, false
                 );
                 dataSocket.setKeepAlive(true);
                 dataSocket.setUseClientMode(true);
@@ -164,7 +162,6 @@ public class DataSocketService extends Service {
                 Log.e(this.getClass().getSimpleName(), e.getMessage());
                 intent.setAction(Api.CONNECTION_FAILED);
                 sendBroadcast(intent);
-                isConnected = false;
                 isConnected = false;
             }
         }

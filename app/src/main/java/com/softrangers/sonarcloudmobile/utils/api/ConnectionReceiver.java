@@ -77,6 +77,12 @@ public class ConnectionReceiver extends BroadcastReceiver {
                     connected.onConnectTimeOut();
                 }
                 break;
+            case Api.AUDIO_CONNECTION_CLOSED:
+                for (OnConnected connected : listeners) {
+                    connected.onAudioConnectionClosed();
+                }
+                break;
+
         }
     }
 
@@ -86,5 +92,6 @@ public class ConnectionReceiver extends BroadcastReceiver {
         void onSocketConnected();
         void onConnectionFailed();
         void onConnectTimeOut();
+        void onAudioConnectionClosed();
     }
 }

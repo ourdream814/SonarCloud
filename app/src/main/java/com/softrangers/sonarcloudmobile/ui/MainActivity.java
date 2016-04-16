@@ -521,6 +521,11 @@ public class MainActivity extends BaseActivity implements
     }
 
     @Override
+    public void onAudioConnectionClosed() {
+        dismissLoading();
+    }
+
+    @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         String action = data.getAction();
         switch (resultCode) {

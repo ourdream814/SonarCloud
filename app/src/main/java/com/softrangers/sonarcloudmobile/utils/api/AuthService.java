@@ -104,7 +104,7 @@ public class AuthService extends Service {
             final Intent intent = new Intent(AuthService.this, ConnectionReceiver.class);
             try {
                 if (!SonarCloudApp.getInstance().isConnected()) {
-                    intent.setAction(Api.CONNECTION_FAILED);
+                    intent.setAction(Api.CONNECTION_LOST);
                     sendBroadcast(intent);
                     isConnected = false;
                     return;
@@ -130,7 +130,7 @@ public class AuthService extends Service {
                 }, 10000);
                 // create a new instance of socket and connect it to server
                 dataSocket = (SSLSocket) sslSocketFactory.createSocket(
-                        new Socket(Api.URL, Api.PORT), Api.URL, Api.PORT, false
+                        new Socket(Api.M_URL, Api.PORT), Api.M_URL, Api.PORT, false
                 );
                 dataSocket.setKeepAlive(true);
                 dataSocket.setUseClientMode(true);
@@ -245,9 +245,7 @@ public class AuthService extends Service {
             public void run() {
                 try {
                     dataSocket.close();
-                    isConnected = false;
                     mRequestExecutor.shutdown();
-                    Log.i(this.getClass().getSimpleName(), "onDestroy(): Socket closed");
                 } catch (Exception e) {
                     e.printStackTrace();
                 }

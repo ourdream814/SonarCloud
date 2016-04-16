@@ -44,6 +44,7 @@ public class AudioSocket {
     private static ExecutorService mResponseExecutor;
     private static ExecutorService mRequestExecutor;
     private static AudioSocket instance;
+    private static boolean isConnected;
 
     private AudioSocket() {
         try {
@@ -76,7 +77,6 @@ public class AudioSocket {
             Intent intent = new Intent(SonarCloudApp.getInstance().getBaseContext(), ConnectionReceiver.class);
             intent.setAction(Api.CONNECTION_FAILED);
             SonarCloudApp.getInstance().sendBroadcast(intent);
-            Log.e(this.getClass().getSimpleName(), "sendRequest(): Disconnected");
         }
     }
 
@@ -99,7 +99,6 @@ public class AudioSocket {
             Intent intent = new Intent(SonarCloudApp.getInstance().getBaseContext(), ConnectionReceiver.class);
             intent.setAction(Api.CONNECTION_FAILED);
             SonarCloudApp.getInstance().sendBroadcast(intent);
-            Log.e(this.getClass().getSimpleName(), "startReadingAudioData()");
         }
     }
 
@@ -111,6 +110,7 @@ public class AudioSocket {
                     if (audioSocket != null)
                         audioSocket.close();
                     audioSocket = null;
+                    isConnected = false;
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -150,16 +150,14 @@ public class AudioSocket {
                 Looper.prepare();
                 if (!SonarCloudApp.getInstance().isConnected()) {
                     intent.setAction(Api.CONNECTION_FAILED);
-                    Log.e(this.getClass().getSimpleName(), "AudioConnection.run()");
                     SonarCloudApp.getInstance().sendBroadcast(intent);
+                    Log.e(this.getClass().getSimpleName(), "run()");
                     return;
                 }
                 audioSocket = (SSLSocket) sslSocketFactory.createSocket(
-                        new Socket(Api.URL, Api.AUDIO_PORT), Api.M_URL, Api.AUDIO_PORT, true
-                );
-                Log.i(this.getClass().getSimpleName(), "Audio socket connected");
+                        new Socket(Api.M_URL, Api.AUDIO_PORT), Api.M_URL, Api.AUDIO_PORT, true);
             } catch (Exception e) {
-                Log.e(this.getClass().getSimpleName(), "Connection failed: " + e.getMessage());
+                closeAudioConnection();
             } finally {
                 Looper.loop();
             }
@@ -194,13 +192,11 @@ public class AudioSocket {
                     mOutputStream = audioSocket.getOutputStream();
                     mOutputStream.write(mBytes, 0, mBytes.length);
                     mOutputStream.flush();
-                    Log.i(this.getClass().getSimpleName(), "Audio data sent: " + mBytes.length);
                     Intent responseContainer = new Intent(Api.AUDIO_DATA_RESULT);
                     SonarCloudApp.getInstance().sendBroadcast(responseContainer);
                 }
             } catch (Exception e) {
-                e.printStackTrace();
-                Log.e(this.getClass().getSimpleName(), "Data sending failed");
+                closeAudioConnection();
             }
         }
     }
@@ -224,7 +220,6 @@ public class AudioSocket {
         @Override
         public void run() {
             try {
-                Log.i(this.getClass().getSimpleName(), "Start sending data for audio");
                 if (audioSocket == null || !audioSocket.isConnected()) {
                     new AudioConnection();
                 }
@@ -239,12 +234,10 @@ public class AudioSocket {
                     writeOut.write(message.toString() + "\n");
                     writeOut.flush();
                     readIn = new BufferedReader(new InputStreamReader(audioSocket.getInputStream()));
-                    Log.i(this.getClass().getSimpleName(), "Request sent successfully");
                     mResponseExecutor.execute(new ReceiveMessage(readIn, message));
                 }
             } catch (Exception e) {
-                e.printStackTrace();
-                Log.e(this.getClass().getSimpleName(), "Sending request failed");
+                closeAudioConnection();
             }
         }
     }
@@ -266,13 +259,12 @@ public class AudioSocket {
         public void run() {
             try {
                 String line = mReader.readLine();
-                Log.i(this.getClass().getSimpleName(), "Audio response: " + line);
                 String command = Api.EXCEPTION;
                 try {
                     JSONObject response = new JSONObject(line);
                     command = response.optString("originalCommand", Api.EXCEPTION);
                 } catch (JSONException e) {
-                    Log.e(this.getClass().getName(), "Finally " + e.getMessage());
+                    closeAudioConnection();
                 } finally {
                     // send the response to ui
                     Intent responseContainer = new Intent(command);
@@ -309,7 +301,7 @@ public class AudioSocket {
                 }
                 baos.flush();
             } catch (Exception e) {
-                e.printStackTrace();
+                closeAudioConnection();
             } finally {
                 Intent intent = new Intent(Api.AUDIO_READY_TO_PLAY);
                 intent.putExtra(Api.AUDIO_READY_TO_PLAY, mFile.getAbsolutePath());
