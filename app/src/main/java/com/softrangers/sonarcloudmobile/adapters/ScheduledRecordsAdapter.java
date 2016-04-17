@@ -137,13 +137,13 @@ public class ScheduledRecordsAdapter extends RecyclerView.Adapter<ScheduledRecor
         return mSchedules.size();
     }
 
-    public class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener, SeekBar.OnSeekBarChangeListener {
+    public class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
         final TextView mRecordTitle;
         final TextView mRecordLength;
         final TextView mHour;
         final TextView mMinutesAmPm;
         final ImageButton mPlayPauseBtn;
-        final SeekBar mSeekBar;
+        final ProgressBar mSeekBar;
         final TextView mSeekBarTime;
         final LinearLayout mSeekBarLayout;
         final ProgressBar mLoadingProgress;
@@ -157,12 +157,11 @@ public class ScheduledRecordsAdapter extends RecyclerView.Adapter<ScheduledRecor
             mHour = (TextView) itemView.findViewById(R.id.schedule_hour_textView);
             mMinutesAmPm = (TextView) itemView.findViewById(R.id.schedule_minutes_textView);
             mPlayPauseBtn = (ImageButton) itemView.findViewById(R.id.schedule_record_item_playButton);
-            mSeekBar = (SeekBar) itemView.findViewById(R.id.schedule_all_record_seekBar);
+            mSeekBar = (ProgressBar) itemView.findViewById(R.id.schedule_all_record_seekBar);
             mSeekBarTime = (TextView) itemView.findViewById(R.id.schedule_all_record_seekBarTime);
             mSeekBarLayout = (LinearLayout) itemView.findViewById(R.id.schedule_all_record_seekBarLayout);
             mLoadingProgress = (ProgressBar) itemView.findViewById(R.id.schedule_all_record_loadingProgress);
             mPlayPauseBtn.setOnClickListener(this);
-            mSeekBar.setOnSeekBarChangeListener(this);
         }
 
         @Override
@@ -192,32 +191,11 @@ public class ScheduledRecordsAdapter extends RecyclerView.Adapter<ScheduledRecor
                     break;
             }
         }
-
-        @Override
-        public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-            if (fromUser) {
-                if (mOnScheduleClickListener != null) {
-                    mOnScheduleClickListener.onSeekBarChanged(mSchedule.getRecording(), mSeekBar, mSeekBarTime, getAdapterPosition(),  progress);
-                }
-            }
-        }
-
-        @Override
-        public void onStartTrackingTouch(SeekBar seekBar) {
-
-        }
-
-        @Override
-        public void onStopTrackingTouch(SeekBar seekBar) {
-
-        }
     }
 
     public interface OnScheduleClickListener {
         void onScheduleClick(Schedule schedule, int position);
 
-        void onSchedulePlayClick(Schedule schedule, Recording recording, SeekBar seekBar, TextView seekBarTime, int position);
-
-        void onSeekBarChanged(Recording recording, SeekBar seekBar, TextView seekBarTime, int position,  int progress);
+        void onSchedulePlayClick(Schedule schedule, Recording recording, ProgressBar seekBar, TextView seekBarTime, int position);
     }
 }

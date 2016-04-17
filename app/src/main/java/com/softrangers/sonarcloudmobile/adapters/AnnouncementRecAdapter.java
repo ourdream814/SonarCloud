@@ -76,10 +76,24 @@ public class AnnouncementRecAdapter extends RecyclerView.Adapter<AnnouncementRec
     @Override
     public void onBindViewHolder(ViewHolder holder, int position) {
         holder.mRecording = mRecordings.get(position);
-        holder.mTitleText.setText(holder.mRecording.getRecordName());
-        holder.mPlayButton.setImageResource(
-                holder.mRecording.isPlaying() ? R.mipmap.ic_record_play_stop_button : R.mipmap.ic_record_play_play_button
-        );
+        boolean isPlaying = holder.mRecording.isPlaying();
+        if (isPlaying) {
+            holder.mPlayingProgress.setVisibility(View.VISIBLE);
+            holder.mPlayingProgress.setMax(holder.mRecording.getLength());
+            holder.mPlayingProgress.setProgress(holder.mRecording.getProgress());
+            holder.mPlayButton.setVisibility(View.GONE);
+            holder.mStopButton.setVisibility(View.VISIBLE);
+            holder.mScheduleButton.setVisibility(View.GONE);
+            holder.mTitleText.setVisibility(View.GONE);
+        } else {
+            holder.mPlayingProgress.setVisibility(View.GONE);
+            holder.mPlayButton.setVisibility(View.VISIBLE);
+            holder.mStopButton.setVisibility(View.GONE);
+            holder.mScheduleButton.setVisibility(View.VISIBLE);
+            holder.mTitleText.setVisibility(View.VISIBLE);
+            holder.mTitleText.setText(holder.mRecording.getRecordName());
+            holder.mPlayButton.setImageResource(R.mipmap.ic_record_play_play_button);
+        }
     }
 
     @Override
@@ -94,6 +108,8 @@ public class AnnouncementRecAdapter extends RecyclerView.Adapter<AnnouncementRec
         final ImageButton mScheduleButton;
         final ImageButton mSendRecord;
         final ProgressBar mSendingProgress;
+        final ProgressBar mPlayingProgress;
+        final ImageButton mStopButton;
         Recording mRecording;
 
         public ViewHolder(View itemView) {
@@ -103,6 +119,9 @@ public class AnnouncementRecAdapter extends RecyclerView.Adapter<AnnouncementRec
             mTitleText = (TextView) itemView.findViewById(R.id.make_announcement_itemTitle);
             mSendingProgress = (ProgressBar) itemView.findViewById(R.id.sending_record_progressBar);
             mScheduleButton = (ImageButton) itemView.findViewById(R.id.make_announcement_scheduleRecording);
+            mPlayingProgress = (ProgressBar) itemView.findViewById(R.id.playing_record_progressBar);
+            mStopButton = (ImageButton) itemView.findViewById(R.id.stop_playing_recordButton);
+            mStopButton.setOnClickListener(this);
             mScheduleButton.setOnClickListener(this);
             mSendRecord = (ImageButton) itemView.findViewById(R.id.make_announcement_sendRecordingBtn);
             mSendRecord.setOnClickListener(this);
@@ -120,6 +139,11 @@ public class AnnouncementRecAdapter extends RecyclerView.Adapter<AnnouncementRec
                 case R.id.make_announcement_sendRecordingBtn:
                     if (mRecordInteraction != null) {
                         mRecordInteraction.onSendRecordClick(mRecording, position, mSendingProgress, mSendRecord);
+                    }
+                    break;
+                case R.id.stop_playing_recordButton:
+                    if (mRecordInteraction != null) {
+                        mRecordInteraction.onStopPlayingClick(mRecording, position);
                     }
                     break;
                 default:
@@ -141,6 +165,7 @@ public class AnnouncementRecAdapter extends RecyclerView.Adapter<AnnouncementRec
     public interface OnAnnouncementRecordInteraction {
         void onItemClick(Recording recording, int position, boolean isPlaying);
         void onScheduleClick(Recording recording, int position);
+        void onStopPlayingClick(Recording recording, int position);
         void onSendRecordClick(Recording recording, int position, ProgressBar progressBar, ImageButton send);
     }
 }

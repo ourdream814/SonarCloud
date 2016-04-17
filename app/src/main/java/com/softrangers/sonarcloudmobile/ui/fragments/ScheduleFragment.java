@@ -325,7 +325,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     }
 
     @Override
-    public void onSchedulePlayClick(Schedule schedule, Recording recording, SeekBar seekBar, TextView seekBarTime, int position) {
+    public void onSchedulePlayClick(Schedule schedule, Recording recording, ProgressBar seekBar, TextView seekBarTime, int position) {
         recording.setLoading(true);
         notifyAllRecordAdapter(position);
         AudioSocket.getInstance().setAudioConnection();
@@ -549,11 +549,11 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
 
     static int clickedRecordPosition = -1;
     Recording clickedRecording;
-    SeekBar mClickedItemSeekBar;
+    ProgressBar mClickedItemSeekBar;
     TextView mClickedItemSeekBarTime;
 
     @Override
-    public void onItemClick(Recording recording, SeekBar seekBar, TextView seekBarTime, int position) {
+    public void onItemClick(Recording recording, ProgressBar seekBar, TextView seekBarTime, int position) {
         if (AudioSocket.getInstance().isAudioConnectionReady())
             AudioSocket.getInstance().closeAudioConnection();
         recording.setLoading(true);
@@ -562,12 +562,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         startGettingAudioData(recording, seekBar, seekBarTime, position);
     }
 
-    @Override
-    public void onSeekBarChanged(Recording recording, SeekBar seekBar, TextView seekBarTime, int position, int progress) {
-
-    }
-
-    private void startGettingAudioData(Recording recording, SeekBar seekBar, TextView seekBarTime, int position) {
+    private void startGettingAudioData(Recording recording, ProgressBar seekBar, TextView seekBarTime, int position) {
         if (!recording.isPlaying()) {
             clickedRecordPosition = position;
             clickedRecording = recording;

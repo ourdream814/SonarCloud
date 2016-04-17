@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-              xmlns:tools="http://schemas.android.com/tools"
-              android:orientation="vertical"
-              android:layout_width="match_parent"
-              android:layout_height="wrap_content"
-              tools:background="@drawable/gradient_background">
+                xmlns:tools="http://schemas.android.com/tools"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                tools:background="@drawable/gradient_background">
 
     <ImageButton
         android:id="@+id/make_announcement_itemPlayBtn"
         style="@style/Base.Widget.AppCompat.ActionButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_margin="10dp"
-        android:layout_centerVertical="true"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
+        android:layout_centerVertical="true"
+        android:layout_margin="10dp"
         android:src="@mipmap/ic_record_play_play_button"/>
 
     <TextView
@@ -22,12 +22,12 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_centerVertical="true"
-        android:layout_toRightOf="@id/make_announcement_itemPlayBtn"
-        android:layout_toEndOf="@id/make_announcement_itemPlayBtn"
-        android:textSize="17sp"
         android:layout_marginLeft="10dp"
         android:layout_marginStart="10dp"
+        android:layout_toEndOf="@id/make_announcement_itemPlayBtn"
+        android:layout_toRightOf="@id/make_announcement_itemPlayBtn"
         android:textColor="@android:color/white"
+        android:textSize="17sp"
         tools:text="Recording 0:05"/>
 
     <ImageButton
@@ -35,9 +35,9 @@
         style="@style/Base.Widget.AppCompat.ActionButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_centerVertical="true"
-        android:layout_alignParentRight="true"
         android:layout_alignParentEnd="true"
+        android:layout_alignParentRight="true"
+        android:layout_centerVertical="true"
         android:src="@mipmap/ic_record_play_send_button"/>
 
     <ImageButton
@@ -51,25 +51,58 @@
         android:src="@mipmap/ic_record_play_schedule_button"/>
 
     <View
+        android:id="@+id/view"
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="@android:color/white"
-        android:layout_marginStart="10dp"
+        android:layout_alignParentBottom="true"
+        android:layout_marginEnd="10dp"
         android:layout_marginLeft="10dp"
         android:layout_marginRight="10dp"
-        android:layout_marginEnd="10dp"
-        android:layout_alignParentBottom="true"
-        android:id="@+id/view"/>
+        android:layout_marginStart="10dp"
+        android:background="@android:color/white"/>
 
     <ProgressBar
+        android:id="@+id/sending_record_progressBar"
         style="?android:attr/progressBarStyleSmall"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:id="@+id/sending_record_progressBar"
-        android:layout_centerVertical="true"
-        android:visibility="gone"
         android:layout_alignLeft="@+id/make_announcement_sendRecordingBtn"
-        android:layout_alignStart="@+id/make_announcement_sendRecordingBtn"
+        android:layout_alignParentEnd="true"
         android:layout_alignParentRight="true"
-        android:layout_alignParentEnd="true"/>
+        android:layout_alignStart="@+id/make_announcement_sendRecordingBtn"
+        android:layout_centerVertical="true"
+        android:visibility="gone"/>
+
+    <ImageButton
+        android:id="@+id/stop_playing_recordButton"
+        style="@style/Base.Widget.AppCompat.ActionButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/make_announcement_scheduleRecording"
+        android:layout_alignStart="@+id/make_announcement_scheduleRecording"
+        android:layout_centerVertical="true"
+        android:layout_marginBottom="10dp"
+        android:layout_marginTop="10dp"
+        android:layout_toLeftOf="@+id/make_announcement_sendRecordingBtn"
+        android:layout_toStartOf="@+id/make_announcement_sendRecordingBtn"
+        android:src="@mipmap/ic_record_play_stop_button"
+        android:visibility="gone"/>
+
+    <ProgressBar
+        android:id="@+id/playing_record_progressBar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:visibility="gone"
+        android:layout_alignParentStart="true"
+        android:layout_centerVertical="true"
+        android:layout_marginBottom="10dp"
+        android:layout_marginLeft="16dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="10dp"
+        android:layout_toLeftOf="@+id/stop_playing_recordButton"
+        android:layout_toStartOf="@+id/stop_playing_recordButton"/>
+
+
 </RelativeLayout>

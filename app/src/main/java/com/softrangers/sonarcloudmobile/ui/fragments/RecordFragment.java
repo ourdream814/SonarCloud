@@ -256,10 +256,17 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
     Handler mHandler = new Handler(Looper.getMainLooper()) {
         @Override
         public void handleMessage(final Message msg) {
+            Recording recording = ((Recording) msg.obj);
             switch (msg.what) {
                 case OpusPlayer.STATE_STARTED:
                 case OpusPlayer.STATE_STOPPED:
-                    ((Recording) msg.obj).setLoading(false);
+                    recording.setLoading(false);
+                    recording.setProgress(0);
+                    notifyRecordingsAdapter(msg.arg1);
+                    break;
+                default:
+                    int progress = msg.what / 1000;
+                    recording.setProgress(progress);
                     notifyRecordingsAdapter(msg.arg1);
                     break;
             }
@@ -282,6 +289,11 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         addSchedule.putExtra(ScheduleActivity.RECORD_BUNDLE, recording);
         mActivity.startActivityForResult(addSchedule, ADD_SCHEDULE_REQUEST_CODE);
 //        mActivity.unregisterReceiver(mAudioSendingReceiver);
+    }
+
+    @Override
+    public void onStopPlayingClick(Recording recording, int position) {
+        recording.setIsPlaying(false);
     }
 
     /**
@@ -317,6 +329,8 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                     Recording recording = new Recording();
                     recording.setFilePath(file.getAbsolutePath());
                     recording.setRecordName(file.getName().split("\\.")[0]);
+                    long time = (file.length() / 48000);
+                    recording.setLength((int) (time));
                     recordingList.add(recording);
                 }
             }
