@@ -265,7 +265,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                     notifyRecordingsAdapter(msg.arg1);
                     break;
                 default:
-                    int progress = msg.what / 1000;
+                    int progress = msg.what;
                     recording.setProgress(progress);
                     notifyRecordingsAdapter(msg.arg1);
                     break;
@@ -328,9 +328,10 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                 if (!file.isDirectory()) {
                     Recording recording = new Recording();
                     recording.setFilePath(file.getAbsolutePath());
-                    recording.setRecordName(file.getName().split("\\.")[0]);
-                    long time = (file.length() / 48000);
-                    recording.setLength((int) (time));
+                    double duration = (file.length() / (OpusRecorder.SAMPLE_RATE / 8.0)) - 1;
+                    String recordName = file.getName().split("\\.")[0] + " (" + recording.stringForTime((int) duration) + ")";
+                    recording.setRecordName(recordName);
+                    recording.setLength(duration * 1000);
                     recordingList.add(recording);
                 }
             }

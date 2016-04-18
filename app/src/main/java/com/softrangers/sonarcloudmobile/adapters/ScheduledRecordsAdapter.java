@@ -106,7 +106,7 @@ public class ScheduledRecordsAdapter extends RecyclerView.Adapter<ScheduledRecor
 
         if (recording.isPlaying()) {
             holder.mSeekBarLayout.setVisibility(View.VISIBLE);
-            holder.mSeekBar.setMax(recording.getLength());
+            holder.mSeekBar.setMax((int) recording.getLength());
             holder.mRecordTitle.setVisibility(View.GONE);
             holder.mRecordLength.setVisibility(View.GONE);
             holder.mHour.setVisibility(View.GONE);

@@ -111,7 +111,7 @@ public class ScheduleAllRecordingsAdapter extends RecyclerView.Adapter<ScheduleA
         holder.mSeekBarLayout.setVisibility(holder.mRecording.isPlaying() ? View.VISIBLE : View.GONE);
 
         if (holder.mSeekBarLayout.getVisibility() == View.VISIBLE) {
-            holder.mSeekBar.setMax(holder.mRecording.getLength());
+            holder.mSeekBar.setMax((int) holder.mRecording.getLength());
             holder.mSeekBar.setProgress(holder.mRecording.getProgress());
             holder.mSeekBarTime.setText(holder.mRecording.stringForTime(holder.mRecording.getProgress()));
         }

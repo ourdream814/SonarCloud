@@ -656,12 +656,21 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     @Override
     public void onConnectionFailed() {
         hideLoading();
-        Snackbar.make(mLoadingProgress, "Can\'t connect to server, please check your internet connection", Snackbar.LENGTH_SHORT).show();
+        if (clickedRecording != null && clickedPosition != -1 && mClickedItemSeekBar != null && mClickedItemSeekBarTime != null) {
+            clickedRecording.setLoading(false);
+            notifyAllRecordAdapter(clickedPosition);
+        }
+        Snackbar.make(mLoadingProgress, "Can\'t connect to server.", Snackbar.LENGTH_SHORT).show();
     }
 
     @Override
     public void onConnectTimeOut() {
-
+        Snackbar.make(mLoadingProgress, "Connection time out. Trying again...", Snackbar.LENGTH_SHORT).show();
+        if (clickedRecording != null && clickedPosition != -1 && mClickedItemSeekBar != null && mClickedItemSeekBarTime != null) {
+            clickedRecording.setLoading(false);
+            startGettingAudioData(clickedRecording, mClickedItemSeekBar, mClickedItemSeekBarTime, clickedPosition);
+            notifyAllRecordAdapter(clickedPosition);
+        }
     }
 
     @Override

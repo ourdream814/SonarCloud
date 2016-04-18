@@ -79,7 +79,7 @@ public class AnnouncementRecAdapter extends RecyclerView.Adapter<AnnouncementRec
         boolean isPlaying = holder.mRecording.isPlaying();
         if (isPlaying) {
             holder.mPlayingProgress.setVisibility(View.VISIBLE);
-            holder.mPlayingProgress.setMax(holder.mRecording.getLength());
+            holder.mPlayingProgress.setMax((int) holder.mRecording.getLength());
             holder.mPlayingProgress.setProgress(holder.mRecording.getProgress());
             holder.mPlayButton.setVisibility(View.GONE);
             holder.mStopButton.setVisibility(View.VISIBLE);

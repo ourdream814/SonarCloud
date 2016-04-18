@@ -20,7 +20,7 @@ import javax.net.ssl.SSLSocket;
 public class OpusRecorder {
 
     private static RecorderState recorderState;
-    private static final int SAMPLE_RATE = 48000;
+    public static final int SAMPLE_RATE = 48000;
     private static final int CHANNEL = 1;
     private OnRecordListener mOnRecordListener;
 

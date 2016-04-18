@@ -24,7 +24,7 @@ public class Recording implements Parcelable {
     private boolean mKeep;
     private String mCreated;
     private String mModified;
-    private int mLength;
+    private double mLength;
     private boolean mIsPlaying;
     private String mFilePath;
     private String mRecordName;
@@ -44,7 +44,7 @@ public class Recording implements Parcelable {
         mKeep = in.readByte() != 0;
         mCreated = in.readString();
         mModified = in.readString();
-        mLength = in.readInt();
+        mLength = in.readDouble();
         mIsPlaying = in.readByte() != 0;
         mFilePath = in.readString();
         mRecordName = in.readString();
@@ -144,16 +144,16 @@ public class Recording implements Parcelable {
         mModified = modified;
     }
 
-    public int getLength() {
+    public double getLength() {
         return mLength;
     }
 
-    public void setLength(int length) {
+    public void setLength(double length) {
         mLength = length;
     }
 
     public String getFromatedLength() {
-        return stringForTime(mLength);
+        return stringForTime((int) mLength);
     }
 
     public boolean isPlaying() {
@@ -293,7 +293,7 @@ public class Recording implements Parcelable {
         dest.writeByte((byte) (mKeep ? 1 : 0));
         dest.writeString(mCreated);
         dest.writeString(mModified);
-        dest.writeInt(mLength);
+        dest.writeDouble(mLength);
         dest.writeByte((byte) (mIsPlaying ? 1 : 0));
         dest.writeString(mFilePath);
         dest.writeString(mRecordName);
