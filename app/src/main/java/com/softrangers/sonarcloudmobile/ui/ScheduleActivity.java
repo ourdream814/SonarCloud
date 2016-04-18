@@ -298,6 +298,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                             .startDate(schedule.getStartDate())
                             .endDate(schedule.getEndDate());
                 } else {
+                    schedule.setTime(schedule.getStartDate());
                     mRequestBuilder.time(schedule.getTime());
                 }
                 JSONObject request = mRequestBuilder.build().toJSON();
@@ -437,6 +438,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                                     mAdapter.notifyItemChanged(position);
                                     schedule = RepeatingCheck.setRepeating(schedule, repeatingOption);
                                     schedule.setRepeatOption();
+                                    if (schedule.getRepeatOption() == 0) schedule.setScheduleTime(schedule.getScheduleStartDate());
                                     if (!mAdapter.getItem(position).getSubtitle().equalsIgnoreCase(repeatValues[0])) {
                                         Schedule schedule = new Schedule();
                                         schedule.setRowType(Schedule.RowType.ITEM);
