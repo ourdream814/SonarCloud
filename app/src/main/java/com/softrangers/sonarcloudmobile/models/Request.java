@@ -50,7 +50,7 @@ public class Request {
     private int organizationID = UNSPECIFIED_INT;
     private int receiverID = UNSPECIFIED_INT;
     private int seq;
-    private int scheduleID = UNSPECIFIED_INT;
+    private String scheduleID;
     private int channels = UNSPECIFIED_INT;
     private int recordingID = UNSPECIFIED_INT;
     private JSONArray receivers;
@@ -82,7 +82,6 @@ public class Request {
             if (loginID == UNSPECIFIED_INT) request.remove("loginID");
             if (organizationID == UNSPECIFIED_INT) request.remove("organizationID");
             if (receiverID == UNSPECIFIED_INT) request.remove("receiverID");
-            if (scheduleID == UNSPECIFIED_INT) request.remove("scheduleID");
             if (bitrate == UNSPECIFIED_INT) request.remove("bitrate");
             if (samplerate == UNSPECIFIED_INT) request.remove("samplerate");
             if (channels == UNSPECIFIED_INT) request.remove("channels");
@@ -120,7 +119,7 @@ public class Request {
         private JSONArray mReceivers;
         private int mSeq = SonarCloudApp.SEQ_VALUE++;
         private int mReceiverGroupId = UNSPECIFIED_INT;
-        private int mScheduleId = UNSPECIFIED_INT;
+        private String mScheduleId;
         private int mSampleRate = UNSPECIFIED_INT;
         private int mChannels = UNSPECIFIED_INT;
         private String time;
@@ -245,7 +244,7 @@ public class Request {
             return this;
         }
 
-        public Builder scheduleId(int scheduleId) {
+        public Builder scheduleId(String scheduleId) {
             mScheduleId = scheduleId;
             return this;
         }

@@ -502,7 +502,7 @@ public class Schedule implements Parcelable, Cloneable {
                 }
             }
 
-            schedule.setEndDate(object.getString("endDate"));
+            schedule.setEndDate(object.optString("endDate", "null"));
             if (schedule.endDate != null && !schedule.endDate.equals("null")) {
                 try {
                     schedule.setScheduleEndDate(dateFormat.parse(schedule.endDate));

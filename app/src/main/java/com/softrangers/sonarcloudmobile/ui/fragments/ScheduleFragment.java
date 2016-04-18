@@ -517,7 +517,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         // build a request object
         Request.Builder builder = new Request.Builder();
         builder.command(Api.Command.DELETE_SCHEDULE);
-        builder.scheduleId(schedule.getScheduleID());
+        builder.scheduleId(String.valueOf(schedule.getScheduleID()));
         // send request to server
         MainActivity.dataSocketService.sendRequest(builder.build().toJSON());
     }

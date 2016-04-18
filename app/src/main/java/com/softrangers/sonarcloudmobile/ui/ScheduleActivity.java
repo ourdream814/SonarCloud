@@ -117,7 +117,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                 schedule = intent.getExtras().getParcelable(SCHEDULE_EXTRAS);
                 mAdapter = new ScheduleEditAdapter(buildAdaptersList(schedule));
                 mRequestBuilder.command(Api.Command.UPDATE_SCHEDULE);
-                mRequestBuilder.scheduleId(schedule.getScheduleID());
+                mRequestBuilder.scheduleId(String.valueOf(schedule.getScheduleID()));
                 break;
         }
         initializeList(mAdapter);
@@ -301,6 +301,10 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                     mRequestBuilder.time(schedule.getTime());
                 }
                 JSONObject request = mRequestBuilder.build().toJSON();
+                String endDate = request.optString("endDate", null);
+                if (endDate == null || endDate.equals("null")) {
+                    request.remove("endDate");
+                }
                 dataSocketService.sendRequest(request);
                 break;
             }
