@@ -114,7 +114,6 @@ public class AnnouncementRecAdapter extends RecyclerView.Adapter<AnnouncementRec
 
         public ViewHolder(View itemView) {
             super(itemView);
-            itemView.setOnClickListener(this);
             mPlayButton = (ImageButton) itemView.findViewById(R.id.make_announcement_itemPlayBtn);
             mTitleText = (TextView) itemView.findViewById(R.id.make_announcement_itemTitle);
             mSendingProgress = (ProgressBar) itemView.findViewById(R.id.sending_record_progressBar);
@@ -123,6 +122,7 @@ public class AnnouncementRecAdapter extends RecyclerView.Adapter<AnnouncementRec
             mStopButton = (ImageButton) itemView.findViewById(R.id.stop_playing_recordButton);
             mStopButton.setOnClickListener(this);
             mScheduleButton.setOnClickListener(this);
+            mPlayButton.setOnClickListener(this);
             mSendRecord = (ImageButton) itemView.findViewById(R.id.make_announcement_sendRecordingBtn);
             mSendRecord.setOnClickListener(this);
         }
@@ -146,7 +146,7 @@ public class AnnouncementRecAdapter extends RecyclerView.Adapter<AnnouncementRec
                         mRecordInteraction.onStopPlayingClick(mRecording, position);
                     }
                     break;
-                default:
+                case R.id.make_announcement_itemPlayBtn: {
                     currentPosition = position;
                     notifyItemChanged(currentPosition);
                     if (lastPosition != WAS_NOT_SELECTED && lastPosition != currentPosition) {
@@ -158,6 +158,7 @@ public class AnnouncementRecAdapter extends RecyclerView.Adapter<AnnouncementRec
                         mRecordInteraction.onItemClick(mRecording, position, mRecording.isPlaying());
                     }
                     break;
+                }
             }
         }
     }
