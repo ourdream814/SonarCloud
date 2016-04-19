@@ -73,7 +73,7 @@ public class Request {
 
             for (Map.Entry<String, Field> set : fieldHashMap.entrySet()) {
                 if (set.getValue().get(this) != null &&
-                        !set.getValue().getName().equalsIgnoreCase("creator")) {
+                        !set.getValue().getName().equalsIgnoreCase("creator") && !set.getValue().get(this).equals("null")) {
                     request.put(set.getKey(), set.getValue().get(this));
                 }
             }

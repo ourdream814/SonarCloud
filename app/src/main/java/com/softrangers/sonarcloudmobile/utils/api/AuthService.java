@@ -208,7 +208,6 @@ public class AuthService extends Service {
                 sendResponseToUI(line, message);
             } catch (Exception e) {
                 e.printStackTrace();
-                Log.e(this.getClass().getSimpleName(), e.getMessage());
                 // send the response to ui
                 Intent responseContainer = new Intent(Api.EXCEPTION);
 //                responseContainer.putExtra(command, line);

@@ -19,7 +19,6 @@ import me.zhanghai.android.patternlock.PatternUtils;
 public class LockAppActivity extends AppCompatActivity implements CompoundButton.OnCheckedChangeListener {
 
     private SwitchCompat mEnableLocking;
-    private SwitchCompat mEnableTouchID;
     private ItemSelected mItemSelected;
 
     @Override
@@ -29,8 +28,6 @@ public class LockAppActivity extends AppCompatActivity implements CompoundButton
         mEnableLocking = (SwitchCompat) findViewById(R.id.enable_locking_switchButton);
         mEnableLocking.setChecked(SonarCloudApp.getInstance().isAppLocked());
         mEnableLocking.setOnCheckedChangeListener(this);
-        mEnableTouchID = (SwitchCompat) findViewById(R.id.enable_touch_switchButton);
-        mEnableTouchID.setOnCheckedChangeListener(this);
     }
 
     public void enableAppLocking(View view) {
@@ -51,10 +48,6 @@ public class LockAppActivity extends AppCompatActivity implements CompoundButton
             Intent intent = new Intent(this, LockPatternActivity.class);
             startActivity(intent);
         }
-    }
-
-    public void enableTouchId(View view) {
-        mEnableTouchID.setChecked(!mEnableTouchID.isChecked());
     }
 
     public void onBackButtonClick(View view) {

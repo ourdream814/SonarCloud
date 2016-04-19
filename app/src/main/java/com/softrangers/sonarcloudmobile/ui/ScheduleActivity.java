@@ -15,6 +15,7 @@ import android.support.design.widget.Snackbar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.View;
 import android.widget.DatePicker;
 import android.widget.NumberPicker;
@@ -71,6 +72,8 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
     private String mAction;
     public static DataSocketService dataSocketService;
     private static int repeatingOption;
+    private static String endDate;
+    private static int initialRepeatingOption;
 
 
     @Override
@@ -118,6 +121,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                 mAdapter = new ScheduleEditAdapter(buildAdaptersList(schedule));
                 mRequestBuilder.command(Api.Command.UPDATE_SCHEDULE);
                 mRequestBuilder.scheduleId(String.valueOf(schedule.getScheduleID()));
+                initialRepeatingOption = schedule.getRepeatOption();
                 break;
         }
         initializeList(mAdapter);
@@ -259,7 +263,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
             repeatUntil.setRowType(Schedule.RowType.ITEM);
             repeatUntil.setTitle(getString(R.string.repeat_until));
             String endDate = schedule.getEndDate();
-            if (!endDate.equals("null") && endDate != null) {
+            if (!endDate.equals("null")) {
                 repeatUntil.setSubtitle(schedule.getStringDate(schedule.getFormattedEndDate()));
             }
             headerArrayList.add(repeatUntil);
@@ -285,27 +289,25 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         showLoading();
         switch (mAction) {
             case ACTION_EDIT_SCHEDULE: {
-                if (schedule.getRepeatOption() > 0) schedule.setTime(null);
-                if (schedule.getStartDate() == null || schedule.getStartDate().equals("null")) {
-                    schedule.setStartDate(schedule.getServerFormatDate(new Date()));
-                }
-                if (schedule.getRepeatOption() > 0) {
-                    mRequestBuilder.minute(schedule.getMinute())
-                            .hour(schedule.getHour())
-                            .day(schedule.getDay())
-                            .month(schedule.getMonth())
-                            .wday(schedule.getWday())
+                if (schedule.getRepeatOption() == 0) {
+                    mRequestBuilder.deleteAfter(1)
                             .startDate(schedule.getStartDate())
-                            .endDate(schedule.getEndDate());
-                } else {
-                    schedule.setTime(schedule.getStartDate());
-                    mRequestBuilder.time(schedule.getTime());
+                            .time(schedule.getTime());
+                } else if (schedule.getRepeatOption() > 0) {
+                    mRequestBuilder.deleteAfter(0)
+                            .startDate(schedule.getStartDate())
+                            .day(schedule.getDay())
+                            .hour(schedule.getHour())
+                            .minute(schedule.getMinute())
+                            .month(schedule.getMonth())
+                            .wday(schedule.getWday());
+                    if (schedule.getEndDate() != null && !schedule.getEndDate().equals("null")) {
+                        if (endDate != null) {
+                            mRequestBuilder.endDate(schedule.getEndDate());
+                        }
+                    }
                 }
                 JSONObject request = mRequestBuilder.build().toJSON();
-                String endDate = request.optString("endDate", null);
-                if (endDate == null || endDate.equals("null")) {
-                    request.remove("endDate");
-                }
                 dataSocketService.sendRequest(request);
                 break;
             }
@@ -378,7 +380,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                 );
                 // Obtain the date picker from dialog and set the minimum date
                 DatePicker datePicker = pickerDialog.getDatePicker();
-                datePicker.setMinDate(Calendar.getInstance().getTimeInMillis() - 10);
+                datePicker.setMinDate(Calendar.getInstance().getTimeInMillis() - 2000);
                 // show the dialog
                 pickerDialog.show();
                 break;
@@ -438,7 +440,8 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                                     mAdapter.notifyItemChanged(position);
                                     schedule = RepeatingCheck.setRepeating(schedule, repeatingOption);
                                     schedule.setRepeatOption();
-                                    if (schedule.getRepeatOption() == 0) schedule.setScheduleTime(schedule.getScheduleStartDate());
+                                    if (schedule.getRepeatOption() == 0)
+                                        schedule.setScheduleTime(schedule.getScheduleStartDate());
                                     if (!mAdapter.getItem(position).getSubtitle().equalsIgnoreCase(repeatValues[0])) {
                                         Schedule schedule = new Schedule();
                                         schedule.setRowType(Schedule.RowType.ITEM);
@@ -462,6 +465,9 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                                     mAdapter.notifyItemChanged(position);
                                     schedule = RepeatingCheck.setRepeating(schedule, currentOption);
                                     schedule.setRepeatOption();
+                                    endDate = null;
+                                    if (schedule.getRepeatOption() == 0)
+                                        schedule.setTime(schedule.getStartDate());
                                 } catch (Exception e) {
                                     e.printStackTrace();
                                 }
@@ -481,6 +487,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                         date.setTime(calendar.getTimeInMillis());
                         // update the interface
                         String dateString = serverFormat.format(date);
+                        endDate = dateString;
                         schedule.setEndDate(dateString);
                         mAdapter.getItem(position).setSubtitle(schedule.getStringDate(date));
                         mAdapter.notifyItemChanged(position);
@@ -490,7 +497,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                 );
                 // Obtain the date picker from dialog and set the minimum date
                 DatePicker datePicker = pickerDialog.getDatePicker();
-                datePicker.setMinDate(Calendar.getInstance().getTimeInMillis() - 10);
+                datePicker.setMinDate(Calendar.getInstance().getTimeInMillis() - 2000);
                 // show the dialog
                 pickerDialog.show();
                 break;

@@ -14,6 +14,7 @@ import org.joda.time.DateTime;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -158,11 +159,15 @@ public class Schedule implements Parcelable, Cloneable {
         if (stringDate == null) return date;
         if (!stringDate.equalsIgnoreCase("null")) {
             String editedDate = stringDate.replace("T", " ");
+            SimpleDateFormat first = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS'Z'", Locale.getDefault());
             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss'Z'", Locale.getDefault());
             try {
                 date = dateFormat.parse(editedDate);
             } catch (Exception e) {
-                e.printStackTrace();
+                try {
+                    date = first.parse(editedDate);
+                } catch (Exception e1) {
+                }
             }
         }
         return date;
