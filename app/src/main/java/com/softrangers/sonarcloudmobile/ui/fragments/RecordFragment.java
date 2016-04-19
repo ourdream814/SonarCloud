@@ -192,8 +192,10 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                     return;
                 }
                 // start stream the audio to server
-                if (mStreamingState == StreamingState.WAITING) {
+                if (mStreamingState == StreamingState.WAITING && !AudioSocket.getInstance().isAudioConnectionReady()) {
                     startSendingAudioProcess(null, null, null);
+                } else if (mStreamingState == StreamingState.WAITING && AudioSocket.getInstance().isAudioConnectionReady()) {
+                    opusRecorder.startStreaming(AudioSocket.getInstance().getAudioSocket());
                 } else if (mStreamingState == StreamingState.STREAMING) {
                     opusRecorder.stopRecording();
                 }
@@ -752,10 +754,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
      */
     public void startSendingAudioProcess(Recording recording, ProgressBar progressBar, ImageButton send) {
         try {
-            if (AudioSocket.getInstance().isAudioConnectionReady()) {
-                onServerReadyForData();
-                return;
-            }
             if (mSelectedLayout == SelectedLayout.RECORDING) {
                 mRecording = recording;
                 mSendingProgress = progressBar;
@@ -766,6 +764,12 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
             } else {
                 mActivity.showLoading();
             }
+
+            if (AudioSocket.getInstance().isAudioConnectionReady()) {
+                onServerReadyForData();
+                return;
+            }
+
             Request.Builder requestBuilder = new Request.Builder()
                     .command(Api.Command.SEND_AUDIO)
                     .bitrate(BITRATE)

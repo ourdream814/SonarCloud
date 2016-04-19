@@ -72,12 +72,12 @@ public class MainActivity extends BaseActivity implements
     private static ScheduleFragment scheduleFragment;
     private static SettingsFragment settingsFragment;
     public static DataSocketService dataSocketService;
-    private static boolean isLockPatternShown;
 
     // set selected items to send the record to them
     public static ArrayList<Receiver> selectedReceivers = new ArrayList<>();
     public static Group selectedGroup;
     private IntentFilter intentFilter;
+    private static boolean isUnlocked;
 
     static {
         observers = new ArrayList<>();
@@ -119,13 +119,6 @@ public class MainActivity extends BaseActivity implements
         mSelectedFragment = SelectedFragment.RECEIVERS;
         invalidateViews();
 
-        if (SonarCloudApp.getInstance().isAppLocked()) {
-            if (PatternLockUtils.hasPattern(this)) {
-                PatternLockUtils.confirmPatternIfHas(this);
-                isLockPatternShown = true;
-            }
-        }
-
         if (!SonarCloudApp.getInstance().isLoggedIn()) {
             Intent intent = new Intent(this, LoginActivity.class);
             startActivityForResult(intent, LOGIN_REQUEST_CODE);
@@ -139,6 +132,22 @@ public class MainActivity extends BaseActivity implements
         }
 
         showLoading();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (!isUnlocked && SonarCloudApp.getInstance().isAppLocked() && SonarCloudApp.getInstance().isLoggedIn()) {
+            if (PatternLockUtils.hasPattern(this)) {
+                PatternLockUtils.confirmPatternIfHas(this);
+            }
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        isUnlocked = false;
     }
 
     // needed to bind DataSocketService to current class
@@ -535,6 +544,8 @@ public class MainActivity extends BaseActivity implements
         if (PatternLockUtils.checkConfirmPatternResult(this, requestCode, resultCode)) {
             finish();
             return;
+        } else {
+            isUnlocked = true;
         }
         if (data != null) {
             String action = data.getAction();

@@ -96,7 +96,6 @@ public class OpusRecorder {
                 outputStream.write(encodeBuffer, 0, bytesWritten);
                 if (serverStream != null) {
                     serverStream.write(encodeBuffer, 0, bytesWritten);
-                    Log.i(this.getClass().getSimpleName(), "Sent: " + encodeBuffer.length);
                 }
             }
             // Stop the recorder
@@ -120,14 +119,6 @@ public class OpusRecorder {
             recorderState = RecorderState.STOPPED;
             if (mOnRecordListener != null) {
                 mOnRecordListener.onRecordFailed(e, recorderState);
-            }
-        } finally {
-            if (sslSocket != null) {
-                try {
-                    sslSocket.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
             }
         }
     }

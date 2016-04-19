@@ -69,9 +69,6 @@ public class LockAppActivity extends AppCompatActivity implements CompoundButton
             case R.id.enable_locking_switchButton:
 
                 break;
-            case R.id.enable_touch_switchButton:
-
-                break;
         }
     }
 
