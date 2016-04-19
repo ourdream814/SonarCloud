@@ -33,6 +33,7 @@ import com.softrangers.sonarcloudmobile.ui.fragments.ReceiversFragment;
 import com.softrangers.sonarcloudmobile.ui.fragments.RecordFragment;
 import com.softrangers.sonarcloudmobile.ui.fragments.ScheduleFragment;
 import com.softrangers.sonarcloudmobile.ui.fragments.SettingsFragment;
+import com.softrangers.sonarcloudmobile.utils.PatternLockUtils;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
 import com.softrangers.sonarcloudmobile.utils.api.AudioSocket;
@@ -70,9 +71,8 @@ public class MainActivity extends BaseActivity implements
     private static RecordFragment recordFragment;
     private static ScheduleFragment scheduleFragment;
     private static SettingsFragment settingsFragment;
-
     public static DataSocketService dataSocketService;
-    private static boolean isSocketConnected;
+    private static boolean isLockPatternShown;
 
     // set selected items to send the record to them
     public static ArrayList<Receiver> selectedReceivers = new ArrayList<>();
@@ -118,6 +118,13 @@ public class MainActivity extends BaseActivity implements
         changeFragment(receiversFragment);
         mSelectedFragment = SelectedFragment.RECEIVERS;
         invalidateViews();
+
+        if (SonarCloudApp.getInstance().isAppLocked()) {
+            if (PatternLockUtils.hasPattern(this)) {
+                PatternLockUtils.confirmPatternIfHas(this);
+                isLockPatternShown = true;
+            }
+        }
 
         if (!SonarCloudApp.getInstance().isLoggedIn()) {
             Intent intent = new Intent(this, LoginActivity.class);
@@ -485,13 +492,11 @@ public class MainActivity extends BaseActivity implements
      */
     @Override
     public void onSocketConnected() {
-        isSocketConnected = true;
         dismissLoading();
     }
 
     @Override
     public void onConnectionFailed() {
-        isSocketConnected = false;
         dismissLoading();
         Snackbar.make(mReceiversSelector, "Can\'t connect to server.", Snackbar.LENGTH_SHORT).show();
     }
@@ -527,59 +532,65 @@ public class MainActivity extends BaseActivity implements
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        String action = data.getAction();
-        switch (resultCode) {
-            case RESULT_OK:
-                switch (action) {
-                    case Api.ACTION_ADD_GROUP:
-                        mGroup = data.getExtras().getParcelable(AddGroupActivity.GROUP_RESULT_BUNDLE);
-                        statusChanged = true;
-                        Toast.makeText(this, getString(R.string.group_saved), Toast.LENGTH_SHORT).show();
-                        notifyObservers();
-                        break;
-                    case ACTION_LOGIN:
-                        registerReceiver(mLoginReceiver, intentFilter);
-                        try {
-                            Thread.sleep(200);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                        dataSocketService.restartConnection();
-                        showLoading();
-                        if (selectedReceivers != null)
-                            selectedReceivers.clear();
-                        selectedGroup = null;
-                        statusChanged = true;
-                        new Handler().postDelayed(new Runnable() {
-                            @Override
-                            public void run() {
-                                onBottomButtonsClick(mReceiversSelector);
+        if (PatternLockUtils.checkConfirmPatternResult(this, requestCode, resultCode)) {
+            finish();
+            return;
+        }
+        if (data != null) {
+            String action = data.getAction();
+            switch (resultCode) {
+                case RESULT_OK:
+                    switch (action) {
+                        case Api.ACTION_ADD_GROUP:
+                            mGroup = data.getExtras().getParcelable(AddGroupActivity.GROUP_RESULT_BUNDLE);
+                            statusChanged = true;
+                            Toast.makeText(this, getString(R.string.group_saved), Toast.LENGTH_SHORT).show();
+                            notifyObservers();
+                            break;
+                        case ACTION_LOGIN:
+                            registerReceiver(mLoginReceiver, intentFilter);
+                            try {
+                                Thread.sleep(200);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
                             }
-                        }, 50);
-                        break;
-                    case ScheduleActivity.ACTION_ADD_SCHEDULE:
-                        if (recordFragment != null && recordFragment.mRecAdapter != null) {
-                            recordFragment.mRecAdapter.refreshList(recordFragment.getRecordedFileList());
-                        }
+                            dataSocketService.restartConnection();
+                            showLoading();
+                            if (selectedReceivers != null)
+                                selectedReceivers.clear();
+                            selectedGroup = null;
+                            statusChanged = true;
+                            new Handler().postDelayed(new Runnable() {
+                                @Override
+                                public void run() {
+                                    onBottomButtonsClick(mReceiversSelector);
+                                }
+                            }, 50);
+                            break;
+                        case ScheduleActivity.ACTION_ADD_SCHEDULE:
+                            if (recordFragment != null && recordFragment.mRecAdapter != null) {
+                                recordFragment.mRecAdapter.refreshList(recordFragment.getRecordedFileList());
+                            }
+                            registerReceiver(recordFragment.mAudioSendingReceiver, recordFragment.getIntentFilter());
+                            break;
+                        case ScheduleActivity.ACTION_EDIT_SCHEDULE:
+                            if (selectedGroup != null)
+                                sendReceiversToScheduleFragment(selectedGroup.getReceivers());
+                            else sendReceiversToScheduleFragment(selectedReceivers);
+                            break;
+                    }
+                    break;
+                case RESULT_CANCELED:
+                    if (action.equals(ACTION_LOGIN)) {
+                        SonarCloudApp.getInstance().clearUserSession(true);
+                        SonarCloudApp.getInstance().stopKeepingConnection();
+                        unbindService(mDataServiceConnection);
+                        finish();
+                    } else if (action.equals(ScheduleActivity.ACTION_ADD_SCHEDULE)) {
                         registerReceiver(recordFragment.mAudioSendingReceiver, recordFragment.getIntentFilter());
-                        break;
-                    case ScheduleActivity.ACTION_EDIT_SCHEDULE:
-                        if (selectedGroup != null)
-                            sendReceiversToScheduleFragment(selectedGroup.getReceivers());
-                        else sendReceiversToScheduleFragment(selectedReceivers);
-                        break;
-                }
-                break;
-            case RESULT_CANCELED:
-                if (action.equals(ACTION_LOGIN)) {
-                    SonarCloudApp.getInstance().clearUserSession(true);
-                    SonarCloudApp.getInstance().stopKeepingConnection();
-                    unbindService(mDataServiceConnection);
-                    finish();
-                } else if (action.equals(ScheduleActivity.ACTION_ADD_SCHEDULE)) {
-                    registerReceiver(recordFragment.mAudioSendingReceiver, recordFragment.getIntentFilter());
-                }
-                break;
+                    }
+                    break;
+            }
         }
     }
 

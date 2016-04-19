@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest package="com.softrangers.sonarcloudmobile"
-          xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          package="com.softrangers.sonarcloudmobile">
 
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
@@ -16,8 +16,8 @@
         <activity
             android:name=".ui.MainActivity"
             android:configChanges="screenLayout|screenSize|orientation|keyboard|fontScale"
-            android:screenOrientation="portrait"
-            android:launchMode="singleTop">
+            android:launchMode="singleTop"
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
 
@@ -34,9 +34,9 @@
         <service
             android:name=".utils.api.DataSocketService"
             android:exported="false"/>
-
-        <service android:name=".utils.api.AuthService"
-                 android:exported="false"/>
+        <service
+            android:name=".utils.api.AuthService"
+            android:exported="false"/>
 
         <!-- Notifies when the socket is connected -->
         <receiver
@@ -52,10 +52,10 @@
                 <action android:name="com.softrangers.sonarcloudmobile.AUDIO_CONNECTION_CLOSED"/>
             </intent-filter>
         </receiver>
-
-        <receiver android:name=".utils.api.ConnectionKeeper"
-                  android:enabled="true"
-                  android:exported="false">
+        <receiver
+            android:name=".utils.api.ConnectionKeeper"
+            android:enabled="true"
+            android:exported="false">
             <intent-filter>
                 <action android:name="ACTION_KEEP_CONNECTION"/>
                 <action android:name="noop"/>
@@ -69,6 +69,10 @@
         <activity android:name=".ui.ScheduleActivity">
         </activity>
         <activity android:name=".ui.LockAppActivity">
+        </activity>
+        <activity android:name=".ui.LockPatternActivity">
+        </activity>
+        <activity android:name=".ui.ConfirmLockPattern">
         </activity>
     </application>
 

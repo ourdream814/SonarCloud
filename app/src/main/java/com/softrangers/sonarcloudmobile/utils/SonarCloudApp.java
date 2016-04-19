@@ -45,6 +45,8 @@ import javax.net.ssl.X509TrustManager;
 public class SonarCloudApp extends Application {
 
     private static final String LOGIN_RESULT = "com.softrangers.sonarcloudmobile.LOGIN_RESULT";
+    private static final String LOCK_PATTERN = "lock pattern preferences key";
+    private static final String IS_APP_LOCKED = "IS_APP_LOCKED";
     private static final String LOGIN_STATUS = "login_status";
     private static final String USER_IDENTIFIER = "identifier";
     private static final String USER_ID = "id";
@@ -86,6 +88,26 @@ public class SonarCloudApp extends Application {
         } else {
             return false;
         }
+    }
+
+    public void setAppIsLocked(boolean isLocked) {
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putBoolean(IS_APP_LOCKED, isLocked);
+        editor.apply();
+    }
+
+    public boolean isAppLocked() {
+        return preferences.getBoolean(IS_APP_LOCKED, false);
+    }
+
+    public void savePattern(String patternSHA1) {
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putString(LOCK_PATTERN, patternSHA1);
+        editor.apply();
+    }
+
+    public String getLockPattern() {
+        return preferences.getString(LOCK_PATTERN, null);
     }
 
     /**
