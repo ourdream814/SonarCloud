@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.support.v7.widget.SwitchCompat;
 import android.view.View;
 import android.widget.CompoundButton;
+import android.widget.RelativeLayout;
 import android.widget.Toast;
 
 import com.softrangers.sonarcloudmobile.R;
@@ -20,24 +21,23 @@ public class LockAppActivity extends AppCompatActivity implements CompoundButton
 
     private SwitchCompat mEnableLocking;
     private ItemSelected mItemSelected;
+    private RelativeLayout mSetPattern;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_lock_app);
         mEnableLocking = (SwitchCompat) findViewById(R.id.enable_locking_switchButton);
+        mSetPattern = (RelativeLayout) findViewById(R.id.lock_activity_setPattern);
         mEnableLocking.setChecked(SonarCloudApp.getInstance().isAppLocked());
-        mEnableLocking.setOnCheckedChangeListener(this);
+        if (mEnableLocking.isChecked()) mSetPattern.setVisibility(View.VISIBLE);
     }
 
     public void enableAppLocking(View view) {
         mItemSelected = ItemSelected.ENABLE_APP_LOCKING;
-        if (PatternLockUtils.hasPattern(this)) {
-            PatternLockUtils.confirmPatternIfHas(this);
-        } else {
-            Intent intent = new Intent(this, LockPatternActivity.class);
-            startActivity(intent);
-        }
+        mEnableLocking.setChecked(!mEnableLocking.isChecked());
+        SonarCloudApp.getInstance().setAppIsLocked(mEnableLocking.isChecked());
+        mSetPattern.setVisibility(mEnableLocking.isChecked() ? View.VISIBLE : View.GONE);
     }
 
     public void setLockPattern(View view) {
@@ -76,15 +76,10 @@ public class LockAppActivity extends AppCompatActivity implements CompoundButton
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (!PatternLockUtils.checkConfirmPatternResult(this, requestCode, resultCode)) {
             switch (mItemSelected) {
-                case ENABLE_APP_LOCKING:
-                    mEnableLocking.setChecked(!mEnableLocking.isChecked());
-                    SonarCloudApp.getInstance().setAppIsLocked(mEnableLocking.isChecked());
-                    break;
                 case SET_PATTERN:
                     Intent intent = new Intent(this, LockPatternActivity.class);
                     startActivity(intent);
                     break;
-
             }
         } else {
             super.onActivityResult(requestCode, resultCode, data);

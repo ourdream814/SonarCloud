@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:animateLayoutChanges="true"
     tools:context="com.softrangers.sonarcloudmobile.ui.LockAppActivity">
 
     <RelativeLayout
@@ -90,6 +91,7 @@
         android:background="@drawable/white_selectable_no_padding"
         android:id="@+id/lock_activity_setPattern"
         android:layout_below="@+id/lock_activity_enableLocking"
+        android:visibility="gone"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true">
 
