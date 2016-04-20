@@ -251,7 +251,7 @@ public class MainActivity extends BaseActivity implements
                     new Handler().postDelayed(new Runnable() {
                         @Override
                         public void run() {
-                            if (selectedReceivers.size() > 0)
+                            if (selectedReceivers != null && selectedReceivers.size() > 0)
                                 sendReceiversToScheduleFragment(selectedReceivers);
                             else if (selectedGroup != null)
                                 sendReceiversToScheduleFragment(selectedGroup.getReceivers());

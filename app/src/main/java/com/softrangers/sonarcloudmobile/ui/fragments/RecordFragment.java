@@ -168,7 +168,11 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
             case R.id.start_pause_recording_button:
                 // if there aren't any receiver or group selected inform user about this and return
                 if (opusRecorder.isRecording() && mRecordingLayout != RecordingLayout.RECORDINGS) {
-                    Toast.makeText(mActivity, mActivity.getString(R.string.stop_recording), Toast.LENGTH_SHORT).show();
+                    if (mStreamingState == StreamingState.STREAMING) {
+                        Snackbar.make(mStreamingChronometer, mActivity.getString(R.string.stop_streaming), Snackbar.LENGTH_SHORT).show();
+                    } else {
+                        Snackbar.make(mStreamingChronometer, mActivity.getString(R.string.stop_recording), Snackbar.LENGTH_SHORT).show();
+                    }
                     return;
                 }
                 if (!opusRecorder.isRecording() || opusRecorder.isPaused()) {
@@ -184,7 +188,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                 break;
             case R.id.start_streaming_button:
                 if (opusRecorder.isRecording() && mRecordingLayout != RecordingLayout.STREAMING) {
-                    Toast.makeText(mActivity, mActivity.getString(R.string.stop_recording), Toast.LENGTH_SHORT).show();
+                    Snackbar.make(mStreamingChronometer, mActivity.getString(R.string.stop_recording), Snackbar.LENGTH_SHORT).show();
                     return;
                 }
                 if (MainActivity.selectedReceivers.size() <= 0 && MainActivity.selectedGroup == null) {
@@ -228,7 +232,11 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                 mStreamLayout.setVisibility(View.GONE);
 
                 if (opusRecorder.isRecording() && mRecordingLayout != RecordingLayout.PUSH_TO_TALK) {
-                    Toast.makeText(mActivity, mActivity.getString(R.string.stop_recording), Toast.LENGTH_SHORT).show();
+                    if (mStreamingState == StreamingState.STREAMING) {
+                        Snackbar.make(mStreamingChronometer, mActivity.getString(R.string.stop_streaming), Snackbar.LENGTH_SHORT).show();
+                    } else {
+                        Snackbar.make(mStreamingChronometer, mActivity.getString(R.string.stop_recording), Snackbar.LENGTH_SHORT).show();
+                    }
                     return;
                 }
 
@@ -643,7 +651,11 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
     @Override
     public boolean onTouch(View v, MotionEvent event) {
         if (opusRecorder.isRecording() && mRecordingLayout != RecordingLayout.PUSH_TO_TALK) {
-            Toast.makeText(mActivity, mActivity.getString(R.string.stop_recording), Toast.LENGTH_SHORT).show();
+            if (mStreamingState == StreamingState.STREAMING) {
+                Snackbar.make(mStreamingChronometer, mActivity.getString(R.string.stop_streaming), Snackbar.LENGTH_SHORT).show();
+            } else {
+                Snackbar.make(mStreamingChronometer, mActivity.getString(R.string.stop_recording), Snackbar.LENGTH_SHORT).show();
+            }
             return false;
         }
         int action = MotionEventCompat.getActionMasked(event);
