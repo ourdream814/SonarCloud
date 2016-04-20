@@ -27,6 +27,7 @@
         <activity
             android:name=".ui.LoginActivity"
             android:screenOrientation="portrait"/>
+
         <activity
             android:name=".utils.ui.BaseActivity"
             android:screenOrientation="portrait"/>
@@ -62,18 +63,29 @@
             </intent-filter>
         </receiver>
 
-        <activity android:name=".ui.AddGroupActivity">
-        </activity>
-        <activity android:name=".ui.SelectPASystemActivity">
-        </activity>
-        <activity android:name=".ui.ScheduleActivity">
-        </activity>
-        <activity android:name=".ui.LockAppActivity">
-        </activity>
-        <activity android:name=".ui.LockPatternActivity">
-        </activity>
-        <activity android:name=".ui.ConfirmLockPattern">
-        </activity>
+        <activity
+            android:name=".ui.AddGroupActivity"
+            android:screenOrientation="portrait"/>
+
+        <activity
+            android:name=".ui.SelectPASystemActivity"
+            android:screenOrientation="portrait"/>
+
+        <activity
+            android:name=".ui.ScheduleActivity"
+            android:screenOrientation="portrait"/>
+
+        <activity
+            android:name=".ui.LockAppActivity"
+            android:screenOrientation="portrait"/>
+
+        <activity
+            android:name=".ui.LockPatternActivity"
+            android:screenOrientation="portrait"/>
+
+        <activity
+            android:name=".ui.ConfirmLockPattern"
+            android:screenOrientation="portrait"/>
     </application>
 
 </manifest>
