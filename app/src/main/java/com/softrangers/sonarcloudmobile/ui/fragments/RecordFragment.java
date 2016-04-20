@@ -290,7 +290,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         addSchedule.setAction(ScheduleActivity.ACTION_ADD_SCHEDULE);
         addSchedule.putExtra(ScheduleActivity.RECORD_BUNDLE, recording);
         mActivity.startActivityForResult(addSchedule, ADD_SCHEDULE_REQUEST_CODE);
-//        mActivity.unregisterReceiver(mAudioSendingReceiver);
     }
 
     @Override

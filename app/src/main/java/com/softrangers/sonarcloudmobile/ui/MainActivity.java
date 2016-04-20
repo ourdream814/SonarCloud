@@ -582,7 +582,6 @@ public class MainActivity extends BaseActivity implements
                             if (recordFragment != null && recordFragment.mRecAdapter != null) {
                                 recordFragment.mRecAdapter.refreshList(recordFragment.getRecordedFileList());
                             }
-                            registerReceiver(recordFragment.mAudioSendingReceiver, recordFragment.getIntentFilter());
                             break;
                         case ScheduleActivity.ACTION_EDIT_SCHEDULE:
                             if (selectedGroup != null)

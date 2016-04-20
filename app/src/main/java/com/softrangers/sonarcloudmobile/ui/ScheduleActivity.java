@@ -645,13 +645,14 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         MainActivity.statusChanged = true;
         File file = new File(recording.getFilePath());
         file.delete();
-        AudioSocket.getInstance().closeAudioConnection();
+        fromScheduleActivity = false;
         Intent intent = new Intent(this, MainActivity.class);
         intent.setAction(mAction);
         setResult(RESULT_OK, intent);
         unregisterReceiver(mAudioSendingReceiver);
         unregisterReceiver(mBroadcastReceiver);
         MainActivity.statusChanged = true;
+        AudioSocket.getInstance().closeAudioConnection();
         unbindService(mDataServiceConnection);
         finish();
     }
