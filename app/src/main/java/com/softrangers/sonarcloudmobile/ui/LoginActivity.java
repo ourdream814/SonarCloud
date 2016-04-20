@@ -17,6 +17,7 @@ import android.widget.ProgressBar;
 import com.softrangers.sonarcloudmobile.R;
 import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.models.User;
+import com.softrangers.sonarcloudmobile.utils.PatternLockUtils;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
 import com.softrangers.sonarcloudmobile.utils.api.AuthService;
@@ -74,6 +75,22 @@ public class LoginActivity extends BaseActivity implements ConnectionReceiver.On
         if (email != null && password != null) {
             mEmail.setText(email);
             mPassword.setText(password);
+        }
+        isUnlocked = true;
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        isUnlocked = true;
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (PatternLockUtils.checkConfirmPatternResult(this, requestCode, resultCode)) {
+            finish();
+        } else {
+            isUnlocked = true;
         }
     }
 

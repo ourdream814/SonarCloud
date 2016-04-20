@@ -28,6 +28,7 @@ import com.softrangers.sonarcloudmobile.models.Receiver;
 import com.softrangers.sonarcloudmobile.models.Recording;
 import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.models.Schedule;
+import com.softrangers.sonarcloudmobile.utils.PatternLockUtils;
 import com.softrangers.sonarcloudmobile.utils.api.AudioSocket;
 import com.softrangers.sonarcloudmobile.utils.api.DataSocketService;
 import com.softrangers.sonarcloudmobile.utils.ui.BaseActivity;
@@ -113,6 +114,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                 recording = intent.getExtras().getParcelable(RECORD_BUNDLE);
                 mAdapter = new ScheduleEditAdapter(buildAdaptersList(schedule));
                 mRequestBuilder.command(Api.Command.SEND_AUDIO);
+                isUnlocked = true;
                 break;
             // User opened an existing schedule
             case ACTION_EDIT_SCHEDULE:
@@ -122,6 +124,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                 mRequestBuilder.command(Api.Command.UPDATE_SCHEDULE);
                 mRequestBuilder.scheduleId(String.valueOf(schedule.getScheduleID()));
                 initialRepeatingOption = schedule.getRepeatOption();
+                isUnlocked = true;
                 break;
         }
         initializeList(mAdapter);
@@ -290,7 +293,14 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         switch (mAction) {
             case ACTION_EDIT_SCHEDULE: {
                 if (schedule.getRepeatOption() == 0) {
+                    if (schedule.getTime() == null || schedule.getTime().equals("null")) {
+                        schedule.setTime(schedule.getServerFormatDate(new Date()));
+                    }
                     mRequestBuilder.deleteAfter(1)
+                            .day(null)
+                            .hour(null)
+                            .minute(null)
+                            .month(null)
                             .startDate(schedule.getStartDate())
                             .time(schedule.getTime());
                 } else if (schedule.getRepeatOption() > 0) {
@@ -300,6 +310,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                             .hour(schedule.getHour())
                             .minute(schedule.getMinute())
                             .month(schedule.getMonth())
+                            .time(null)
                             .wday(schedule.getWday());
                     if (schedule.getEndDate() != null && !schedule.getEndDate().equals("null")) {
                         if (endDate != null) {
@@ -655,5 +666,14 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         AudioSocket.getInstance().closeAudioConnection();
         unbindService(mDataServiceConnection);
         finish();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (PatternLockUtils.checkConfirmPatternResult(this, requestCode, resultCode)) {
+            finish();
+        } else {
+            isUnlocked = true;
+        }
     }
 }

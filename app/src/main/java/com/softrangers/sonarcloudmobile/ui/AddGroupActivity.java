@@ -20,6 +20,7 @@ import com.softrangers.sonarcloudmobile.models.Group;
 import com.softrangers.sonarcloudmobile.models.PASystem;
 import com.softrangers.sonarcloudmobile.models.Receiver;
 import com.softrangers.sonarcloudmobile.models.Request;
+import com.softrangers.sonarcloudmobile.utils.PatternLockUtils;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
 import com.softrangers.sonarcloudmobile.utils.api.DataSocketService;
 import com.softrangers.sonarcloudmobile.utils.ui.BaseActivity;
@@ -70,6 +71,7 @@ public class AddGroupActivity extends BaseActivity {
                 command = Api.Command.CREATE_GROUP;
                 mGroup = new Group();
                 clearPASelections(mPASystems);
+                isUnlocked = true;
                 break;
             case Api.ACTION_EDIT_GROUP:
                 command = Api.Command.UPDATE_GROUP;
@@ -80,6 +82,7 @@ public class AddGroupActivity extends BaseActivity {
                 setSelectedReceivers(mReceivers);
                 mToolbarTitle.setText(getString(R.string.edit_group));
                 mNameEditText.setText(mGroup.getName());
+                isUnlocked = true;
                 mSelectPAButton.setText(mGroup.getReceivers().size() + " " + getString(R.string.pa_systems));
                 break;
         }
@@ -212,13 +215,21 @@ public class AddGroupActivity extends BaseActivity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        switch (resultCode) {
-            case RESULT_OK:
-                mReceivers = data.getExtras().getParcelableArrayList(SelectPASystemActivity.RECEIVERS_RESULT);
-                if (mReceivers == null) mReceivers = new ArrayList<>();
-                updatePAReceivers(mReceivers);
-                mSelectPAButton.setText(mReceivers.size() + " " + getString(R.string.pa_systems));
-                break;
+        if (PatternLockUtils.checkConfirmPatternResult(this, requestCode, resultCode)) {
+            finish();
+            return;
+        } else {
+            isUnlocked = true;
+        }
+        if (data != null) {
+            switch (resultCode) {
+                case RESULT_OK:
+                    mReceivers = data.getExtras().getParcelableArrayList(SelectPASystemActivity.RECEIVERS_RESULT);
+                    if (mReceivers == null) mReceivers = new ArrayList<>();
+                    updatePAReceivers(mReceivers);
+                    mSelectPAButton.setText(mReceivers.size() + " " + getString(R.string.pa_systems));
+                    break;
+            }
         }
     }
 

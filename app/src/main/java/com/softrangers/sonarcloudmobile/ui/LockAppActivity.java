@@ -1,23 +1,17 @@
 package com.softrangers.sonarcloudmobile.ui;
 
 import android.content.Intent;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.SwitchCompat;
 import android.view.View;
-import android.widget.CompoundButton;
 import android.widget.RelativeLayout;
-import android.widget.Toast;
 
 import com.softrangers.sonarcloudmobile.R;
 import com.softrangers.sonarcloudmobile.utils.PatternLockUtils;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
+import com.softrangers.sonarcloudmobile.utils.ui.BaseActivity;
 
-import java.util.regex.Pattern;
-
-import me.zhanghai.android.patternlock.PatternUtils;
-
-public class LockAppActivity extends AppCompatActivity implements CompoundButton.OnCheckedChangeListener {
+public class LockAppActivity extends BaseActivity {
 
     private SwitchCompat mEnableLocking;
     private ItemSelected mItemSelected;
@@ -30,7 +24,18 @@ public class LockAppActivity extends AppCompatActivity implements CompoundButton
         mEnableLocking = (SwitchCompat) findViewById(R.id.enable_locking_switchButton);
         mSetPattern = (RelativeLayout) findViewById(R.id.lock_activity_setPattern);
         mEnableLocking.setChecked(SonarCloudApp.getInstance().isAppLocked());
+        mItemSelected = ItemSelected.UNSELECTED;
         if (mEnableLocking.isChecked()) mSetPattern.setVisibility(View.VISIBLE);
+        Intent lockIntent = getIntent();
+        if (lockIntent != null) {
+            isUnlocked = !lockIntent.getAction().isEmpty();
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mItemSelected = ItemSelected.UNSELECTED;
     }
 
     public void enableAppLocking(View view) {
@@ -63,30 +68,21 @@ public class LockAppActivity extends AppCompatActivity implements CompoundButton
     }
 
     @Override
-    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-        int buttonId = buttonView.getId();
-        switch (buttonId) {
-            case R.id.enable_locking_switchButton:
-
-                break;
-        }
-    }
-
-    @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (!PatternLockUtils.checkConfirmPatternResult(this, requestCode, resultCode)) {
+        if (PatternLockUtils.checkConfirmPatternResult(this, requestCode, resultCode)) {
+            finish();
+        } else {
+            isUnlocked = true;
             switch (mItemSelected) {
                 case SET_PATTERN:
                     Intent intent = new Intent(this, LockPatternActivity.class);
                     startActivity(intent);
                     break;
             }
-        } else {
-            super.onActivityResult(requestCode, resultCode, data);
         }
     }
 
     enum ItemSelected {
-        ENABLE_APP_LOCKING, SET_PATTERN, ENABLE_TOUCH_ID
+        ENABLE_APP_LOCKING, SET_PATTERN, ENABLE_TOUCH_ID, UNSELECTED
     }
 }

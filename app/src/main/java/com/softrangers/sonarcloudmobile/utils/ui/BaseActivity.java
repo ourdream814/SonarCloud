@@ -1,5 +1,6 @@
 package com.softrangers.sonarcloudmobile.utils.ui;
 
+import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
@@ -11,6 +12,7 @@ import android.view.View;
 import android.widget.TextView;
 
 import com.softrangers.sonarcloudmobile.R;
+import com.softrangers.sonarcloudmobile.utils.PatternLockUtils;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 
 /**
@@ -22,10 +24,32 @@ import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 public class BaseActivity extends AppCompatActivity {
 
     private AlertDialog mLoadingDialog;
+    public static boolean isUnlocked;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (!isUnlocked && SonarCloudApp.getInstance().isAppLocked() && SonarCloudApp.getInstance().isLoggedIn()) {
+            if (PatternLockUtils.hasPattern(this)) {
+                PatternLockUtils.confirmPatternIfHas(this);
+            }
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        isUnlocked = false;
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+
     }
 
     public void alertUserAboutError(final String title, final String message) {
@@ -58,7 +82,9 @@ public class BaseActivity extends AppCompatActivity {
         mLoadingDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         try {
             mLoadingDialog.show();
-        } catch (Exception e){}
+        } catch (Exception e){
+            e.printStackTrace();
+        }
     }
 
     public void dismissLoading() {

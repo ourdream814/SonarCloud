@@ -77,7 +77,7 @@ public class MainActivity extends BaseActivity implements
     public static ArrayList<Receiver> selectedReceivers = new ArrayList<>();
     public static Group selectedGroup;
     private IntentFilter intentFilter;
-    private static boolean isUnlocked;
+
 
     static {
         observers = new ArrayList<>();
@@ -137,18 +137,10 @@ public class MainActivity extends BaseActivity implements
     @Override
     protected void onResume() {
         super.onResume();
-        if (!isUnlocked && SonarCloudApp.getInstance().isAppLocked() && SonarCloudApp.getInstance().isLoggedIn()) {
-            if (PatternLockUtils.hasPattern(this)) {
-                PatternLockUtils.confirmPatternIfHas(this);
-            }
-        }
+
     }
 
-    @Override
-    protected void onPause() {
-        super.onPause();
-        isUnlocked = false;
-    }
+
 
     // needed to bind DataSocketService to current class
     protected ServiceConnection mDataServiceConnection = new ServiceConnection() {
@@ -460,7 +452,9 @@ public class MainActivity extends BaseActivity implements
      * Called when lock button from {@link SettingsFragment} is clicked
      */
     public void lockApplication(View view) {
-        startActivityForResult(new Intent(this, LockAppActivity.class), 56);
+        Intent lockIntent = new Intent(this, LockAppActivity.class);
+        lockIntent.setAction("start_lock");
+        startActivityForResult(lockIntent, 56);
         overridePendingTransition(R.anim.enter, R.anim.exit);
     }
 

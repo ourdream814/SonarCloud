@@ -9,6 +9,7 @@ import com.softrangers.sonarcloudmobile.R;
 import com.softrangers.sonarcloudmobile.adapters.ReceiverListAdapter;
 import com.softrangers.sonarcloudmobile.models.PASystem;
 import com.softrangers.sonarcloudmobile.models.Receiver;
+import com.softrangers.sonarcloudmobile.utils.PatternLockUtils;
 import com.softrangers.sonarcloudmobile.utils.ui.BaseActivity;
 import com.softrangers.sonarcloudmobile.utils.widgets.AnimatedExpandableListView;
 
@@ -39,6 +40,7 @@ public class SelectPASystemActivity extends BaseActivity implements
         assert mListView != null;
         mListView.setAdapter(mAdapter);
         mListView.setOnGroupClickListener(this);
+        isUnlocked = true;
     }
 
     private void addSelectedReceivers(ArrayList<PASystem> systems) {
@@ -61,6 +63,15 @@ public class SelectPASystemActivity extends BaseActivity implements
     public void cancel(View view) {
         setResult(RESULT_CANCELED);
         finish();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (PatternLockUtils.checkConfirmPatternResult(this, requestCode, resultCode)) {
+            finish();
+        } else {
+            isUnlocked = true;
+        }
     }
 
     @Override
