@@ -328,7 +328,6 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     public void onSchedulePlayClick(Schedule schedule, Recording recording, ProgressBar seekBar, TextView seekBarTime, int position) {
         recording.setLoading(true);
         notifyAllRecordAdapter(position);
-        AudioSocket.getInstance().setAudioConnection();
         startGettingAudioData(recording, seekBar, seekBarTime, position);
     }
 
@@ -389,7 +388,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
                                     hideLoading();
                                     String message = jsonResponse.optString("message");
                                     if (message.equalsIgnoreCase("Ready for data.")) {
-                                        AudioSocket.getInstance().startReadingAudioData();
+                                        MainActivity.audioSocket.startReadingAudioData();
                                     } else {
                                         onErrorOccurred();
                                     }
@@ -554,11 +553,8 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
 
     @Override
     public void onItemClick(Recording recording, ProgressBar seekBar, TextView seekBarTime, int position) {
-        if (AudioSocket.getInstance().isAudioConnectionReady())
-            AudioSocket.getInstance().closeAudioConnection();
         recording.setLoading(true);
         notifyAllRecordAdapter(position);
-        AudioSocket.getInstance().setAudioConnection();
         startGettingAudioData(recording, seekBar, seekBarTime, position);
     }
 
@@ -585,7 +581,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
             JSONObject request = builder.build().toJSON();
             request.remove("seq");
             Log.i(this.getClass().getSimpleName(), request.toString());
-            AudioSocket.getInstance().sendRequest(request);
+            MainActivity.audioSocket.sendRequest(request);
         }
     }
 
@@ -604,7 +600,6 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
                     recording.setLoading(false);
                     recording.setProgress(0);
                     notifyAllRecordAdapter(msg.arg1);
-                    AudioSocket.getInstance().closeAudioConnection();
                     break;
                 default:
                     int progress = msg.what / 1000;

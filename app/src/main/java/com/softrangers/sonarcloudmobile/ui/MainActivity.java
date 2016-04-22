@@ -72,6 +72,7 @@ public class MainActivity extends BaseActivity implements
     private static ScheduleFragment scheduleFragment;
     private static SettingsFragment settingsFragment;
     public static DataSocketService dataSocketService;
+    public static AudioSocket audioSocket;
 
     // set selected items to send the record to them
     public static ArrayList<Receiver> selectedReceivers = new ArrayList<>();
@@ -88,7 +89,9 @@ public class MainActivity extends BaseActivity implements
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         Intent socketIntent = new Intent(this, DataSocketService.class);
+        Intent audioIntent = new Intent(this, AudioSocket.class);
         bindService(socketIntent, mDataServiceConnection, Context.BIND_AUTO_CREATE);
+        bindService(audioIntent, mAudioSocketConnection, Context.BIND_AUTO_CREATE);
         // initialize bottom buttons
         assert mToolbarTitle != null;
         mToolbarTitle = (TextView) findViewById(R.id.main_activity_toolbarTitle);
@@ -148,6 +151,21 @@ public class MainActivity extends BaseActivity implements
         public void onServiceConnected(ComponentName name, IBinder service) {
             // get the service instance
             dataSocketService = ((DataSocketService.LocalBinder) service).getService();
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            // remove service instance
+            dataSocketService = null;
+        }
+    };
+
+    // needed to bind AudioSocket to current class
+    protected ServiceConnection mAudioSocketConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            // get the service instance
+            audioSocket = ((AudioSocket.LocalBinder) service).getService();
         }
 
         @Override
@@ -223,19 +241,16 @@ public class MainActivity extends BaseActivity implements
     public void onBottomButtonsClick(View view) {
         switch (view.getId()) {
             case R.id.bottom_PASystems_selector:
-                AudioSocket.getInstance().closeAudioConnection();
                 changeFragment(receiversFragment);
                 mSelectedFragment = SelectedFragment.RECEIVERS;
                 invalidateViews();
                 break;
             case R.id.bottom_announcements_selector:
-                AudioSocket.getInstance().closeAudioConnection();
                 changeFragment(recordFragment);
                 mSelectedFragment = SelectedFragment.ANNOUNCEMENTS;
                 invalidateViews();
                 break;
             case R.id.bottom_recordings_selector:
-                AudioSocket.getInstance().closeAudioConnection();
                 changeFragment(scheduleFragment);
                 mSelectedFragment = SelectedFragment.RECORDINGS;
                 invalidateViews();
@@ -254,7 +269,6 @@ public class MainActivity extends BaseActivity implements
                 }
                 break;
             case R.id.bottom_settings_selector:
-                AudioSocket.getInstance().closeAudioConnection();
                 changeFragment(settingsFragment);
                 mSelectedFragment = SelectedFragment.SETTINGS;
                 invalidateViews();
@@ -468,6 +482,7 @@ public class MainActivity extends BaseActivity implements
             ConnectionReceiver.getInstance().removeOnResponseListener(this);
             SonarCloudApp.getInstance().stopKeepingConnection();
             unregisterReceiver(mLoginReceiver);
+            unbindService(mAudioSocketConnection);
             unbindService(mDataServiceConnection);
         } catch (Exception e) {
             Log.e(this.getClass().getSimpleName(), "OnDestroy(): " + e.getMessage());

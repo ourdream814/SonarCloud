@@ -72,6 +72,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
     private Request.Builder mRequestBuilder;
     private String mAction;
     public static DataSocketService dataSocketService;
+    public static AudioSocket audioSocket;
     private static int repeatingOption;
     private static String endDate;
     private static int initialRepeatingOption;
@@ -82,7 +83,9 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_schedule);
         Intent socketIntent = new Intent(this, DataSocketService.class);
+        Intent audioIntent = new Intent(this, AudioSocket.class);
         bindService(socketIntent, mDataServiceConnection, Context.BIND_AUTO_CREATE);
+        bindService(audioIntent, mAudioSocketConnection, BIND_AUTO_CREATE);
         IntentFilter dataIntentFilter = new IntentFilter(Api.Command.UPDATE_SCHEDULE);
         dataIntentFilter.addAction(Api.Command.CREATE_SCHEDULE);
         dataIntentFilter.addAction(Api.Command.SEND_AUDIO);
@@ -136,6 +139,21 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         public void onServiceConnected(ComponentName name, IBinder service) {
             // get the service instance
             dataSocketService = ((DataSocketService.LocalBinder) service).getService();
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            // remove service instance
+            dataSocketService = null;
+        }
+    };
+
+    // needed to bind AudioSocket to current class
+    protected ServiceConnection mAudioSocketConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            // get the service instance
+            audioSocket = ((AudioSocket.LocalBinder) service).getService();
         }
 
         @Override
@@ -339,10 +357,16 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
     @Override
     public void onBackPressed() {
         setResult(RESULT_CANCELED, new Intent(mAction));
+        super.onBackPressed();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
         unregisterReceiver(mBroadcastReceiver);
         unregisterReceiver(mAudioSendingReceiver);
         unbindService(mDataServiceConnection);
-        super.onBackPressed();
+        unbindService(mAudioSocketConnection);
     }
 
     /**
@@ -525,11 +549,11 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                 String action = intent.getAction();
                 JSONObject jsonResponse = new JSONObject(intent.getExtras().getString(action));
                 boolean success = jsonResponse.optBoolean("success", false);
-                if (!success && !AudioSocket.getInstance().isAudioConnectionReady()) {
+                if (!success) {
                     String message = jsonResponse.optString("message", getString(R.string.unknown_error));
                     onCommandFailure(message);
                     return;
-                } else if (AudioSocket.getInstance().isAudioConnectionReady()) {
+                } else if (audioSocket.isAudioConnectionReady()) {
                     onAudioSent();
                     return;
                 }
@@ -623,10 +647,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         recording.setRecordingId(response.getInt("recordingID"));
         Request.Builder requestBuilder = new Request.Builder();
         requestBuilder.command(Api.Command.SEND).key(sendAudioKey);
-        AudioSocket.getInstance().setAudioConnection();
-        while (!AudioSocket.getInstance().isAudioConnectionReady()) {
-        }
-        AudioSocket.getInstance().sendRequest(requestBuilder.build().toJSON());
+        audioSocket.sendRequest(requestBuilder.build().toJSON());
     }
 
     /**
@@ -641,7 +662,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
             BufferedInputStream bis = new BufferedInputStream(fis);
             bis.read(bytes, 0, bytes.length);
             bis.close();
-            AudioSocket.getInstance().sendAudio(bytes);
+            audioSocket.sendAudio(bytes);
         } catch (Exception e) {
             onErrorOccurred();
             e.printStackTrace();
@@ -663,7 +684,6 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         unregisterReceiver(mAudioSendingReceiver);
         unregisterReceiver(mBroadcastReceiver);
         MainActivity.statusChanged = true;
-        AudioSocket.getInstance().closeAudioConnection();
         unbindService(mDataServiceConnection);
         finish();
     }

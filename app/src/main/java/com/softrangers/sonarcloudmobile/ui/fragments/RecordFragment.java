@@ -59,6 +59,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         OpusRecorder.OnRecordListener {
 
     private static final int ADD_SCHEDULE_REQUEST_CODE = 1813;
+    private static final String READY_FOR_DATA = "Ready for data.";
     private static final int SAMPLE_RATE = 48000;
     private static final int BITRATE = 16000;
     private static final int CHANNEL = 1;
@@ -80,7 +81,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
     private MillisChronometer mStreamingChronometer;
     private MillisChronometer mPTTChronometer;
     private SelectedLayout mSelectedLayout;
-    private static boolean isServerReady;
     private static OpusRecorder opusRecorder;
     private OpusPlayer mOpusPlayer;
     private RecordingLayout mRecordingLayout;
@@ -153,6 +153,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         intentFilter.addAction(Api.Command.SEND);
         intentFilter.addAction(Api.EXCEPTION);
         intentFilter.addAction(Api.AUDIO_DATA_RESULT);
+        intentFilter.addAction(READY_FOR_DATA);
         return intentFilter;
     }
 
@@ -163,7 +164,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
      */
     @Override
     public void onClick(View v) {
-
         switch (v.getId()) {
             case R.id.start_pause_recording_button:
                 // if there aren't any receiver or group selected inform user about this and return
@@ -196,10 +196,8 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                     return;
                 }
                 // start stream the audio to server
-                if (mStreamingState == StreamingState.WAITING && !AudioSocket.getInstance().isAudioConnectionReady()) {
+                if (mStreamingState == StreamingState.WAITING) {
                     startSendingAudioProcess(null, null, null);
-                } else if (mStreamingState == StreamingState.WAITING && AudioSocket.getInstance().isAudioConnectionReady()) {
-                    opusRecorder.startStreaming(AudioSocket.getInstance().getAudioSocket());
                 } else if (mStreamingState == StreamingState.STREAMING) {
                     opusRecorder.stopRecording();
                 }
@@ -254,6 +252,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
     /**
      * Called when a record from the list is clicked
+     *
      * @param recording which was clicked
      * @param position  of the clicked record in the list
      * @param isPlaying either true or false, depends on record playing state
@@ -285,6 +284,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
     /**
      * Called when schedule button for a record within the list is clicked
+     *
      * @param recording whom schedule button was clicked
      * @param position  of the recording in the list
      */
@@ -307,6 +307,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
     /**
      * Called when send button for a record within the list is clicked
+     *
      * @param recording whom send button was clicked
      * @param position  of the record in the list
      */
@@ -325,6 +326,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
     /**
      * Load recorded files from the application cache
+     *
      * @return a list of recordings, each recording will contain a unique path to a file
      */
     public ArrayList<Recording> getRecordedFileList() {
@@ -424,6 +426,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
     /**
      * Delete a recorded file from application cache and reload the list
+     *
      * @param rec which needs to be deleted
      */
     private void deleteRecord(Recording rec) {
@@ -524,7 +527,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                             case DISMISS_EVENT_TIMEOUT:
                             case DISMISS_EVENT_CONSECUTIVE:
                             case DISMISS_EVENT_MANUAL:
-                                AudioSocket.getInstance().sendAudio(audioData);
+                                MainActivity.audioSocket.sendAudio(audioData);
                                 break;
                         }
                     }
@@ -621,7 +624,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
      */
     private void invalidateStreamViews(RecorderState recorderState) {
         switch (recorderState) {
-            case RECORDING:
+            case STREAMING:
                 mStartStreamingBtn.setImageResource(R.mipmap.ic_button_pause);
                 mStreamingChronometer.setVisibility(View.VISIBLE);
                 mStreamingChronometer.start();
@@ -663,11 +666,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
             Toast.makeText(mActivity, mActivity.getString(R.string.please_select_pa), Toast.LENGTH_SHORT).show();
             return false;
         }
-        // do not start recording if server is not ready for data
-        if (!AudioSocket.getInstance().isAudioConnectionReady()) {
-            startSendingAudioProcess(null, null, null);
-            return false;
-        }
+        startSendingAudioProcess(null, null, null);
         switch (action) {
             case MotionEvent.ACTION_DOWN:
                 opusRecorder.startRecording();
@@ -700,6 +699,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
     /**
      * Notifies recordings list adapter about playing state of a recording changes
+     *
      * @param position to notify adapter about
      */
     private void notifyRecordingsAdapter(final int position) {
@@ -726,13 +726,18 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                 if (ScheduleActivity.fromScheduleActivity) return;
                 if (mActivity.mSelectedFragment == MainActivity.SelectedFragment.ANNOUNCEMENTS) {
                     String action = intent.getAction();
+                    if (action.equals(READY_FOR_DATA)) {
+                        onServerReadyForData();
+                        return;
+                    }
                     if (action.equals(Api.AUDIO_DATA_RESULT)) {
                         onAudioSent();
                         return;
                     }
                     JSONObject jsonResponse = new JSONObject(intent.getExtras().getString(action));
+
                     boolean success = jsonResponse.optBoolean("success", false);
-                    if (!success && !AudioSocket.getInstance().isAudioConnectionReady()) {
+                    if (!success && !MainActivity.audioSocket.isAudioConnectionReady()) {
                         String message = jsonResponse.optString("message");
                         onCommandFailure(message);
                         return;
@@ -742,12 +747,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                             onKeyAndIDReceived(jsonResponse);
                             break;
                         case Api.EXCEPTION:
-                            String message = jsonResponse.optString("message");
-                            if (message.equalsIgnoreCase("Ready for data.")) {
-                                onServerReadyForData();
-                            } else {
-                                onErrorOccurred();
-                            }
+                            onErrorOccurred();
                             break;
                     }
                 }
@@ -761,6 +761,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
     /**
      * Start the sending process
+     *
      * @param recording which needs to be sent
      */
     public void startSendingAudioProcess(Recording recording, ProgressBar progressBar, ImageButton send) {
@@ -772,13 +773,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                 mSendButton.setClickable(false);
                 mSendButton.setVisibility(View.INVISIBLE);
                 mSendingProgress.setVisibility(View.VISIBLE);
-            } else {
-                mActivity.showLoading();
-            }
-
-            if (AudioSocket.getInstance().isAudioConnectionReady()) {
-                onServerReadyForData();
-                return;
             }
 
             Request.Builder requestBuilder = new Request.Builder()
@@ -813,6 +807,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
     /**
      * Called when the key and id for record are received from server
+     *
      * @param response which contains "key" and "recordingID"
      * @throws JSONException
      */
@@ -823,18 +818,14 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         Request.Builder requestBuilder = new Request.Builder();
         requestBuilder.command(Api.Command.SEND).key(sendAudioKey);
         JSONObject request = requestBuilder.build().toJSON();
-        AudioSocket.getInstance().setAudioConnection();
-        while (!AudioSocket.getInstance().isAudioConnectionReady()) {
-            // wait till connection will be ok to start sending audio data
-        }
-        AudioSocket.getInstance().sendRequest(request);
+        request.remove("seq");
+        MainActivity.audioSocket.sendRequest(request);
     }
 
     /**
      * Called when server says "Ready for data."
      */
     private void onServerReadyForData() {
-        isServerReady = true;
         mActivity.dismissLoading();
         switch (mSelectedLayout) {
             case RECORDING: {
@@ -846,7 +837,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                     BufferedInputStream bis = new BufferedInputStream(fis);
                     bis.read(bytes, 0, bytes.length);
                     bis.close();
-                    AudioSocket.getInstance().sendAudio(bytes);
+                    MainActivity.audioSocket.sendAudio(bytes);
                 } catch (Exception e) {
                     isSending = false;
                     if (mSendButton != null && mSendingProgress != null) {
@@ -871,7 +862,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
             }
             case STREAMING: {
                 mActivity.dismissLoading();
-                opusRecorder.startStreaming(AudioSocket.getInstance().getAudioSocket());
+                opusRecorder.startStreaming(MainActivity.audioSocket.getAudioSocket());
                 break;
             }
         }
@@ -882,7 +873,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
      * Called when the data is sent
      */
     private void onAudioSent() {
-        isServerReady = false;
         MainActivity.statusChanged = true;
         switch (mSelectedLayout) {
             case PTT:
@@ -905,12 +895,12 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
 
     /**
      * called when the command which is sent to server fails
+     *
      * @param message with the problem description
      */
     private void onCommandFailure(String message) {
         mActivity.dismissLoading();
         isSending = false;
-        isServerReady = false;
         if (message != null) {
             Snackbar.make(mStreamLayout, message, Snackbar.LENGTH_SHORT).show();
         }
@@ -927,12 +917,12 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
     private void onErrorOccurred() {
         mActivity.dismissLoading();
         isSending = false;
-        isServerReady = false;
         if (mSendButton != null && mSendingProgress != null) {
             mSendButton.setVisibility(View.VISIBLE);
             mSendingProgress.setVisibility(View.GONE);
             mSendButton.setClickable(true);
         }
+        opusRecorder.stopRecording();
     }
 
     enum SelectedLayout {

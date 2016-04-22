@@ -4,18 +4,17 @@ import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.support.annotation.Nullable;
-import android.util.Log;
 
 import com.softrangers.sonarcloudmobile.utils.AudioProcessor;
 
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.io.OutputStream;
 
 import javax.net.ssl.SSLSocket;
 
 /**
  * Created by eduard on 4/2/16.
+ *
  */
 public class OpusRecorder {
 
@@ -80,21 +79,23 @@ public class OpusRecorder {
             AudioRecord audioRecorder = new AudioRecord(MediaRecorder.AudioSource.MIC, SAMPLE_RATE, channelOption,
                     AudioFormat.ENCODING_PCM_16BIT, bufferSizeInBytes);
             audioRecorder.startRecording();
-            recorderState = RecorderState.RECORDING;
+            if (recorderState != RecorderState.STREAMING) {
+                recorderState = RecorderState.RECORDING;
+            }
             if (mOnRecordListener != null) {
                 mOnRecordListener.onRecordStarted(recorderState);
             }
 
             OutputStream serverStream = null;
-            if (sslSocket != null) {
+            if (sslSocket != null && !sslSocket.isClosed()) {
                 serverStream = sslSocket.getOutputStream();
             }
-            while (recorderState == RecorderState.RECORDING) {
+            while (recorderState == RecorderState.RECORDING || recorderState == RecorderState.STREAMING) {
                 audioRecorder.read(recordBuffer, 0, recordBuffer.length);
                 // Encode
                 int bytesWritten = audioProcessor.encodePCM(recordBuffer, 0, encodeBuffer, 0);
                 outputStream.write(encodeBuffer, 0, bytesWritten);
-                if (serverStream != null) {
+                if (serverStream != null && !sslSocket.isClosed()) {
                     serverStream.write(encodeBuffer, 0, bytesWritten);
                 }
             }
@@ -109,13 +110,14 @@ public class OpusRecorder {
                 if (mOnRecordListener != null) {
                     mOnRecordListener.onRecordPaused(outputStream.toByteArray(), recorderState);
                 }
-            } else if (recorderState == RecorderState.STOPPED){
+            } else if (recorderState == RecorderState.STOPPED) {
                 if (mOnRecordListener != null) {
                     mOnRecordListener.onRecordFinished(outputStream.toByteArray(), recorderState);
                 }
             }
 
         } catch (Exception e) {
+            e.printStackTrace();
             recorderState = RecorderState.STOPPED;
             if (mOnRecordListener != null) {
                 mOnRecordListener.onRecordFailed(e, recorderState);
