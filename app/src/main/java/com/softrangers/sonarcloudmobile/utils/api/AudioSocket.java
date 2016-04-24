@@ -18,7 +18,6 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -151,6 +150,11 @@ public class AudioSocket extends Service {
                         new Socket(Api.M_URL, Api.AUDIO_PORT), Api.M_URL, Api.AUDIO_PORT, true);
                 audioSocket.setKeepAlive(true);
                 audioSocket.setUseClientMode(true);
+
+                // Start socket handshake
+                audioSocket.startHandshake();
+                outputStream = audioSocket.getOutputStream();
+                inputStream = audioSocket.getInputStream();
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -174,8 +178,6 @@ public class AudioSocket extends Service {
             try {
                 // Start socket handshake
                 audioSocket.startHandshake();
-                outputStream = audioSocket.getOutputStream();
-                inputStream = audioSocket.getInputStream();
                 // Create a reader and writer from socket output and input streams
                 outputStream.write(mBytes, 0, mBytes.length);
                 outputStream.flush();
@@ -207,23 +209,19 @@ public class AudioSocket extends Service {
         public void run() {
             try {
                 // Start socket handshake
+
                 audioSocket.startHandshake();
                 // send the request to server through writer object
-                writeOut = new BufferedWriter(new OutputStreamWriter(audioSocket.getOutputStream()));
+                writeOut = new BufferedWriter(new OutputStreamWriter(outputStream));
                 writeOut.write(message.toString());
                 writeOut.newLine();
                 writeOut.flush();
-                readIn = new BufferedReader(new InputStreamReader(audioSocket.getInputStream()));
+                readIn = new BufferedReader(new InputStreamReader(inputStream));
                 String line = readIn.readLine();
                 sendResponseToUI(line, message);
             } catch (Exception e) {
                 e.printStackTrace();
-                Log.e(this.getClass().getSimpleName(), e.getMessage());
-                // send the response to ui
-                Intent responseContainer = new Intent(Api.EXCEPTION);
-//                responseContainer.putExtra(command, line);
-                responseContainer.putExtra(Api.REQUEST_MESSAGE, message.toString());
-                sendBroadcast(responseContainer);
+                sendResponseToUI("", message);
             }
         }
     }
@@ -258,6 +256,8 @@ public class AudioSocket extends Service {
         @Override
         public void run() {
             try {
+                // Start socket handshake
+                audioSocket.startHandshake();
                 byte[] buffer = new byte[1024];
                 BufferedOutputStream baos = new BufferedOutputStream(new FileOutputStream(mFile));
                 int bytesRead;
