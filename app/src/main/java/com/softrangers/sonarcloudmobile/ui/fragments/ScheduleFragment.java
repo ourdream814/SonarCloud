@@ -21,7 +21,6 @@ import android.view.ViewGroup;
 import android.widget.ProgressBar;
 import android.widget.RadioGroup;
 import android.widget.RelativeLayout;
-import android.widget.SeekBar;
 import android.widget.TextView;
 
 import com.softrangers.sonarcloudmobile.R;
@@ -35,12 +34,11 @@ import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.models.Schedule;
 import com.softrangers.sonarcloudmobile.ui.MainActivity;
 import com.softrangers.sonarcloudmobile.ui.ScheduleActivity;
-import com.softrangers.sonarcloudmobile.utils.api.AudioSocket;
-import com.softrangers.sonarcloudmobile.utils.api.ConnectionReceiver;
-import com.softrangers.sonarcloudmobile.utils.ui.BaseFragment;
-import com.softrangers.sonarcloudmobile.utils.opus.OpusPlayer;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
+import com.softrangers.sonarcloudmobile.utils.api.ConnectionReceiver;
+import com.softrangers.sonarcloudmobile.utils.opus.OpusPlayer;
+import com.softrangers.sonarcloudmobile.utils.ui.BaseFragment;
 
 import org.json.JSONObject;
 
@@ -53,6 +51,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
 
     private static RelativeLayout scheduledLayout;
     private static RelativeLayout allScheduleLayout;
+    public static final String READY_FOR_DATA = "Ready for data.";
 
     private static TextView unselectedText;
     private TextView mScheduledNoRecords;
@@ -66,7 +65,6 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     private int clickedPosition;
     private ProgressBar mLoadingProgress;
     private OpusPlayer mOpusPlayer;
-    private View mRootView;
 
     public ScheduleFragment() {
         // Required empty public constructor
@@ -87,7 +85,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        mRootView = inflater.inflate(R.layout.fragment_schedule, container, false);
+        View rootView = inflater.inflate(R.layout.fragment_schedule, container, false);
         mActivity = (MainActivity) getActivity();
         ConnectionReceiver.getInstance().addOnConnectedListener(this);
         IntentFilter intentFilter = new IntentFilter(Api.Command.RECORDINGS);
@@ -98,11 +96,12 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         intentFilter.addAction(Api.Command.DELETE_SCHEDULE);
         intentFilter.addAction(Api.Command.GET_AUDIO);
         intentFilter.addAction(Api.AUDIO_READY_TO_PLAY);
+        intentFilter.addAction(READY_FOR_DATA);
         mActivity.registerReceiver(mBroadcastReceiver, intentFilter);
         mDaysAdapter = new DaysAdapter();
         mOpusPlayer = new OpusPlayer();
-        initializeViews(mRootView);
-        return mRootView;
+        initializeViews(rootView);
+        return rootView;
     }
 
     /**
@@ -336,6 +335,10 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         public void onReceive(Context context, Intent intent) {
             try {
                 String action = intent.getAction();
+                if (action.equals(READY_FOR_DATA)) {
+                    MainActivity.audioSocket.startReadingAudioData();
+                    return;
+                }
                 switch (action) {
                     case ScheduleActivity.ACTION_ADD_SCHEDULE: {
                         Schedule schedule = intent.getExtras().getParcelable(ScheduleActivity.ACTION_ADD_SCHEDULE);
@@ -385,14 +388,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
                                     break;
                                 }
                                 case Api.EXCEPTION: {
-                                    hideLoading();
-                                    String message = jsonResponse.optString("message");
-                                    if (message.equalsIgnoreCase("Ready for data.")) {
-                                        MainActivity.audioSocket.startReadingAudioData();
-                                    } else {
-                                        onErrorOccurred();
-                                    }
-
+                                    onErrorOccurred();
                                     break;
                                 }
                             }
@@ -441,11 +437,6 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     @Override
     public void onCommandFailure(String message) {
         mActivity.dismissLoading();
-        Snackbar.make(allScheduleLayout, message, Snackbar.LENGTH_SHORT).show();
-    }
-
-    @Override
-    public void onErrorOccurred() {
         hideLoading();
         ArrayList<Receiver> receivers = new ArrayList<>();
         if (MainActivity.selectedReceivers != null && MainActivity.selectedReceivers.size() > 0) {
@@ -454,8 +445,26 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
             receivers = MainActivity.selectedGroup.getReceivers();
         }
         getAllRecordingsFromServer(receivers);
-        Snackbar.make(allScheduleLayout,
-                mActivity.getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onErrorOccurred() {
+        hideLoading();
+        if (clickedRecording != null) {
+            clickedRecording.setLoading(false);
+            clickedRecording.setIsPlaying(false);
+            notifyAllRecordAdapter(clickedRecordPosition);
+        }
+        MainActivity.audioSocket.reconnect();
+        ArrayList<Receiver> receivers = new ArrayList<>();
+        if (MainActivity.selectedReceivers != null && MainActivity.selectedReceivers.size() > 0) {
+            receivers = MainActivity.selectedReceivers;
+        } else if (MainActivity.selectedGroup != null) {
+            receivers = MainActivity.selectedGroup.getReceivers();
+        }
+        getAllRecordingsFromServer(receivers);
+//        Snackbar.make(allScheduleLayout,
+//                mActivity.getString(R.string.unknown_error), Snackbar.LENGTH_SHORT).show();
     }
 
 
@@ -581,6 +590,11 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
             JSONObject request = builder.build().toJSON();
             request.remove("seq");
             Log.i(this.getClass().getSimpleName(), request.toString());
+            int count = 0;
+            while (!MainActivity.audioSocket.isAudioConnectionReady()) {
+                count++;
+                Log.i("Waiting connection", String.valueOf(count));
+            }
             MainActivity.audioSocket.sendRequest(request);
         }
     }
@@ -588,6 +602,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     private void onAudioReady(String path) {
         clickedRecording.setFilePath(path);
         mOpusPlayer.play(clickedRecording, clickedRecordPosition, mHandler);
+        MainActivity.audioSocket.reconnect();
     }
 
     Handler mHandler = new Handler(Looper.getMainLooper()) {
@@ -611,7 +626,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     };
 
     private void notifyAllRecordAdapter(final int position) {
-        getActivity().runOnUiThread(new Runnable() {
+        mActivity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 allRecordingsAdapter.notifyItemChanged(position);

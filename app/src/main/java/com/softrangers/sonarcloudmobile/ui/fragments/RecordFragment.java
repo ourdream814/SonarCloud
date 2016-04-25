@@ -589,11 +589,15 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                     mRecordingLayout = RecordingLayout.NOT_RECORDING;
                 }
             }
+            default: {
+                MainActivity.audioSocket.reconnect();
+            }
         }
     }
 
     @Override
     public void onRecordFailed(Exception e, final RecorderState recorderState) {
+        MainActivity.audioSocket.reconnect();
         mRecordingLayout = RecordingLayout.NOT_RECORDING;
         Log.i(this.getClass().getSimpleName(), "Record failed");
         mActivity.runOnUiThread(new Runnable() {
@@ -610,8 +614,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                     case PTT:
                         invalidatePTTViews(recorderState);
                 }
-                Snackbar.make(mStreamLayout, mActivity.getString(R.string.unknown_error),
-                        Snackbar.LENGTH_SHORT).show();
             }
         });
     }
@@ -734,6 +736,10 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                         onAudioSent();
                         return;
                     }
+                    if (action.equals(Api.EXCEPTION)) {
+                        onErrorOccurred();
+                        return;
+                    }
                     JSONObject jsonResponse = new JSONObject(intent.getExtras().getString(action));
 
                     boolean success = jsonResponse.optBoolean("success", false);
@@ -742,6 +748,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                         onCommandFailure(message);
                         return;
                     }
+
                     switch (action) {
                         case Api.Command.SEND_AUDIO:
                             onKeyAndIDReceived(jsonResponse);
@@ -819,6 +826,11 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         requestBuilder.command(Api.Command.SEND).key(sendAudioKey);
         JSONObject request = requestBuilder.build().toJSON();
         request.remove("seq");
+        int count = 0;
+        while (!MainActivity.audioSocket.isAudioConnectionReady()) {
+            count++;
+            Log.i("Waiting connection", String.valueOf(count));
+        }
         MainActivity.audioSocket.sendRequest(request);
     }
 
@@ -873,6 +885,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
      * Called when the data is sent
      */
     private void onAudioSent() {
+        MainActivity.audioSocket.reconnect();
         MainActivity.statusChanged = true;
         switch (mSelectedLayout) {
             case PTT:

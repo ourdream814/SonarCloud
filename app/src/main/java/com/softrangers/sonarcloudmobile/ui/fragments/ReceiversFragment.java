@@ -191,6 +191,7 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
 
     /**
      * Hide the PAs layout and show the Groups layout
+     *
      * @param always make request to server
      */
     private void showGroupsLayout(boolean always) {
@@ -251,6 +252,7 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
 
     /**
      * Called when a group edit button was clicked
+     *
      * @param group    for which the button was clicked
      * @param position of the group in the list
      */
@@ -265,6 +267,7 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
 
     /**
      * Called when a group where added or edited
+     *
      * @param group either new or edited
      */
     @Override
@@ -295,24 +298,25 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
 
     /**
      * Called when server can't understand the command
+     *
      * @param message about server error
      */
     @Override
     public void onCommandFailure(String message) {
         mActivity.dismissLoading();
-        if (message != null) {
-            Snackbar.make(mReceiversLayout, message, Snackbar.LENGTH_SHORT).show();
-        }
+        hideLoading();
     }
 
     @Override
     public void onErrorOccurred() {
         mActivity.dismissLoading();
+        hideLoading();
     }
 
 
     /**
      * Called when a receiver is clicked in the PAs list
+     *
      * @param receiver which is clicked
      * @param position of the receiver in the list
      */
@@ -390,26 +394,26 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
         public void onReceive(Context context, Intent intent) {
             try {
 //                if (mActivity.mSelectedFragment == MainActivity.SelectedFragment.RECEIVERS) {
-                    String action = intent.getAction();
-                    JSONObject jsonResponse = new JSONObject(intent.getExtras().getString(action));
-                    JSONObject jsonRequest = new JSONObject(intent.getExtras().getString(Api.REQUEST_MESSAGE));
-                    boolean success = jsonResponse.optBoolean("success", false);
-                    if (!success) {
-                        String message = jsonResponse.optString("message", mActivity.getString(R.string.unknown_error));
-                        onCommandFailure(message);
-                        return;
-                    }
-                    switch (action) {
-                        case Api.Command.ORGANISATIONS:
-                            onOrganisationsReceived(jsonResponse, jsonRequest);
-                            break;
-                        case Api.Command.RECEIVERS:
-                            onReceiversReceived(jsonResponse, jsonRequest);
-                            break;
-                        case Api.Command.RECEIVER_GROUPS:
-                            onGroupsReceived(jsonResponse, jsonRequest);
-                            break;
-                    }
+                String action = intent.getAction();
+                JSONObject jsonResponse = new JSONObject(intent.getExtras().getString(action));
+                JSONObject jsonRequest = new JSONObject(intent.getExtras().getString(Api.REQUEST_MESSAGE));
+                boolean success = jsonResponse.optBoolean("success", false);
+                if (!success) {
+                    String message = jsonResponse.optString("message", mActivity.getString(R.string.unknown_error));
+                    onCommandFailure(message);
+                    return;
+                }
+                switch (action) {
+                    case Api.Command.ORGANISATIONS:
+                        onOrganisationsReceived(jsonResponse, jsonRequest);
+                        break;
+                    case Api.Command.RECEIVERS:
+                        onReceiversReceived(jsonResponse, jsonRequest);
+                        break;
+                    case Api.Command.RECEIVER_GROUPS:
+                        onGroupsReceived(jsonResponse, jsonRequest);
+                        break;
+                }
 //                }
             } catch (Exception e) {
                 onErrorOccurred();

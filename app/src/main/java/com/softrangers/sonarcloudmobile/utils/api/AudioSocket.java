@@ -92,6 +92,36 @@ public class AudioSocket extends Service {
         }
     }
 
+    public void reconnect() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                final Intent intent = new Intent(SonarCloudApp.getInstance().getBaseContext(), ConnectionReceiver.class);
+                try {
+                    if (audioSocket != null) audioSocket.close();
+                    audioSocket = null;
+                    if (!SonarCloudApp.getInstance().isConnected()) {
+                        intent.setAction(Api.CONNECTION_FAILED);
+                        SonarCloudApp.getInstance().sendBroadcast(intent);
+                        Log.e(this.getClass().getSimpleName(), "run()");
+                        return;
+                    }
+                    audioSocket = (SSLSocket) sslSocketFactory.createSocket(
+                            new Socket(Api.M_URL, Api.AUDIO_PORT), Api.M_URL, Api.AUDIO_PORT, true);
+                    audioSocket.setKeepAlive(true);
+                    audioSocket.setUseClientMode(true);
+
+                    // Start socket handshake
+                    audioSocket.startHandshake();
+                    outputStream = audioSocket.getOutputStream();
+                    inputStream = audioSocket.getInputStream();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+
     public boolean isAudioConnectionReady() {
         return audioSocket != null && audioSocket.isConnected() && !audioSocket.isClosed();
     }
@@ -209,7 +239,6 @@ public class AudioSocket extends Service {
         public void run() {
             try {
                 // Start socket handshake
-
                 audioSocket.startHandshake();
                 // send the request to server through writer object
                 writeOut = new BufferedWriter(new OutputStreamWriter(outputStream));

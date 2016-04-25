@@ -54,6 +54,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
     public static final String ACTION_ADD_SCHEDULE = "com.softrangers.sonarcloudmobile.ACTION_ADD_SCHEDULE";
     public static final String ACTION_EDIT_SCHEDULE = "com.softrangers.sonarcloudmobile.ACTION_EDIT_SCHEDULE";
     public static final String RECORD_BUNDLE = "key for record bundle";
+    public static final String READY_FOR_DATA = "Ready for data.";
     private static final String DATE = "Date";
     private static final String TIME = "Time";
     private static final String REPEAT = "Repeat";
@@ -92,6 +93,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         dataIntentFilter.addAction(Api.EXCEPTION);
         IntentFilter audioIntentFilter = new IntentFilter(Api.Command.SEND_AUDIO);
         audioIntentFilter.addAction(Api.EXCEPTION);
+        audioIntentFilter.addAction(READY_FOR_DATA);
         registerReceiver(mAudioSendingReceiver, audioIntentFilter);
         registerReceiver(mBroadcastReceiver, dataIntentFilter);
         mRequestBuilder = new Request.Builder();
@@ -547,6 +549,10 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         public void onReceive(Context context, Intent intent) {
             try {
                 String action = intent.getAction();
+                if (action.equals(READY_FOR_DATA)) {
+                    onServerReadyForData();
+                    return;
+                }
                 JSONObject jsonResponse = new JSONObject(intent.getExtras().getString(action));
                 boolean success = jsonResponse.optBoolean("success", false);
                 if (!success) {
@@ -562,12 +568,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                         onKeyAndIDReceived(jsonResponse);
                         break;
                     case Api.EXCEPTION:
-                        String message = jsonResponse.optString("message");
-                        if (message.equalsIgnoreCase("Ready for data.")) {
-                            onServerReadyForData();
-                        } else {
-                            onErrorOccurred();
-                        }
+                        onErrorOccurred();
                         break;
                 }
             } catch (Exception e) {
@@ -673,6 +674,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
      * Called when the data is sent
      */
     private void onAudioSent() {
+        audioSocket.reconnect();
         dismissLoading();
         MainActivity.statusChanged = true;
         File file = new File(recording.getFilePath());

@@ -32,8 +32,9 @@ public class OpusRecorder {
     }
 
     public void startRecording() {
-        if (recorderState == RecorderState.RECORDING || recorderState == RecorderState.PAUSED) {
-            recorderState = RecorderState.STOPPED;
+        if (recorderState == RecorderState.RECORDING || recorderState == RecorderState.STREAMING
+                || recorderState == RecorderState.PAUSED) {
+            stopRecording();
         }
         new Thread(new Runnable() {
             @Override
@@ -44,7 +45,8 @@ public class OpusRecorder {
     }
 
     public void startStreaming(final SSLSocket sslSocket) {
-        if (recorderState == RecorderState.RECORDING || recorderState == RecorderState.PAUSED) {
+        if (recorderState == RecorderState.RECORDING || recorderState == RecorderState.STREAMING
+                || recorderState == RecorderState.PAUSED) {
             stopRecording();
         }
         recorderState = RecorderState.STREAMING;
@@ -146,7 +148,7 @@ public class OpusRecorder {
     }
 
     public boolean isRecording() {
-        return recorderState == RecorderState.RECORDING;
+        return recorderState != RecorderState.STOPPED;
     }
 
     public boolean isPaused() {
