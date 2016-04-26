@@ -674,7 +674,6 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
      * Called when the data is sent
      */
     private void onAudioSent() {
-        audioSocket.reconnect();
         dismissLoading();
         MainActivity.statusChanged = true;
         File file = new File(recording.getFilePath());

@@ -36,7 +36,6 @@ import com.softrangers.sonarcloudmobile.ui.MainActivity;
 import com.softrangers.sonarcloudmobile.ui.ScheduleActivity;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
-import com.softrangers.sonarcloudmobile.utils.api.AudioSocket;
 import com.softrangers.sonarcloudmobile.utils.opus.OpusPlayer;
 import com.softrangers.sonarcloudmobile.utils.opus.OpusRecorder;
 import com.softrangers.sonarcloudmobile.utils.opus.OpusRecorder.RecorderState;
@@ -52,6 +51,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public class RecordFragment extends Fragment implements View.OnClickListener,
         AnnouncementRecAdapter.OnAnnouncementRecordInteraction,
@@ -589,15 +589,11 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                     mRecordingLayout = RecordingLayout.NOT_RECORDING;
                 }
             }
-            default: {
-                MainActivity.audioSocket.reconnect();
-            }
         }
     }
 
     @Override
     public void onRecordFailed(Exception e, final RecorderState recorderState) {
-        MainActivity.audioSocket.reconnect();
         mRecordingLayout = RecordingLayout.NOT_RECORDING;
         Log.i(this.getClass().getSimpleName(), "Record failed");
         mActivity.runOnUiThread(new Runnable() {
@@ -885,7 +881,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
      * Called when the data is sent
      */
     private void onAudioSent() {
-        MainActivity.audioSocket.reconnect();
         MainActivity.statusChanged = true;
         switch (mSelectedLayout) {
             case PTT:

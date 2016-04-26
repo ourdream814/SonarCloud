@@ -10,8 +10,10 @@ import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.softrangers.sonarcloudmobile.models.Request;
+import com.softrangers.sonarcloudmobile.utils.FileLog;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 
+import org.joda.time.DateTime;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -219,14 +221,17 @@ public class DataSocketService extends Service {
                 // Start socket handshake
                 dataSocket.startHandshake();
                 // send the request to server through writer object
+                FileLog.getInstance().write(new DateTime().toString() + " Send: " + message + "; port: " + dataSocket.getPort() + "; url: " + dataSocket.getInetAddress());
                 writeOut.write(message.toString());
                 writeOut.newLine();
                 writeOut.flush();
                 String line = readIn.readLine();
+                FileLog.getInstance().write(new DateTime().toString() + " Receive: " + line + "; port: " + dataSocket.getPort() + "; url: " + dataSocket.getInetAddress());
                 sendResponseToUI(line, message);
             } catch (Exception e) {
                 e.printStackTrace();
                 Log.e(this.getClass().getSimpleName(), e.getMessage());
+                FileLog.getInstance().write(new DateTime().toString() + " Error: " + e.getMessage() + "; port: " + dataSocket.getPort() + "; url: " + dataSocket.getInetAddress());
                 // send the response to ui
                 Intent responseContainer = new Intent(Api.EXCEPTION);
 //                responseContainer.putExtra(command, line);
@@ -243,6 +248,7 @@ public class DataSocketService extends Service {
             command = jsonResponse.optString("originalCommand", Api.EXCEPTION);
         } catch (JSONException e) {
             Log.e(this.getClass().getName(), "Finally " + e.getMessage());
+            FileLog.getInstance().write(new DateTime().toString() + " Error: " + e.getMessage() + "; port: " + dataSocket.getPort() + "; url: " + dataSocket.getInetAddress());
         } finally {
             // send the response to ui
             Intent responseContainer = new Intent(command);

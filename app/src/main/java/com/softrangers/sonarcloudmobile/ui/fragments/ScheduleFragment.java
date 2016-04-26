@@ -455,7 +455,6 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
             clickedRecording.setIsPlaying(false);
             notifyAllRecordAdapter(clickedRecordPosition);
         }
-        MainActivity.audioSocket.reconnect();
         ArrayList<Receiver> receivers = new ArrayList<>();
         if (MainActivity.selectedReceivers != null && MainActivity.selectedReceivers.size() > 0) {
             receivers = MainActivity.selectedReceivers;
@@ -602,7 +601,6 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
     private void onAudioReady(String path) {
         clickedRecording.setFilePath(path);
         mOpusPlayer.play(clickedRecording, clickedRecordPosition, mHandler);
-        MainActivity.audioSocket.reconnect();
     }
 
     Handler mHandler = new Handler(Looper.getMainLooper()) {
