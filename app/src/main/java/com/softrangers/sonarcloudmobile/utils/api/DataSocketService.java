@@ -245,7 +245,9 @@ public class DataSocketService extends Service {
         String command = Api.EXCEPTION;
         try {
             JSONObject jsonResponse = new JSONObject(response);
-            command = jsonResponse.optString("originalCommand", Api.EXCEPTION);
+            if (!jsonResponse.has("command")) {
+                command = jsonResponse.optString("originalCommand", Api.EXCEPTION);
+            }
         } catch (JSONException e) {
             Log.e(this.getClass().getName(), "Finally " + e.getMessage());
             FileLog.getInstance().write(new DateTime().toString() + " Error: " + e.getMessage() + "; port: " + dataSocket.getPort() + "; url: " + dataSocket.getInetAddress());

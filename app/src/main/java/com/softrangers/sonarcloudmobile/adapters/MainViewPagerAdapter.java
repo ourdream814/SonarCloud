@@ -5,7 +5,7 @@ import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 
-import com.softrangers.sonarcloudmobile.ui.fragments.ReceiversFragment;
+import com.softrangers.sonarcloudmobile.ui.receivers.ReceiversFragment;
 
 import java.util.ArrayList;
 import java.util.List;

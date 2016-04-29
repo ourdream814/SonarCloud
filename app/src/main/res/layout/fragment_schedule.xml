@@ -2,7 +2,7 @@
                 xmlns:tools="http://schemas.android.com/tools"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                tools:context=".ui.fragments.ScheduleFragment">
+                tools:context=".ui.schedule.ScheduleFragment">
 
     <RadioGroup
         android:id="@+id/schedule_list_selector"

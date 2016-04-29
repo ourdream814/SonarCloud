@@ -12,7 +12,7 @@ import android.view.View;
 import android.widget.TextView;
 
 import com.softrangers.sonarcloudmobile.R;
-import com.softrangers.sonarcloudmobile.utils.PatternLockUtils;
+import com.softrangers.sonarcloudmobile.utils.lock.PatternLockUtils;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 
 /**

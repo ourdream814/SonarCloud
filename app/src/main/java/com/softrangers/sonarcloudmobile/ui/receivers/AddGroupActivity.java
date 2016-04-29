@@ -1,4 +1,4 @@
-package com.softrangers.sonarcloudmobile.ui;
+package com.softrangers.sonarcloudmobile.ui.receivers;
 
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -20,7 +20,8 @@ import com.softrangers.sonarcloudmobile.models.Group;
 import com.softrangers.sonarcloudmobile.models.PASystem;
 import com.softrangers.sonarcloudmobile.models.Receiver;
 import com.softrangers.sonarcloudmobile.models.Request;
-import com.softrangers.sonarcloudmobile.utils.PatternLockUtils;
+import com.softrangers.sonarcloudmobile.ui.MainActivity;
+import com.softrangers.sonarcloudmobile.utils.lock.PatternLockUtils;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
 import com.softrangers.sonarcloudmobile.utils.api.DataSocketService;
 import com.softrangers.sonarcloudmobile.utils.ui.BaseActivity;
@@ -230,6 +231,8 @@ public class AddGroupActivity extends BaseActivity {
                     mSelectPAButton.setText(mReceivers.size() + " " + getString(R.string.pa_systems));
                     break;
             }
+        } else {
+            finish();
         }
     }
 
@@ -276,7 +279,6 @@ public class AddGroupActivity extends BaseActivity {
         Intent intent = new Intent(AddGroupActivity.this, MainActivity.class);
         intent.setAction("Add group canceled");
         setResult(RESULT_CANCELED, intent);
-        unregisterReceiver(mBroadcastReceiver);
         super.onBackPressed();
     }
 
@@ -284,6 +286,7 @@ public class AddGroupActivity extends BaseActivity {
     protected void onDestroy() {
         super.onDestroy();
         unbindService(mDataServiceConnection);
+        unregisterReceiver(mBroadcastReceiver);
     }
 
     private void onResponseSucceed(JSONObject response) {

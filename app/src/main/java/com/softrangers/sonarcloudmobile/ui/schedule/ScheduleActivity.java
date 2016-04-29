@@ -1,4 +1,4 @@
-package com.softrangers.sonarcloudmobile.ui;
+package com.softrangers.sonarcloudmobile.ui.schedule;
 
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
@@ -30,7 +30,8 @@ import com.softrangers.sonarcloudmobile.models.Receiver;
 import com.softrangers.sonarcloudmobile.models.Recording;
 import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.models.Schedule;
-import com.softrangers.sonarcloudmobile.utils.PatternLockUtils;
+import com.softrangers.sonarcloudmobile.ui.MainActivity;
+import com.softrangers.sonarcloudmobile.utils.lock.PatternLockUtils;
 import com.softrangers.sonarcloudmobile.utils.api.DataSocketService;
 import com.softrangers.sonarcloudmobile.utils.api.SendAudioThread;
 import com.softrangers.sonarcloudmobile.utils.ui.BaseActivity;
@@ -89,10 +90,6 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         dataIntentFilter.addAction(Api.Command.CREATE_SCHEDULE);
         dataIntentFilter.addAction(Api.Command.SEND_AUDIO);
         dataIntentFilter.addAction(Api.EXCEPTION);
-        IntentFilter audioIntentFilter = new IntentFilter(Api.Command.SEND_AUDIO);
-        audioIntentFilter.addAction(Api.EXCEPTION);
-        audioIntentFilter.addAction(READY_FOR_DATA);
-        registerReceiver(mAudioSendingReceiver, audioIntentFilter);
         registerReceiver(mBroadcastReceiver, dataIntentFilter);
         mRequestBuilder = new Request.Builder();
         // instantiate all views for this activity
@@ -171,6 +168,9 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                     case Api.Command.CREATE_SCHEDULE:
                         onResponseSucceed(jsonResponse);
                         break;
+                    case Api.Command.SEND_AUDIO:
+                        onKeyAndIDReceived(jsonResponse);
+                        break;
                 }
             } catch (Exception e) {
                 onErrorOccurred();
@@ -190,10 +190,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         intent.setAction(mAction);
         intent.putExtra(mAction, schedule);
         setResult(RESULT_OK, intent);
-        unregisterReceiver(mBroadcastReceiver);
-        unregisterReceiver(mAudioSendingReceiver);
         MainActivity.statusChanged = true;
-        unbindService(mDataServiceConnection);
         finish();
     }
 
@@ -348,7 +345,6 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
     protected void onDestroy() {
         super.onDestroy();
         unregisterReceiver(mBroadcastReceiver);
-        unregisterReceiver(mAudioSendingReceiver);
         unbindService(mDataServiceConnection);
     }
 
@@ -522,35 +518,6 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         }
     }
 
-    /**
-     * Receives and parse the response from an audio request
-     */
-    BroadcastReceiver mAudioSendingReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            try {
-                String action = intent.getAction();
-                JSONObject jsonResponse = new JSONObject(intent.getExtras().getString(action));
-                boolean success = jsonResponse.optBoolean("success", false);
-                if (!success) {
-                    String message = jsonResponse.optString("message", getString(R.string.unknown_error));
-                    onCommandFailure(message);
-                    return;
-                }
-                switch (action) {
-                    case Api.Command.SEND_AUDIO:
-                        onKeyAndIDReceived(jsonResponse);
-                        break;
-                    case Api.EXCEPTION:
-                        onErrorOccurred();
-                        break;
-                }
-            } catch (Exception e) {
-                onErrorOccurred();
-                e.printStackTrace();
-            }
-        }
-    };
 
     /**
      * Convert the {@link ScheduleActivity#schedule} into a JSON object for adding a new schedule
@@ -611,7 +578,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
     }
 
     /**
-     * Called by {@link ScheduleActivity#mAudioSendingReceiver} when the key
+     * Called by {@link ScheduleActivity#mBroadcastReceiver} when the key
      * and id for record are received from server
      *
      * @param response which contains "key" and "recordingID"
@@ -632,7 +599,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
             bis.close();
             JSONObject request = requestBuilder.build().toJSON();
             request.remove("seq");
-            new SendAudioThread(bytes, request, mSendAudioHandler);
+            new SendAudioThread(bytes, request, mSendAudioHandler).start();
         } catch (Exception e) {
             onErrorOccurred();
             e.printStackTrace();
@@ -647,12 +614,10 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                     break;
                 }
                 case SendAudioThread.SENDING_SUCCEED: {
-                    dismissLoading();
                     onAudioSent();
                     break;
                 }
                 case SendAudioThread.SENDING_FAILED: {
-                    dismissLoading();
                     onErrorOccurred();
                     break;
                 }
@@ -672,10 +637,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         Intent intent = new Intent(this, MainActivity.class);
         intent.setAction(mAction);
         setResult(RESULT_OK, intent);
-        unregisterReceiver(mAudioSendingReceiver);
-        unregisterReceiver(mBroadcastReceiver);
         MainActivity.statusChanged = true;
-        unbindService(mDataServiceConnection);
         finish();
     }
 

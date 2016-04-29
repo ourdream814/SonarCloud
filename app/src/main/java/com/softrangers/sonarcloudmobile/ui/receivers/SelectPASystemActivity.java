@@ -1,4 +1,4 @@
-package com.softrangers.sonarcloudmobile.ui;
+package com.softrangers.sonarcloudmobile.ui.receivers;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -9,7 +9,7 @@ import com.softrangers.sonarcloudmobile.R;
 import com.softrangers.sonarcloudmobile.adapters.ReceiverListAdapter;
 import com.softrangers.sonarcloudmobile.models.PASystem;
 import com.softrangers.sonarcloudmobile.models.Receiver;
-import com.softrangers.sonarcloudmobile.utils.PatternLockUtils;
+import com.softrangers.sonarcloudmobile.utils.lock.PatternLockUtils;
 import com.softrangers.sonarcloudmobile.utils.ui.BaseActivity;
 import com.softrangers.sonarcloudmobile.utils.widgets.AnimatedExpandableListView;
 
@@ -61,7 +61,9 @@ public class SelectPASystemActivity extends BaseActivity implements
     }
 
     public void cancel(View view) {
-        setResult(RESULT_CANCELED);
+        Intent intent = new Intent();
+        intent.putExtra("cancel", "cancel");
+        setResult(RESULT_CANCELED, intent);
         finish();
     }
 

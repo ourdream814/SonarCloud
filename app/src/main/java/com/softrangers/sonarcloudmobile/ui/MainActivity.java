@@ -29,11 +29,14 @@ import com.softrangers.sonarcloudmobile.R;
 import com.softrangers.sonarcloudmobile.models.Group;
 import com.softrangers.sonarcloudmobile.models.Receiver;
 import com.softrangers.sonarcloudmobile.models.User;
-import com.softrangers.sonarcloudmobile.ui.fragments.ReceiversFragment;
-import com.softrangers.sonarcloudmobile.ui.fragments.RecordFragment;
-import com.softrangers.sonarcloudmobile.ui.fragments.ScheduleFragment;
-import com.softrangers.sonarcloudmobile.ui.fragments.SettingsFragment;
-import com.softrangers.sonarcloudmobile.utils.PatternLockUtils;
+import com.softrangers.sonarcloudmobile.ui.lock.LockAppActivity;
+import com.softrangers.sonarcloudmobile.ui.receivers.AddGroupActivity;
+import com.softrangers.sonarcloudmobile.ui.receivers.ReceiversFragment;
+import com.softrangers.sonarcloudmobile.ui.recording.RecordFragment;
+import com.softrangers.sonarcloudmobile.ui.schedule.ScheduleActivity;
+import com.softrangers.sonarcloudmobile.ui.schedule.ScheduleFragment;
+import com.softrangers.sonarcloudmobile.ui.lock.SettingsFragment;
+import com.softrangers.sonarcloudmobile.utils.lock.PatternLockUtils;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
 import com.softrangers.sonarcloudmobile.utils.api.ConnectionReceiver;
@@ -73,7 +76,7 @@ public class MainActivity extends BaseActivity implements
     public static DataSocketService dataSocketService;
 
     // set selected items to send the record to them
-    public static ArrayList<Receiver> selectedReceivers = new ArrayList<>();
+    public static ArrayList<Receiver> selectedReceivers;
     public static Group selectedGroup;
     private IntentFilter intentFilter;
 
@@ -97,6 +100,8 @@ public class MainActivity extends BaseActivity implements
         intentFilter = new IntentFilter();
         intentFilter.addAction(Api.Command.AUTHENTICATE);
         intentFilter.addAction(Api.EXCEPTION);
+
+        selectedReceivers = new ArrayList<>();
 
         if (savedInstanceState != null) {
             receiversFragment = (ReceiversFragment) getSupportFragmentManager().getFragment(savedInstanceState,
@@ -458,8 +463,6 @@ public class MainActivity extends BaseActivity implements
     protected void onDestroy() {
         super.onDestroy();
         try {
-            selectedReceivers = null;
-            selectedGroup = null;
             ConnectionReceiver.getInstance().removeOnResponseListener(this);
             SonarCloudApp.getInstance().stopKeepingConnection();
             unregisterReceiver(mLoginReceiver);
@@ -583,12 +586,13 @@ public class MainActivity extends BaseActivity implements
                     if (action.equals(ACTION_LOGIN)) {
                         SonarCloudApp.getInstance().clearUserSession(true);
                         SonarCloudApp.getInstance().stopKeepingConnection();
-                        unbindService(mDataServiceConnection);
                         finish();
-                    } else if (action.equals(ScheduleActivity.ACTION_ADD_SCHEDULE)) {
-//                        registerReceiver(recordFragment.mAudioSendingReceiver, recordFragment.getIntentFilter());
                     }
                     break;
+            }
+        } else {
+            if (resultCode == RESULT_CANCELED) {
+                finish();
             }
         }
     }

@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/colorSecondary"
-    tools:context="com.softrangers.sonarcloudmobile.ui.ScheduleActivity">
+    tools:context=".ui.schedule.ScheduleActivity">
 
     <RelativeLayout
         android:layout_width="match_parent"

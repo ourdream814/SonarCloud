@@ -1,4 +1,4 @@
-package com.softrangers.sonarcloudmobile.ui.fragments;
+package com.softrangers.sonarcloudmobile.ui.recording;
 
 
 import android.content.BroadcastReceiver;
@@ -33,7 +33,7 @@ import com.softrangers.sonarcloudmobile.models.Receiver;
 import com.softrangers.sonarcloudmobile.models.Recording;
 import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.ui.MainActivity;
-import com.softrangers.sonarcloudmobile.ui.ScheduleActivity;
+import com.softrangers.sonarcloudmobile.ui.schedule.ScheduleActivity;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
 import com.softrangers.sonarcloudmobile.utils.api.SendAudioThread;
@@ -52,7 +52,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 public class RecordFragment extends Fragment implements View.OnClickListener,
         AnnouncementRecAdapter.OnAnnouncementRecordInteraction,

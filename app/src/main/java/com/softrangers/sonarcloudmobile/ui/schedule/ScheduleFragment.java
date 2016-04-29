@@ -1,4 +1,4 @@
-package com.softrangers.sonarcloudmobile.ui.fragments;
+package com.softrangers.sonarcloudmobile.ui.schedule;
 
 
 import android.content.BroadcastReceiver;
@@ -33,7 +33,6 @@ import com.softrangers.sonarcloudmobile.models.Recording;
 import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.models.Schedule;
 import com.softrangers.sonarcloudmobile.ui.MainActivity;
-import com.softrangers.sonarcloudmobile.ui.ScheduleActivity;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
 import com.softrangers.sonarcloudmobile.utils.api.ConnectionReceiver;

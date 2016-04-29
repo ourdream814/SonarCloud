@@ -1,10 +1,10 @@
-package com.softrangers.sonarcloudmobile.ui;
+package com.softrangers.sonarcloudmobile.ui.lock;
 
 import android.os.Bundle;
 import android.os.PersistableBundle;
 import android.view.View;
 
-import com.softrangers.sonarcloudmobile.utils.PatternLockUtils;
+import com.softrangers.sonarcloudmobile.utils.lock.PatternLockUtils;
 
 import java.util.List;
 

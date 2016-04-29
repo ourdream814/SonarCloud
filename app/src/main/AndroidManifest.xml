@@ -66,27 +66,27 @@
         </receiver>
 
         <activity
-            android:name=".ui.AddGroupActivity"
+            android:name=".ui.receivers.AddGroupActivity"
             android:screenOrientation="portrait"/>
 
         <activity
-            android:name=".ui.SelectPASystemActivity"
+            android:name=".ui.receivers.SelectPASystemActivity"
             android:screenOrientation="portrait"/>
 
         <activity
-            android:name=".ui.ScheduleActivity"
+            android:name=".ui.schedule.ScheduleActivity"
             android:screenOrientation="portrait"/>
 
         <activity
-            android:name=".ui.LockAppActivity"
+            android:name=".ui.lock.LockAppActivity"
             android:screenOrientation="portrait"/>
 
         <activity
-            android:name=".ui.LockPatternActivity"
+            android:name=".ui.lock.LockPatternActivity"
             android:screenOrientation="portrait"/>
 
         <activity
-            android:name=".ui.ConfirmLockPattern"
+            android:name=".ui.lock.ConfirmLockPattern"
             android:screenOrientation="portrait"/>
     </application>
 

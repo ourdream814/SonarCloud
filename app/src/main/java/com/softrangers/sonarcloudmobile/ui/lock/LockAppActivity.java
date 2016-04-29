@@ -1,4 +1,4 @@
-package com.softrangers.sonarcloudmobile.ui;
+package com.softrangers.sonarcloudmobile.ui.lock;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -7,7 +7,8 @@ import android.view.View;
 import android.widget.RelativeLayout;
 
 import com.softrangers.sonarcloudmobile.R;
-import com.softrangers.sonarcloudmobile.utils.PatternLockUtils;
+import com.softrangers.sonarcloudmobile.ui.MainActivity;
+import com.softrangers.sonarcloudmobile.utils.lock.PatternLockUtils;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.ui.BaseActivity;
 
@@ -61,15 +62,15 @@ public class LockAppActivity extends BaseActivity {
 
     @Override
     public void onBackPressed() {
-        Intent intent = new Intent(this, MainActivity.class);
-        intent.setAction("lock");
-        setResult(RESULT_OK, intent);
+        setResult(RESULT_OK, getIntent().setAction("lock"));
         super.onBackPressed();
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (PatternLockUtils.checkConfirmPatternResult(this, requestCode, resultCode)) {
+            setResult(RESULT_CANCELED, getIntent().setAction("lock"));
+            isUnlocked = false;
             finish();
         } else {
             isUnlocked = true;

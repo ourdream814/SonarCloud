@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:animateLayoutChanges="true"
-    tools:context="com.softrangers.sonarcloudmobile.ui.LockAppActivity">
+    tools:context=".ui.lock.LockAppActivity">
 
     <RelativeLayout
         android:layout_width="match_parent"

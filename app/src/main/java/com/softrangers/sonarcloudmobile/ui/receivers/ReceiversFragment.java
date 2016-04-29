@@ -1,4 +1,4 @@
-package com.softrangers.sonarcloudmobile.ui.fragments;
+package com.softrangers.sonarcloudmobile.ui.receivers;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -25,7 +25,6 @@ import com.softrangers.sonarcloudmobile.models.Group;
 import com.softrangers.sonarcloudmobile.models.PASystem;
 import com.softrangers.sonarcloudmobile.models.Receiver;
 import com.softrangers.sonarcloudmobile.models.Request;
-import com.softrangers.sonarcloudmobile.ui.AddGroupActivity;
 import com.softrangers.sonarcloudmobile.ui.MainActivity;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;

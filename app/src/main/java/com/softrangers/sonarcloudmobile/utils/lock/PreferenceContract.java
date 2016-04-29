@@ -1,4 +1,4 @@
-package com.softrangers.sonarcloudmobile.utils;
+package com.softrangers.sonarcloudmobile.utils.lock;
 
 /**
  * Created by eduard on 19.04.16.

@@ -1,19 +1,17 @@
-package com.softrangers.sonarcloudmobile.utils;
+package com.softrangers.sonarcloudmobile.utils.lock;
 
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.text.TextUtils;
 
-import com.softrangers.sonarcloudmobile.ui.ConfirmLockPattern;
-import com.softrangers.sonarcloudmobile.ui.LockPatternActivity;
+import com.softrangers.sonarcloudmobile.ui.lock.ConfirmLockPattern;
+import com.softrangers.sonarcloudmobile.ui.lock.LockPatternActivity;
 
 import java.util.List;
 
-import me.zhanghai.android.patternlock.ConfirmPatternActivity;
 import me.zhanghai.android.patternlock.PatternUtils;
 import me.zhanghai.android.patternlock.PatternView;
-import me.zhanghai.android.patternlock.SetPatternActivity;
 
 /**
  * Created by eduard on 19.04.16.

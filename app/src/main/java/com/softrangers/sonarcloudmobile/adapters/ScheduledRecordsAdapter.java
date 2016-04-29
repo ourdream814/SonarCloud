@@ -107,6 +107,8 @@ public class ScheduledRecordsAdapter extends RecyclerView.Adapter<ScheduledRecor
         if (recording.isPlaying()) {
             holder.mSeekBarLayout.setVisibility(View.VISIBLE);
             holder.mSeekBar.setMax((int) recording.getLength());
+            holder.mSeekBar.setProgress(recording.getProgress());
+            holder.mSeekBarTime.setText(recording.stringForTime(recording.getProgress()));
             holder.mRecordTitle.setVisibility(View.GONE);
             holder.mRecordLength.setVisibility(View.GONE);
             holder.mHour.setVisibility(View.GONE);
@@ -174,6 +176,7 @@ public class ScheduledRecordsAdapter extends RecyclerView.Adapter<ScheduledRecor
                             && lastSelectedPosition != currentSelectedPosition) {
                         mSchedules.get(lastSelectedPosition).setIsSelected(false);
                         mSchedules.get(lastSelectedPosition).getRecording().setLoading(false);
+                        mSchedules.get(lastSelectedPosition).getRecording().setIsPlaying(false);
                         notifyItemChanged(lastSelectedPosition);
                     }
                     notifyItemChanged(currentSelectedPosition);

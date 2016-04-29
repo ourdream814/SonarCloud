@@ -1,4 +1,4 @@
-package com.softrangers.sonarcloudmobile.utils;
+package com.softrangers.sonarcloudmobile.utils.lock;
 
 import android.content.Context;
 import android.content.SharedPreferences;

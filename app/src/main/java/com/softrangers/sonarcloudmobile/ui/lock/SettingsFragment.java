@@ -1,4 +1,4 @@
-package com.softrangers.sonarcloudmobile.ui.fragments;
+package com.softrangers.sonarcloudmobile.ui.lock;
 
 
 import android.os.Bundle;

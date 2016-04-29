@@ -1,12 +1,10 @@
-package com.softrangers.sonarcloudmobile.ui;
+package com.softrangers.sonarcloudmobile.ui.lock;
 
-import com.softrangers.sonarcloudmobile.utils.PatternLockUtils;
-import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
+import com.softrangers.sonarcloudmobile.utils.lock.PatternLockUtils;
 import com.softrangers.sonarcloudmobile.utils.ui.BaseActivity;
 
 import java.util.List;
 
-import me.zhanghai.android.patternlock.PatternUtils;
 import me.zhanghai.android.patternlock.PatternView;
 import me.zhanghai.android.patternlock.SetPatternActivity;
 
