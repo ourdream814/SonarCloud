@@ -37,9 +37,6 @@
             android:name=".utils.api.DataSocketService"
             android:exported="false"/>
 
-        <service android:name=".utils.api.AudioSocket"
-                 android:exported="false"/>
-
         <service
             android:name=".utils.api.AuthService"
             android:exported="false"/>

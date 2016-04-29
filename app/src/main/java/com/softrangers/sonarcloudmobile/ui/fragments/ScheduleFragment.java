@@ -37,6 +37,7 @@ import com.softrangers.sonarcloudmobile.ui.ScheduleActivity;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
 import com.softrangers.sonarcloudmobile.utils.api.ConnectionReceiver;
+import com.softrangers.sonarcloudmobile.utils.api.GetAudioThread;
 import com.softrangers.sonarcloudmobile.utils.opus.OpusPlayer;
 import com.softrangers.sonarcloudmobile.utils.ui.BaseFragment;
 
@@ -95,8 +96,6 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         intentFilter.addAction(ScheduleActivity.ACTION_ADD_SCHEDULE);
         intentFilter.addAction(Api.Command.DELETE_SCHEDULE);
         intentFilter.addAction(Api.Command.GET_AUDIO);
-        intentFilter.addAction(Api.AUDIO_READY_TO_PLAY);
-        intentFilter.addAction(READY_FOR_DATA);
         mActivity.registerReceiver(mBroadcastReceiver, intentFilter);
         mDaysAdapter = new DaysAdapter();
         mOpusPlayer = new OpusPlayer();
@@ -330,15 +329,31 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
         startGettingAudioData(recording, seekBar, seekBarTime, position);
     }
 
+    private Handler mGetAudioHandler = new Handler(Looper.getMainLooper()) {
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+                case GetAudioThread.READING_STARTED: {
+
+                    break;
+                }
+                case GetAudioThread.READING_SUCCEED: {
+                    onAudioReady((String) msg.obj);
+                    break;
+                }
+                case GetAudioThread.READING_FAILED: {
+                    onErrorOccurred();
+                    break;
+                }
+            }
+        }
+    };
+
     public BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             try {
                 String action = intent.getAction();
-                if (action.equals(READY_FOR_DATA)) {
-                    MainActivity.audioSocket.startReadingAudioData();
-                    return;
-                }
                 switch (action) {
                     case ScheduleActivity.ACTION_ADD_SCHEDULE: {
                         Schedule schedule = intent.getExtras().getParcelable(ScheduleActivity.ACTION_ADD_SCHEDULE);
@@ -349,11 +364,6 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
                         Schedule schedule = intent.getExtras().getParcelable(ScheduleActivity.ACTION_EDIT_SCHEDULE);
                         scheduledRecordsAdapter.removeItem(clickedPosition);
                         scheduledRecordsAdapter.addItem(schedule, clickedPosition);
-                        break;
-                    }
-                    case Api.AUDIO_READY_TO_PLAY: {
-                        String path = intent.getExtras().getString(action);
-                        onAudioReady(path);
                         break;
                     }
                     default:
@@ -588,13 +598,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
             builder.command(Api.Command.RECEIVE).key(key);
             JSONObject request = builder.build().toJSON();
             request.remove("seq");
-            Log.i(this.getClass().getSimpleName(), request.toString());
-            int count = 0;
-            while (!MainActivity.audioSocket.isAudioConnectionReady()) {
-                count++;
-                Log.i("Waiting connection", String.valueOf(count));
-            }
-            MainActivity.audioSocket.sendRequest(request);
+            new GetAudioThread(request, mGetAudioHandler).start();
         }
     }
 

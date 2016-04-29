@@ -10,12 +10,14 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
+import android.os.Message;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.View;
 import android.widget.DatePicker;
 import android.widget.NumberPicker;
@@ -29,8 +31,8 @@ import com.softrangers.sonarcloudmobile.models.Recording;
 import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.models.Schedule;
 import com.softrangers.sonarcloudmobile.utils.PatternLockUtils;
-import com.softrangers.sonarcloudmobile.utils.api.AudioSocket;
 import com.softrangers.sonarcloudmobile.utils.api.DataSocketService;
+import com.softrangers.sonarcloudmobile.utils.api.SendAudioThread;
 import com.softrangers.sonarcloudmobile.utils.ui.BaseActivity;
 import com.softrangers.sonarcloudmobile.utils.RepeatingCheck;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
@@ -73,10 +75,8 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
     private Request.Builder mRequestBuilder;
     private String mAction;
     public static DataSocketService dataSocketService;
-    public static AudioSocket audioSocket;
     private static int repeatingOption;
     private static String endDate;
-    private static int initialRepeatingOption;
 
 
     @Override
@@ -84,9 +84,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_schedule);
         Intent socketIntent = new Intent(this, DataSocketService.class);
-        Intent audioIntent = new Intent(this, AudioSocket.class);
         bindService(socketIntent, mDataServiceConnection, Context.BIND_AUTO_CREATE);
-        bindService(audioIntent, mAudioSocketConnection, BIND_AUTO_CREATE);
         IntentFilter dataIntentFilter = new IntentFilter(Api.Command.UPDATE_SCHEDULE);
         dataIntentFilter.addAction(Api.Command.CREATE_SCHEDULE);
         dataIntentFilter.addAction(Api.Command.SEND_AUDIO);
@@ -128,7 +126,6 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                 mAdapter = new ScheduleEditAdapter(buildAdaptersList(schedule));
                 mRequestBuilder.command(Api.Command.UPDATE_SCHEDULE);
                 mRequestBuilder.scheduleId(String.valueOf(schedule.getScheduleID()));
-                initialRepeatingOption = schedule.getRepeatOption();
                 isUnlocked = true;
                 break;
         }
@@ -141,21 +138,6 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         public void onServiceConnected(ComponentName name, IBinder service) {
             // get the service instance
             dataSocketService = ((DataSocketService.LocalBinder) service).getService();
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            // remove service instance
-            dataSocketService = null;
-        }
-    };
-
-    // needed to bind AudioSocket to current class
-    protected ServiceConnection mAudioSocketConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            // get the service instance
-            audioSocket = ((AudioSocket.LocalBinder) service).getService();
         }
 
         @Override
@@ -368,7 +350,6 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         unregisterReceiver(mBroadcastReceiver);
         unregisterReceiver(mAudioSendingReceiver);
         unbindService(mDataServiceConnection);
-        unbindService(mAudioSocketConnection);
     }
 
     /**
@@ -549,18 +530,11 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         public void onReceive(Context context, Intent intent) {
             try {
                 String action = intent.getAction();
-                if (action.equals(READY_FOR_DATA)) {
-                    onServerReadyForData();
-                    return;
-                }
                 JSONObject jsonResponse = new JSONObject(intent.getExtras().getString(action));
                 boolean success = jsonResponse.optBoolean("success", false);
                 if (!success) {
                     String message = jsonResponse.optString("message", getString(R.string.unknown_error));
                     onCommandFailure(message);
-                    return;
-                } else if (audioSocket.isAudioConnectionReady()) {
-                    onAudioSent();
                     return;
                 }
                 switch (action) {
@@ -648,13 +622,6 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         recording.setRecordingId(response.getInt("recordingID"));
         Request.Builder requestBuilder = new Request.Builder();
         requestBuilder.command(Api.Command.SEND).key(sendAudioKey);
-        audioSocket.sendRequest(requestBuilder.build().toJSON());
-    }
-
-    /**
-     * Called by {@link ScheduleActivity#mAudioSendingReceiver} when server says "Ready for data."
-     */
-    private void onServerReadyForData() {
         try {
             File file = new File(recording.getFilePath());
             int size = (int) file.length();
@@ -663,12 +630,35 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
             BufferedInputStream bis = new BufferedInputStream(fis);
             bis.read(bytes, 0, bytes.length);
             bis.close();
-            audioSocket.sendAudio(bytes);
+            JSONObject request = requestBuilder.build().toJSON();
+            request.remove("seq");
+            new SendAudioThread(bytes, request, mSendAudioHandler);
         } catch (Exception e) {
             onErrorOccurred();
             e.printStackTrace();
         }
     }
+
+    private Handler mSendAudioHandler = new Handler(Looper.getMainLooper()) {
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+                case SendAudioThread.SENDING_STARTED: {
+                    break;
+                }
+                case SendAudioThread.SENDING_SUCCEED: {
+                    dismissLoading();
+                    onAudioSent();
+                    break;
+                }
+                case SendAudioThread.SENDING_FAILED: {
+                    dismissLoading();
+                    onErrorOccurred();
+                    break;
+                }
+            }
+        }
+    };
 
     /**
      * Called when the data is sent

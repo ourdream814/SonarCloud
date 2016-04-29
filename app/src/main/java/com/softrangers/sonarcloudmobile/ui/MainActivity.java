@@ -36,7 +36,6 @@ import com.softrangers.sonarcloudmobile.ui.fragments.SettingsFragment;
 import com.softrangers.sonarcloudmobile.utils.PatternLockUtils;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
-import com.softrangers.sonarcloudmobile.utils.api.AudioSocket;
 import com.softrangers.sonarcloudmobile.utils.api.ConnectionReceiver;
 import com.softrangers.sonarcloudmobile.utils.api.DataSocketService;
 import com.softrangers.sonarcloudmobile.utils.observers.GroupObserver;
@@ -72,7 +71,6 @@ public class MainActivity extends BaseActivity implements
     private static ScheduleFragment scheduleFragment;
     private static SettingsFragment settingsFragment;
     public static DataSocketService dataSocketService;
-    public static AudioSocket audioSocket;
 
     // set selected items to send the record to them
     public static ArrayList<Receiver> selectedReceivers = new ArrayList<>();
@@ -89,9 +87,7 @@ public class MainActivity extends BaseActivity implements
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         Intent socketIntent = new Intent(this, DataSocketService.class);
-        Intent audioIntent = new Intent(this, AudioSocket.class);
         bindService(socketIntent, mDataServiceConnection, Context.BIND_AUTO_CREATE);
-        bindService(audioIntent, mAudioSocketConnection, Context.BIND_AUTO_CREATE);
         // initialize bottom buttons
         assert mToolbarTitle != null;
         mToolbarTitle = (TextView) findViewById(R.id.main_activity_toolbarTitle);
@@ -151,21 +147,6 @@ public class MainActivity extends BaseActivity implements
         public void onServiceConnected(ComponentName name, IBinder service) {
             // get the service instance
             dataSocketService = ((DataSocketService.LocalBinder) service).getService();
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            // remove service instance
-            dataSocketService = null;
-        }
-    };
-
-    // needed to bind AudioSocket to current class
-    protected ServiceConnection mAudioSocketConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            // get the service instance
-            audioSocket = ((AudioSocket.LocalBinder) service).getService();
         }
 
         @Override
@@ -482,7 +463,6 @@ public class MainActivity extends BaseActivity implements
             ConnectionReceiver.getInstance().removeOnResponseListener(this);
             SonarCloudApp.getInstance().stopKeepingConnection();
             unregisterReceiver(mLoginReceiver);
-            unbindService(mAudioSocketConnection);
             unbindService(mDataServiceConnection);
         } catch (Exception e) {
             Log.e(this.getClass().getSimpleName(), "OnDestroy(): " + e.getMessage());
@@ -606,7 +586,7 @@ public class MainActivity extends BaseActivity implements
                         unbindService(mDataServiceConnection);
                         finish();
                     } else if (action.equals(ScheduleActivity.ACTION_ADD_SCHEDULE)) {
-                        registerReceiver(recordFragment.mAudioSendingReceiver, recordFragment.getIntentFilter());
+//                        registerReceiver(recordFragment.mAudioSendingReceiver, recordFragment.getIntentFilter());
                     }
                     break;
             }
@@ -615,7 +595,6 @@ public class MainActivity extends BaseActivity implements
 
     /**
      * Add observers to the list
-     *
      * @param observer which will be notified when add group activity sent the newly created group
      */
     @Override
@@ -625,7 +604,6 @@ public class MainActivity extends BaseActivity implements
 
     /**
      * Remove observers from the list
-     *
      * @param observer which you want to remove from the list
      */
     @Override

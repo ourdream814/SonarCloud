@@ -71,7 +71,11 @@ public class OpusPlayer {
                     playAudio(recording, position, handler);
                 } catch (Exception e) {
                     e.printStackTrace();
-
+                    Message message = handler.obtainMessage();
+                    message.what = STATE_STOPPED;
+                    message.arg1 = position;
+                    message.obj = recording;
+                    handler.sendMessage(message);
                 }
             }
         }).start();

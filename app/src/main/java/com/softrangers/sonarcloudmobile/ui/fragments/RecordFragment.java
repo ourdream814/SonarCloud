@@ -36,6 +36,7 @@ import com.softrangers.sonarcloudmobile.ui.MainActivity;
 import com.softrangers.sonarcloudmobile.ui.ScheduleActivity;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
+import com.softrangers.sonarcloudmobile.utils.api.SendAudioThread;
 import com.softrangers.sonarcloudmobile.utils.opus.OpusPlayer;
 import com.softrangers.sonarcloudmobile.utils.opus.OpusRecorder;
 import com.softrangers.sonarcloudmobile.utils.opus.OpusRecorder.RecorderState;
@@ -59,7 +60,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         OpusRecorder.OnRecordListener {
 
     private static final int ADD_SCHEDULE_REQUEST_CODE = 1813;
-    private static final String READY_FOR_DATA = "Ready for data.";
+
     private static final int SAMPLE_RATE = 48000;
     private static final int BITRATE = 16000;
     private static final int CHANNEL = 1;
@@ -84,6 +85,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
     private static OpusRecorder opusRecorder;
     private OpusPlayer mOpusPlayer;
     private RecordingLayout mRecordingLayout;
+    private String mKey;
 
 
     public RecordFragment() {
@@ -152,8 +154,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
         IntentFilter intentFilter = new IntentFilter(Api.Command.SEND_AUDIO);
         intentFilter.addAction(Api.Command.SEND);
         intentFilter.addAction(Api.EXCEPTION);
-        intentFilter.addAction(Api.AUDIO_DATA_RESULT);
-        intentFilter.addAction(READY_FOR_DATA);
         return intentFilter;
     }
 
@@ -527,7 +527,11 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                             case DISMISS_EVENT_TIMEOUT:
                             case DISMISS_EVENT_CONSECUTIVE:
                             case DISMISS_EVENT_MANUAL:
-                                MainActivity.audioSocket.sendAudio(audioData);
+                                Request.Builder requestBuilder = new Request.Builder();
+                                requestBuilder.command(Api.Command.SEND).key(mKey);
+                                JSONObject request = requestBuilder.build().toJSON();
+                                request.remove("seq");
+                                new SendAudioThread(audioData, request, mAudioHandler).start();
                                 break;
                         }
                     }
@@ -724,24 +728,12 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                 if (ScheduleActivity.fromScheduleActivity) return;
                 if (mActivity.mSelectedFragment == MainActivity.SelectedFragment.ANNOUNCEMENTS) {
                     String action = intent.getAction();
-                    if (action.equals(READY_FOR_DATA)) {
-                        onServerReadyForData();
-                        return;
-                    }
-                    if (action.equals(Api.AUDIO_DATA_RESULT)) {
-                        onAudioSent();
-                        return;
-                    }
-                    if (action.equals(Api.EXCEPTION)) {
-                        onErrorOccurred();
-                        return;
-                    }
                     JSONObject jsonResponse = new JSONObject(intent.getExtras().getString(action));
-
                     boolean success = jsonResponse.optBoolean("success", false);
-                    if (!success && !MainActivity.audioSocket.isAudioConnectionReady()) {
+                    if (!success) {
                         String message = jsonResponse.optString("message");
-                        onCommandFailure(message);
+                        if (message != null && !message.equals(""))
+                            onCommandFailure(message);
                         return;
                     }
 
@@ -816,19 +808,64 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
      */
     private void onKeyAndIDReceived(JSONObject response) throws JSONException {
         if (mRecording == null) mRecording = new Recording();
-        String sendAudioKey = response.getString("key");
+        mKey = response.getString("key");
         mRecording.setRecordingId(response.getInt("recordingID"));
         Request.Builder requestBuilder = new Request.Builder();
-        requestBuilder.command(Api.Command.SEND).key(sendAudioKey);
+        requestBuilder.command(Api.Command.SEND).key(mKey);
         JSONObject request = requestBuilder.build().toJSON();
         request.remove("seq");
-        int count = 0;
-        while (!MainActivity.audioSocket.isAudioConnectionReady()) {
-            count++;
-            Log.i("Waiting connection", String.valueOf(count));
+        if (mSelectedLayout == SelectedLayout.RECORDING) {
+            try {
+                File file = new File(mRecording.getFilePath());
+                int size = (int) file.length();
+                byte[] bytes = new byte[size];
+                FileInputStream fis = new FileInputStream(new File(mRecording.getFilePath()));
+                BufferedInputStream bis = new BufferedInputStream(fis);
+                bis.read(bytes, 0, bytes.length);
+                bis.close();
+                new SendAudioThread(bytes, request, mAudioHandler).start();
+            } catch (Exception e) {
+                isSending = false;
+                if (mSendButton != null && mSendingProgress != null) {
+                    mSendButton.setVisibility(View.VISIBLE);
+                    mSendingProgress.setVisibility(View.GONE);
+                    mSendButton.setClickable(true);
+                }
+                onErrorOccurred();
+                e.printStackTrace();
+            }
+        } else if (mSelectedLayout == SelectedLayout.STREAMING) {
+            opusRecorder.startStreaming(request);
         }
-        MainActivity.audioSocket.sendRequest(request);
     }
+
+    private Handler mAudioHandler = new Handler(Looper.getMainLooper()) {
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+                case SendAudioThread.SENDING_STARTED: {
+                    mActivity.dismissLoading();
+                    break;
+                }
+                case SendAudioThread.SENDING_SUCCEED: {
+                    mActivity.dismissLoading();
+                    onAudioSent();
+                    break;
+                }
+                case SendAudioThread.SENDING_FAILED: {
+                    mActivity.dismissLoading();
+                    isSending = false;
+                    if (mSendButton != null && mSendingProgress != null) {
+                        mSendButton.setVisibility(View.VISIBLE);
+                        mSendingProgress.setVisibility(View.GONE);
+                        mSendButton.setClickable(true);
+                    }
+                    onErrorOccurred();
+                    break;
+                }
+            }
+        }
+    };
 
     /**
      * Called when server says "Ready for data."
@@ -845,7 +882,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                     BufferedInputStream bis = new BufferedInputStream(fis);
                     bis.read(bytes, 0, bytes.length);
                     bis.close();
-                    MainActivity.audioSocket.sendAudio(bytes);
+//                    MainActivity.audioSocket.sendAudio(bytes);
                 } catch (Exception e) {
                     isSending = false;
                     if (mSendButton != null && mSendingProgress != null) {
@@ -870,7 +907,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
             }
             case STREAMING: {
                 mActivity.dismissLoading();
-                opusRecorder.startStreaming(MainActivity.audioSocket.getAudioSocket());
+//                opusRecorder.startStreaming(MainActivity.audioSocket.getAudioSocket());
                 break;
             }
         }

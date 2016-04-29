@@ -6,18 +6,31 @@ import android.media.MediaRecorder;
 import android.support.annotation.Nullable;
 
 import com.softrangers.sonarcloudmobile.utils.AudioProcessor;
+import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
+import com.softrangers.sonarcloudmobile.utils.api.Api;
 
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.net.Socket;
+import java.security.SecureRandom;
 
+import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
 
 /**
  * Created by eduard on 4/2/16.
- *
  */
 public class OpusRecorder {
 
+    public static final String READY_FOR_DATA = "Ready for data.";
     private static RecorderState recorderState;
     public static final int SAMPLE_RATE = 48000;
     private static final int CHANNEL = 1;
@@ -44,7 +57,7 @@ public class OpusRecorder {
         }).start();
     }
 
-    public void startStreaming(final SSLSocket sslSocket) {
+    public void startStreaming(final JSONObject request) {
         if (recorderState == RecorderState.RECORDING || recorderState == RecorderState.STREAMING
                 || recorderState == RecorderState.PAUSED) {
             stopRecording();
@@ -53,7 +66,38 @@ public class OpusRecorder {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                recordAudio(sslSocket);
+                try {
+                    // initialize socket factory and all-trust TrustyManager
+                    SecureRandom secureRandom = new SecureRandom();
+                    SSLContext sslContext = SSLContext.getInstance("TLS");
+                    sslContext.init(null, SonarCloudApp.getInstance().getTrustManagers(), secureRandom);
+                    SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
+                    SSLSocket sslSocket = (SSLSocket) sslSocketFactory.createSocket(
+                            new Socket(Api.M_URL, Api.AUDIO_PORT), Api.M_URL, Api.AUDIO_PORT, true);
+                    BufferedWriter writeOut = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream()));
+                    BufferedReader readIn = new BufferedReader(new InputStreamReader(sslSocket.getInputStream()));
+                    writeOut.write(request.toString());
+                    writeOut.newLine();
+                    writeOut.flush();
+                    String line = readIn.readLine();
+                    if (line != null) {
+                        JSONObject jsonResponse = new JSONObject(line);
+                        String message = jsonResponse.optString("message", Api.EXCEPTION);
+                        if (READY_FOR_DATA.equalsIgnoreCase(message)) {
+                            recordAudio(sslSocket);
+                        } else {
+                            if (mOnRecordListener != null) {
+                                mOnRecordListener.onRecordFailed(new Exception(message), recorderState);
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    recorderState = RecorderState.STOPPED;
+                    if (mOnRecordListener != null) {
+                        mOnRecordListener.onRecordFailed(e, recorderState);
+                    }
+                    e.printStackTrace();
+                }
             }
         }).start();
     }
@@ -123,6 +167,14 @@ public class OpusRecorder {
             recorderState = RecorderState.STOPPED;
             if (mOnRecordListener != null) {
                 mOnRecordListener.onRecordFailed(e, recorderState);
+            }
+        } finally {
+            if (sslSocket != null) {
+                try {
+                    sslSocket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         }
     }
