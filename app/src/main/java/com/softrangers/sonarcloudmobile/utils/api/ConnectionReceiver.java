@@ -82,7 +82,12 @@ public class ConnectionReceiver extends BroadcastReceiver {
                     connected.onAudioConnectionClosed();
                 }
                 break;
-
+            case Api.CONNECTION_LOST: {
+                for (OnConnected connected : listeners) {
+                    connected.onInternetConnectionLost();
+                }
+                break;
+            }
         }
     }
 

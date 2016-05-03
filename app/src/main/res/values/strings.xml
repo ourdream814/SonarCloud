@@ -11,15 +11,13 @@
     <string name="schedule_announcement">Schedule an announcement</string>
     <string name="settings">Settings</string>
     <string name="login_error">Log-in error</string>
-    <string name="unknown_error">Something went wrong, please try again</string>
+    <string name="unknown_error">Something went wrong.</string>
     <string name="error">Error</string>
     <string name="loading">Connecting…</string>
     <string name="receivers">PAs</string>
     <string name="groups">Groups</string>
     <string name="sign_out">Sign Out</string>
 
-    <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="add_group">Add new group</string>
     <string name="group_name">Group Name</string>
     <string name="phone_pin_number">Phone PIN Number</string>

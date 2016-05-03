@@ -17,6 +17,7 @@ import android.widget.ProgressBar;
 import com.softrangers.sonarcloudmobile.R;
 import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.models.User;
+import com.softrangers.sonarcloudmobile.utils.api.DataSocketService;
 import com.softrangers.sonarcloudmobile.utils.lock.PatternLockUtils;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
@@ -34,15 +35,15 @@ public class LoginActivity extends BaseActivity implements ConnectionReceiver.On
     private ProgressBar mProgressBar;
     private Button mSignIn;
     private User mUser;
-    public static AuthService authService;
     public static boolean isSocketConnected;
+    public static DataSocketService dataSocketService;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
-        Intent intent = new Intent(this, AuthService.class);
-        bindService(intent, mAuthServiceConnection, Context.BIND_AUTO_CREATE);
+        Intent intent = new Intent(this, DataSocketService.class);
+        bindService(intent, mDataServiceConnection, Context.BIND_AUTO_CREATE);
 
         IntentFilter intentFilter = new IntentFilter(Api.Command.AUTHENTICATE);
         intentFilter.addAction(Api.Command.IDENTIFIER);
@@ -95,20 +96,19 @@ public class LoginActivity extends BaseActivity implements ConnectionReceiver.On
     }
 
     // needed to bind DataSocketService to current class
-    protected ServiceConnection mAuthServiceConnection = new ServiceConnection() {
+    protected ServiceConnection mDataServiceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             // get the service instance
-            authService = ((AuthService.LocalBinder) service).getService();
+            dataSocketService = ((DataSocketService.LocalBinder) service).getService();
         }
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
             // remove service instance
-            authService = null;
+            dataSocketService = null;
         }
     };
-
 
     BroadcastReceiver mLoginReceiver = new BroadcastReceiver() {
         @Override
@@ -177,7 +177,7 @@ public class LoginActivity extends BaseActivity implements ConnectionReceiver.On
                 .seq(SonarCloudApp.SEQ_VALUE)
                 .build().toJSON();
         // Send the request
-        authService.sendRequest(req);
+        dataSocketService.sendRequest(req);
     }
 
 
@@ -213,7 +213,7 @@ public class LoginActivity extends BaseActivity implements ConnectionReceiver.On
             requestBuilder.action(Api.Action.RENEW);
             requestBuilder.identifier(identifier);
         }
-        authService.sendRequest(requestBuilder.build().toJSON());
+        dataSocketService.sendRequest(requestBuilder.build().toJSON());
     }
 
     /**
@@ -224,7 +224,7 @@ public class LoginActivity extends BaseActivity implements ConnectionReceiver.On
     public void onCommandFailure(final String message) {
         // show an alert dialog to user with server message
         alertUserAboutError(getString(R.string.login_error), message);
-        authService.restartConnection();
+        dataSocketService.restartConnection();
         // hide loading ui
         runOnUiThread(new Runnable() {
             @Override
@@ -292,14 +292,14 @@ public class LoginActivity extends BaseActivity implements ConnectionReceiver.On
         super.onDestroy();
         ConnectionReceiver.getInstance().removeOnResponseListener(this);
         unregisterReceiver(mLoginReceiver);
-        unbindService(mAuthServiceConnection);
+        unbindService(mDataServiceConnection);
     }
 
     @Override
     public void onInternetConnectionRestored() {
         Snackbar.make(mSignIn, "Internet connection restored",
                 Snackbar.LENGTH_SHORT).show();
-        authService.restartConnection();
+        dataSocketService.restartConnection();
         showLoading();
     }
 
@@ -345,7 +345,7 @@ public class LoginActivity extends BaseActivity implements ConnectionReceiver.On
                             case DISMISS_EVENT_TIMEOUT:
                             case DISMISS_EVENT_CONSECUTIVE:
                             case DISMISS_EVENT_MANUAL:
-                                authService.restartConnection();
+                                dataSocketService.restartConnection();
                                 break;
                         }
                     }

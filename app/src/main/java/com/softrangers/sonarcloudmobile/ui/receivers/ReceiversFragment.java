@@ -395,7 +395,6 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
 //                if (mActivity.mSelectedFragment == MainActivity.SelectedFragment.RECEIVERS) {
                 String action = intent.getAction();
                 JSONObject jsonResponse = new JSONObject(intent.getExtras().getString(action));
-                JSONObject jsonRequest = new JSONObject(intent.getExtras().getString(Api.REQUEST_MESSAGE));
                 boolean success = jsonResponse.optBoolean("success", false);
                 if (!success) {
                     String message = jsonResponse.optString("message", mActivity.getString(R.string.unknown_error));
@@ -404,13 +403,13 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
                 }
                 switch (action) {
                     case Api.Command.ORGANISATIONS:
-                        onOrganisationsReceived(jsonResponse, jsonRequest);
+                        onOrganisationsReceived(jsonResponse);
                         break;
                     case Api.Command.RECEIVERS:
-                        onReceiversReceived(jsonResponse, jsonRequest);
+                        onReceiversReceived(jsonResponse);
                         break;
                     case Api.Command.RECEIVER_GROUPS:
-                        onGroupsReceived(jsonResponse, jsonRequest);
+                        onGroupsReceived(jsonResponse);
                         break;
                 }
 //                }
@@ -421,7 +420,7 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
         }
     };
 
-    private void onOrganisationsReceived(JSONObject response, JSONObject jsonRequest) {
+    private void onOrganisationsReceived(JSONObject response) {
         // Build a list of organisations
         mPASystems = PASystem.build(response);
         // Start getting receivers for each organisation
@@ -443,11 +442,10 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
             }
         }
         response.remove("seq");
-        jsonRequest.remove("seq");
         setUpReceiversListView(mPASystems);
     }
 
-    private void onReceiversReceived(JSONObject response, JSONObject jsonRequest) {
+    private void onReceiversReceived(JSONObject response) {
         hideLoading();
         try {
             // Parse the response and build an receivers array list
@@ -466,7 +464,6 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
                 }
             }
             response.remove("seq");
-            jsonRequest.remove("seq");
             setUpReceiversListView(mPASystems);
             mReceiverListAdapter.notifyDataSetChanged();
         } catch (Exception e) {
@@ -474,12 +471,11 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
         }
     }
 
-    private void onGroupsReceived(JSONObject response, JSONObject jsonRequest) {
+    private void onGroupsReceived(JSONObject response) {
         hideLoading();
         mGroups = Group.build(response);
         setUpGroupsListView(mGroups);
         response.remove("seq");
-        jsonRequest.remove("seq");
         setUpReceiversListView(mPASystems);
     }
 
@@ -512,6 +508,17 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
     public void onInternetConnectionLost() {
         Snackbar.make(mReceiversLayout, "Internet connection lost",
                 Snackbar.LENGTH_SHORT).show();
+
+        if (mReceiverListAdapter != null)
+            mReceiverListAdapter.clearList();
+
+        if (mGroupsListAdapter != null)
+            mGroupsListAdapter.clearList();
+
+        MainActivity.selectedGroup = null;
+
+        if (MainActivity.selectedReceivers != null)
+            MainActivity.selectedReceivers.clear();
     }
 
     @Override
@@ -528,7 +535,9 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
 
     @Override
     public void onConnectTimeOut() {
-
+        hideLoading();
+        mActivity.dismissLoading();
+        Snackbar.make(mReceiversLayout, "Connection time out.", Snackbar.LENGTH_SHORT).show();
     }
 
     @Override

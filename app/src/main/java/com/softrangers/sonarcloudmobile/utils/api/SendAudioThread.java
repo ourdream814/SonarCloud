@@ -1,15 +1,9 @@
 package com.softrangers.sonarcloudmobile.utils.api;
 
-import android.content.Intent;
 import android.os.Handler;
-import android.os.Message;
 
-import com.softrangers.sonarcloudmobile.models.Request;
-import com.softrangers.sonarcloudmobile.utils.FileLog;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 
-import org.joda.time.DateTime;
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -19,7 +13,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.security.SecureRandom;
 
 import javax.net.ssl.SSLContext;
@@ -67,32 +63,40 @@ public class SendAudioThread extends Thread {
         SSLSocket sslSocket = null;
         try {
             if (!mIsFailed) {
-                sslSocket = (SSLSocket) mSSLSocketFactory.createSocket(
-                        new Socket(Api.M_URL, Api.AUDIO_PORT), Api.M_URL, Api.AUDIO_PORT, true);
+                Socket socket = new Socket();
+                SocketAddress socketAddress = new InetSocketAddress(Api.M_URL, Api.AUDIO_PORT);
+                socket.connect(socketAddress, 7000);
+                sslSocket = (SSLSocket) mSSLSocketFactory.createSocket(socket, Api.M_URL, Api.AUDIO_PORT, true);
                 // Start socket handshake
-                sslSocket.startHandshake();
-                OutputStream outputStream = sslSocket.getOutputStream();
-                InputStream inputStream = sslSocket.getInputStream();
-                BufferedWriter writeOut = new BufferedWriter(new OutputStreamWriter(outputStream));
-                BufferedReader readIn = new BufferedReader(new InputStreamReader(inputStream));
-                writeOut.write(mRequest.toString());
-                writeOut.newLine();
-                writeOut.flush();
-                String line = readIn.readLine();
-                if (line != null) {
-                    JSONObject jsonResponse = new JSONObject(line);
-                    String message = jsonResponse.optString("message", Api.EXCEPTION);
-                    if (READY_FOR_DATA.equalsIgnoreCase(message)) {
-                        outputStream.write(mAudioData, 0, mAudioData.length);
-                        outputStream.flush();
+                if (sslSocket.isConnected()) {
+                    sslSocket.startHandshake();
+                    OutputStream outputStream = sslSocket.getOutputStream();
+                    InputStream inputStream = sslSocket.getInputStream();
+                    BufferedWriter writeOut = new BufferedWriter(new OutputStreamWriter(outputStream));
+                    BufferedReader readIn = new BufferedReader(new InputStreamReader(inputStream));
+                    writeOut.write(mRequest.toString());
+                    writeOut.newLine();
+                    writeOut.flush();
+                    String line = readIn.readLine();
+                    if (line != null) {
+                        JSONObject jsonResponse = new JSONObject(line);
+                        String message = jsonResponse.optString("message", Api.EXCEPTION);
+                        if (READY_FOR_DATA.equalsIgnoreCase(message)) {
+                            outputStream.write(mAudioData, 0, mAudioData.length);
+                            outputStream.flush();
+                        } else {
+                            mHandler.sendEmptyMessage(SENDING_FAILED);
+                            return;
+                        }
+                        mHandler.sendEmptyMessage(SENDING_SUCCEED);
                     } else {
                         mHandler.sendEmptyMessage(SENDING_FAILED);
-                        return;
                     }
-                    mHandler.sendEmptyMessage(SENDING_SUCCEED);
                 } else {
                     mHandler.sendEmptyMessage(SENDING_FAILED);
                 }
+            } else {
+                mHandler.sendEmptyMessage(SENDING_FAILED);
             }
         } catch (Exception e) {
             mHandler.sendEmptyMessage(SENDING_FAILED);

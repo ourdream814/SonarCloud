@@ -651,8 +651,10 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
 
     @Override
     public void onInternetConnectionLost() {
+        mActivity.dismissLoading();
         Snackbar.make(mLoadingProgress, "Internet connection lost",
                 Snackbar.LENGTH_SHORT).show();
+        hideLoading();
     }
 
     @Override
@@ -666,6 +668,7 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
 
     @Override
     public void onConnectionFailed() {
+        mActivity.dismissLoading();
         hideLoading();
         if (clickedRecording != null && clickedPosition != -1 && mClickedItemSeekBar != null && mClickedItemSeekBarTime != null) {
             clickedRecording.setLoading(false);
@@ -676,7 +679,9 @@ public class ScheduleFragment extends BaseFragment implements RadioGroup.OnCheck
 
     @Override
     public void onConnectTimeOut() {
-        Snackbar.make(mLoadingProgress, "Connection time out. Trying again...", Snackbar.LENGTH_SHORT).show();
+        Snackbar.make(mLoadingProgress, "Connection time out.", Snackbar.LENGTH_SHORT).show();
+        hideLoading();
+        mActivity.dismissLoading();
         if (clickedRecording != null && clickedPosition != -1 && mClickedItemSeekBar != null && mClickedItemSeekBarTime != null) {
             clickedRecording.setLoading(false);
             startGettingAudioData(clickedRecording, mClickedItemSeekBar, mClickedItemSeekBarTime, clickedPosition);

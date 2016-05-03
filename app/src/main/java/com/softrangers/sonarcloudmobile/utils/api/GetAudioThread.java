@@ -18,7 +18,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.security.SecureRandom;
 
 import javax.net.ssl.SSLContext;
@@ -67,36 +69,42 @@ public class GetAudioThread extends Thread {
         SSLSocket sslSocket = null;
         try {
             if (!mIsFailed) {
-                sslSocket = (SSLSocket) mSSLSocketFactory.createSocket(
-                        new Socket(Api.M_URL, Api.AUDIO_PORT), Api.M_URL, Api.AUDIO_PORT, true);
-                // Start socket handshake
-                sslSocket.startHandshake();
-                OutputStream outputStream = sslSocket.getOutputStream();
-                InputStream inputStream = sslSocket.getInputStream();
-                BufferedWriter writeOut = new BufferedWriter(new OutputStreamWriter(outputStream));
-                BufferedReader readIn = new BufferedReader(new InputStreamReader(inputStream));
-                writeOut.write(mRequest.toString());
-                writeOut.newLine();
-                writeOut.flush();
-                String line = readIn.readLine();
-                if (line != null) {
-                    JSONObject jsonResponse = new JSONObject(line);
-                    String message = jsonResponse.optString("message", Api.EXCEPTION);
-                    if (READY_FOR_DATA.equalsIgnoreCase(message)) {
-                        byte[] buffer = new byte[1024];
-                        BufferedOutputStream baos = new BufferedOutputStream(new FileOutputStream(mFile));
-                        int bytesRead;
-                        while ((bytesRead = inputStream.read(buffer, 0, buffer.length)) != -1) {
-                            baos.write(buffer, 0, bytesRead);
+                Socket socket = new Socket();
+                SocketAddress socketAddress = new InetSocketAddress(Api.M_URL, Api.AUDIO_PORT);
+                socket.connect(socketAddress, 7000);
+                sslSocket = (SSLSocket) mSSLSocketFactory.createSocket(socket, Api.M_URL, Api.AUDIO_PORT, true);
+                if (sslSocket.isConnected()) {
+                    // Start socket handshake
+                    sslSocket.startHandshake();
+                    OutputStream outputStream = sslSocket.getOutputStream();
+                    InputStream inputStream = sslSocket.getInputStream();
+                    BufferedWriter writeOut = new BufferedWriter(new OutputStreamWriter(outputStream));
+                    BufferedReader readIn = new BufferedReader(new InputStreamReader(inputStream));
+                    writeOut.write(mRequest.toString());
+                    writeOut.newLine();
+                    writeOut.flush();
+                    String line = readIn.readLine();
+                    if (line != null) {
+                        JSONObject jsonResponse = new JSONObject(line);
+                        String message = jsonResponse.optString("message", Api.EXCEPTION);
+                        if (READY_FOR_DATA.equalsIgnoreCase(message)) {
+                            byte[] buffer = new byte[1024];
+                            BufferedOutputStream baos = new BufferedOutputStream(new FileOutputStream(mFile));
+                            int bytesRead;
+                            while ((bytesRead = inputStream.read(buffer, 0, buffer.length)) != -1) {
+                                baos.write(buffer, 0, bytesRead);
+                            }
+                        } else {
+                            mHandler.sendEmptyMessage(READING_FAILED);
+                            return;
                         }
+                        Message msg = mHandler.obtainMessage();
+                        msg.obj = mFile.getAbsolutePath();
+                        msg.what = READING_SUCCEED;
+                        mHandler.sendMessage(msg);
                     } else {
                         mHandler.sendEmptyMessage(READING_FAILED);
-                        return;
                     }
-                    Message msg = mHandler.obtainMessage();
-                    msg.obj = mFile.getAbsolutePath();
-                    msg.what = READING_SUCCEED;
-                    mHandler.sendMessage(msg);
                 } else {
                     mHandler.sendEmptyMessage(READING_FAILED);
                 }

@@ -31,6 +31,7 @@ import com.softrangers.sonarcloudmobile.models.Recording;
 import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.models.Schedule;
 import com.softrangers.sonarcloudmobile.ui.MainActivity;
+import com.softrangers.sonarcloudmobile.utils.api.ConnectionReceiver;
 import com.softrangers.sonarcloudmobile.utils.lock.PatternLockUtils;
 import com.softrangers.sonarcloudmobile.utils.api.DataSocketService;
 import com.softrangers.sonarcloudmobile.utils.api.SendAudioThread;
@@ -52,7 +53,7 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
 
-public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapter.OnItemClickListener {
+public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapter.OnItemClickListener, ConnectionReceiver.OnConnected {
 
     public static final String ACTION_ADD_SCHEDULE = "com.softrangers.sonarcloudmobile.ACTION_ADD_SCHEDULE";
     public static final String ACTION_EDIT_SCHEDULE = "com.softrangers.sonarcloudmobile.ACTION_EDIT_SCHEDULE";
@@ -90,6 +91,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         dataIntentFilter.addAction(Api.Command.CREATE_SCHEDULE);
         dataIntentFilter.addAction(Api.Command.SEND_AUDIO);
         dataIntentFilter.addAction(Api.EXCEPTION);
+        ConnectionReceiver.getInstance().addOnConnectedListener(this);
         registerReceiver(mBroadcastReceiver, dataIntentFilter);
         mRequestBuilder = new Request.Builder();
         // instantiate all views for this activity
@@ -346,6 +348,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         super.onDestroy();
         unregisterReceiver(mBroadcastReceiver);
         unbindService(mDataServiceConnection);
+        ConnectionReceiver.getInstance().removeOnResponseListener(this);
     }
 
     /**
@@ -648,5 +651,41 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         } else {
             isUnlocked = true;
         }
+    }
+
+    @Override
+    public void onInternetConnectionRestored() {
+        dataSocketService.restartConnection();
+        Snackbar.make(mRecyclerView, "Internet connection restored",
+                Snackbar.LENGTH_SHORT).show();
+        showLoading();
+    }
+
+    @Override
+    public void onInternetConnectionLost() {
+        Snackbar.make(mRecyclerView, "Internet connection lost",
+                Snackbar.LENGTH_SHORT).show();
+        dismissLoading();
+    }
+
+    @Override
+    public void onSocketConnected() {
+        dismissLoading();
+    }
+
+    @Override
+    public void onConnectionFailed() {
+        dismissLoading();
+    }
+
+    @Override
+    public void onConnectTimeOut() {
+        dismissLoading();
+        Snackbar.make(mRecyclerView, "Connection time out.", Snackbar.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onAudioConnectionClosed() {
+        dismissLoading();
     }
 }

@@ -28,6 +28,7 @@ import android.widget.Toast;
 import com.softrangers.sonarcloudmobile.R;
 import com.softrangers.sonarcloudmobile.models.Group;
 import com.softrangers.sonarcloudmobile.models.Receiver;
+import com.softrangers.sonarcloudmobile.models.Request;
 import com.softrangers.sonarcloudmobile.models.User;
 import com.softrangers.sonarcloudmobile.ui.lock.LockAppActivity;
 import com.softrangers.sonarcloudmobile.ui.receivers.AddGroupActivity;
@@ -86,11 +87,18 @@ public class MainActivity extends BaseActivity implements
     }
 
     @Override
+    protected void onStart() {
+        super.onStart();
+        Intent socketIntent = new Intent(this, DataSocketService.class);
+        bindService(socketIntent, mDataServiceConnection, Context.BIND_AUTO_CREATE);
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Intent socketIntent = new Intent(this, DataSocketService.class);
-        bindService(socketIntent, mDataServiceConnection, Context.BIND_AUTO_CREATE);
+
+
         // initialize bottom buttons
         assert mToolbarTitle != null;
         mToolbarTitle = (TextView) findViewById(R.id.main_activity_toolbarTitle);
@@ -136,12 +144,6 @@ public class MainActivity extends BaseActivity implements
         }
 
         showLoading();
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-
     }
 
 
@@ -534,9 +536,10 @@ public class MainActivity extends BaseActivity implements
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (PatternLockUtils.checkConfirmPatternResult(this, requestCode, resultCode)) {
+            isUnlocked = false;
             finish();
             return;
-        } else {
+        } else if (!PatternLockUtils.checkConfirmPatternResult(this, requestCode, resultCode)) {
             isUnlocked = true;
         }
         if (data != null) {
@@ -552,13 +555,20 @@ public class MainActivity extends BaseActivity implements
                             break;
                         case ACTION_LOGIN:
                             registerReceiver(mLoginReceiver, intentFilter);
+                            // try to authenticate to server if user is logged in
+                            if (SonarCloudApp.getInstance().isLoggedIn()) {
+                                Request.Builder builder = new Request.Builder();
+                                builder.command(Api.Command.AUTHENTICATE);
+                                builder.device(Api.Device.CLIENT).method(Api.Method.IDENTIFIER).identifier(SonarCloudApp.getInstance().getIdentifier())
+                                        .secret(SonarCloudApp.getInstance().getSavedData()).seq(SonarCloudApp.SEQ_VALUE);
+                                dataSocketService.sendRequest(builder.build().toJSON());
+                            }
+                            showLoading();
                             try {
                                 Thread.sleep(200);
                             } catch (InterruptedException e) {
                                 e.printStackTrace();
                             }
-                            dataSocketService.restartConnection();
-                            showLoading();
                             if (selectedReceivers != null)
                                 selectedReceivers.clear();
                             selectedGroup = null;
@@ -592,6 +602,7 @@ public class MainActivity extends BaseActivity implements
             }
         } else {
             if (resultCode == RESULT_CANCELED) {
+                isUnlocked = false;
                 finish();
             }
         }

@@ -70,7 +70,6 @@ public class LockAppActivity extends BaseActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (PatternLockUtils.checkConfirmPatternResult(this, requestCode, resultCode)) {
             setResult(RESULT_CANCELED, getIntent().setAction("lock"));
-            isUnlocked = false;
             finish();
         } else {
             isUnlocked = true;

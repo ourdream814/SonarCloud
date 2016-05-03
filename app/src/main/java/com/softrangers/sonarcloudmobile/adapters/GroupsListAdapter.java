@@ -93,6 +93,11 @@ public class GroupsListAdapter extends RecyclerView.Adapter<GroupsListAdapter.Vi
         return mGroups;
     }
 
+    public void clearList() {
+        mGroups.clear();
+        notifyDataSetChanged();
+    }
+
     public class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
         final ImageView mCheckCircle;
         final TextView mGroupTitle;

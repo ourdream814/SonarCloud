@@ -196,6 +196,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                 }
                 // start stream the audio to server
                 if (mStreamingState == StreamingState.WAITING) {
+                    mActivity.showLoading();
                     startSendingAudioProcess(null, null, null);
                 } else if (mStreamingState == StreamingState.STREAMING) {
                     opusRecorder.stopRecording();
@@ -446,6 +447,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener,
                         mRecordingLayout = RecordingLayout.RECORDINGS;
                         break;
                     case STREAMING:
+                        mActivity.dismissLoading();
                         mStreamingState = StreamingState.STREAMING;
                         mRecordingLayout = RecordingLayout.STREAMING;
                         invalidateStreamViews(recorderState);

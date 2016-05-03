@@ -120,7 +120,7 @@ public class SonarCloudApp extends Application {
             Intent intent = new Intent(this, ConnectionKeeper.class);
             intent.setAction(Api.KEEP_CONNECTION);
             pendingIntent = PendingIntent.getBroadcast(this, 0, intent, 0);
-            alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), 50000, pendingIntent);
+            alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), 35000, pendingIntent);
         }
     }
 
