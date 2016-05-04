@@ -45,7 +45,6 @@ import javax.net.ssl.X509TrustManager;
 public class SonarCloudApp extends Application {
 
     private static final String LOGIN_RESULT = "com.softrangers.sonarcloudmobile.LOGIN_RESULT";
-    private static final String LOCK_PATTERN = "lock pattern preferences key";
     private static final String IS_APP_LOCKED = "IS_APP_LOCKED";
     private static final String LOGIN_STATUS = "login_status";
     private static final String USER_IDENTIFIER = "identifier";
@@ -82,12 +81,8 @@ public class SonarCloudApp extends Application {
     public boolean isConnected() {
         ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo networkInfo = cm.getActiveNetworkInfo();
-        if (networkInfo != null && networkInfo.isConnected()) {
-            // Wifi is connected
-            return true;
-        } else {
-            return false;
-        }
+        // Wifi is connected
+        return networkInfo != null && networkInfo.isConnected();
     }
 
     public void setAppIsLocked(boolean isLocked) {
@@ -98,16 +93,6 @@ public class SonarCloudApp extends Application {
 
     public boolean isAppLocked() {
         return preferences.getBoolean(IS_APP_LOCKED, false);
-    }
-
-    public void savePattern(String patternSHA1) {
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putString(LOCK_PATTERN, patternSHA1);
-        editor.apply();
-    }
-
-    public String getLockPattern() {
-        return preferences.getString(LOCK_PATTERN, null);
     }
 
     /**
@@ -123,21 +108,6 @@ public class SonarCloudApp extends Application {
             alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), 35000, pendingIntent);
         }
     }
-
-//    // needed to bind DataSocketService to current class
-//    protected ServiceConnection mDataServiceConnection = new ServiceConnection() {
-//        @Override
-//        public void onServiceConnected(ComponentName name, IBinder service) {
-//            // get the service instance
-//            dataSocketService = ((DataSocketService.LocalBinder) service).getService();
-//        }
-//
-//        @Override
-//        public void onServiceDisconnected(ComponentName name) {
-//            // remove service instance
-//            dataSocketService = null;
-//        }
-//    };
 
     /**
      * Check if application has permissions to use microphone

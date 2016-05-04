@@ -200,17 +200,10 @@ public class DataSocketService extends Service {
                 // if we got here than socket is disconnected
                 // let's try to connect again
                 isConnected = false;
+                restartConnection();
             } catch (Exception e) {
                 Intent intent = new Intent(Api.CONNECTION_TIME_OUT);
                 sendBroadcast(intent);
-//                try {
-//                    if (dataSocket != null)
-//                        dataSocket.close();
-//                } catch (IOException e1) {
-//                    e1.printStackTrace();
-//                } finally {
-//                    isConnected = false;
-//                }
             }
         }
     }
@@ -254,29 +247,5 @@ public class DataSocketService extends Service {
             Intent intent = new Intent(Api.CONNECTION_FAILED);
             sendBroadcast(intent);
         }
-    }
-
-    /**
-     * Close socket connection and set socket to null to free the resources
-     */
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-//        new Thread(new Runnable() {
-//            @Override
-//            public void run() {
-//                try {
-//                    readIn.close();
-//                    writeOut.close();
-//                    dataSocket.close();
-//                    isConnected = false;
-//                    Log.i(this.getClass().getSimpleName(), "onDestroy(): Socket closed");
-//                } catch (Exception e) {
-//                    e.printStackTrace();
-//                } finally {
-//                    dataSocket = null;
-//                }
-//            }
-//        }).start();
     }
 }
