@@ -139,9 +139,6 @@ public class MainActivity extends BaseActivity implements
 
         registerReceiver(mLoginReceiver, intentFilter);
         ConnectionReceiver.getInstance().addOnConnectedListener(this);
-        if (dataSocketService != null) {
-            dataSocketService.restartConnection();
-        }
 
         showLoading();
     }
@@ -506,26 +503,7 @@ public class MainActivity extends BaseActivity implements
 
     @Override
     public void onConnectTimeOut() {
-        Snackbar.make(mReceiversSelector, "Connection time out, trying to reconnect", Snackbar.LENGTH_LONG).setAction("CANCEL",
-                new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-
-                    }
-                }).setActionTextColor(getResources()
-                .getColor(R.color.colorAlertAction))
-                .setCallback(new Snackbar.Callback() {
-                    @Override
-                    public void onDismissed(Snackbar snackbar, int event) {
-                        switch (event) {
-                            case DISMISS_EVENT_TIMEOUT:
-                            case DISMISS_EVENT_CONSECUTIVE:
-                            case DISMISS_EVENT_MANUAL:
-                                dataSocketService.restartConnection();
-                                break;
-                        }
-                    }
-                }).show();
+        Snackbar.make(mReceiversSelector, "Connection time out.", Snackbar.LENGTH_LONG).show();
     }
 
     @Override

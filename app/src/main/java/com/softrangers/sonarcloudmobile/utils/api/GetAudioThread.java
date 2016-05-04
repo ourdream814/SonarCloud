@@ -41,7 +41,6 @@ public class GetAudioThread extends Thread {
     private JSONObject mRequest;
     private SSLSocketFactory mSSLSocketFactory;
     private Handler mHandler;
-    private boolean mIsFailed;
 
     public GetAudioThread(JSONObject request, Handler handler) {
         File dir = new File(SonarCloudApp.getInstance().getCacheDir().getAbsolutePath() + File.separator + "tmp");
@@ -55,11 +54,9 @@ public class GetAudioThread extends Thread {
             SSLContext sslContext = SSLContext.getInstance("TLS");
             sslContext.init(null, SonarCloudApp.getInstance().getTrustManagers(), secureRandom);
             mSSLSocketFactory = sslContext.getSocketFactory();
-            mIsFailed = false;
             mHandler.sendEmptyMessage(READING_STARTED);
         } catch (Exception e) {
             mHandler.sendEmptyMessage(READING_FAILED);
-            mIsFailed = true;
             e.printStackTrace();
         }
     }
@@ -68,43 +65,39 @@ public class GetAudioThread extends Thread {
     public void run() {
         SSLSocket sslSocket = null;
         try {
-            if (!mIsFailed) {
-                Socket socket = new Socket();
-                SocketAddress socketAddress = new InetSocketAddress(Api.M_URL, Api.AUDIO_PORT);
-                socket.connect(socketAddress, 7000);
-                sslSocket = (SSLSocket) mSSLSocketFactory.createSocket(socket, Api.M_URL, Api.AUDIO_PORT, true);
-                if (sslSocket.isConnected()) {
-                    // Start socket handshake
-                    sslSocket.startHandshake();
-                    OutputStream outputStream = sslSocket.getOutputStream();
-                    InputStream inputStream = sslSocket.getInputStream();
-                    BufferedWriter writeOut = new BufferedWriter(new OutputStreamWriter(outputStream));
-                    BufferedReader readIn = new BufferedReader(new InputStreamReader(inputStream));
-                    writeOut.write(mRequest.toString());
-                    writeOut.newLine();
-                    writeOut.flush();
-                    String line = readIn.readLine();
-                    if (line != null) {
-                        JSONObject jsonResponse = new JSONObject(line);
-                        String message = jsonResponse.optString("message", Api.EXCEPTION);
-                        if (READY_FOR_DATA.equalsIgnoreCase(message)) {
-                            byte[] buffer = new byte[1024];
-                            BufferedOutputStream baos = new BufferedOutputStream(new FileOutputStream(mFile));
-                            int bytesRead;
-                            while ((bytesRead = inputStream.read(buffer, 0, buffer.length)) != -1) {
-                                baos.write(buffer, 0, bytesRead);
-                            }
-                        } else {
-                            mHandler.sendEmptyMessage(READING_FAILED);
-                            return;
+            Socket socket = new Socket();
+            SocketAddress socketAddress = new InetSocketAddress(Api.M_URL, Api.AUDIO_PORT);
+            socket.connect(socketAddress, 7000);
+            sslSocket = (SSLSocket) mSSLSocketFactory.createSocket(socket, Api.M_URL, Api.AUDIO_PORT, true);
+            if (sslSocket.isConnected()) {
+                // Start socket handshake
+                sslSocket.startHandshake();
+                OutputStream outputStream = sslSocket.getOutputStream();
+                InputStream inputStream = sslSocket.getInputStream();
+                BufferedWriter writeOut = new BufferedWriter(new OutputStreamWriter(outputStream));
+                BufferedReader readIn = new BufferedReader(new InputStreamReader(inputStream));
+                writeOut.write(mRequest.toString());
+                writeOut.newLine();
+                writeOut.flush();
+                String line = readIn.readLine();
+                if (line != null) {
+                    JSONObject jsonResponse = new JSONObject(line);
+                    String message = jsonResponse.optString("message", Api.EXCEPTION);
+                    if (READY_FOR_DATA.equalsIgnoreCase(message)) {
+                        byte[] buffer = new byte[1024];
+                        BufferedOutputStream baos = new BufferedOutputStream(new FileOutputStream(mFile));
+                        int bytesRead;
+                        while ((bytesRead = inputStream.read(buffer, 0, buffer.length)) != -1) {
+                            baos.write(buffer, 0, bytesRead);
                         }
-                        Message msg = mHandler.obtainMessage();
-                        msg.obj = mFile.getAbsolutePath();
-                        msg.what = READING_SUCCEED;
-                        mHandler.sendMessage(msg);
                     } else {
                         mHandler.sendEmptyMessage(READING_FAILED);
+                        return;
                     }
+                    Message msg = mHandler.obtainMessage();
+                    msg.obj = mFile.getAbsolutePath();
+                    msg.what = READING_SUCCEED;
+                    mHandler.sendMessage(msg);
                 } else {
                     mHandler.sendEmptyMessage(READING_FAILED);
                 }

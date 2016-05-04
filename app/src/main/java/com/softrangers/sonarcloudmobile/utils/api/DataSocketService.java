@@ -105,24 +105,6 @@ public class DataSocketService extends Service {
         }
     }
 
-    public static boolean isHostReachable(int timeoutMS) {
-        boolean connected = false;
-        SSLSocket sslSocket;
-        try {
-            Socket socket = new Socket();
-            SocketAddress socketAddress = new InetSocketAddress(Api.M_URL, Api.PORT);
-            socket.connect(socketAddress, timeoutMS);
-            sslSocket = (SSLSocket) sslSocketFactory.createSocket(socket, Api.M_URL, Api.PORT, false);
-            if (sslSocket.isConnected()) {
-                connected = true;
-                sslSocket.close();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return connected;
-    }
-
     class ConnectionThread extends Thread {
         Handler mHandler;
 
@@ -158,16 +140,10 @@ public class DataSocketService extends Service {
                     @Override
                     public void handleMessage(Message msg) {
                         try {
-                            if (isHostReachable(7000)) {
-                                String message = (String) msg.obj;
-                                writeOut.write(message);
-                                writeOut.newLine();
-                                writeOut.flush();
-                                dataSocket.setSoTimeout(7000);
-                            } else {
-                                Intent intent = new Intent(Api.CONNECTION_LOST);
-                                sendBroadcast(intent);
-                            }
+                            String message = (String) msg.obj;
+                            writeOut.write(message);
+                            writeOut.newLine();
+                            writeOut.flush();
                         } catch (Exception e) {
                             Intent intent = new Intent(Api.CONNECTION_LOST);
                             sendBroadcast(intent);
@@ -176,7 +152,7 @@ public class DataSocketService extends Service {
                     }
                 };
 
-                isConnected = true;
+                isConnected = dataSocket.isConnected();
 
                 // start reading response thread so it will wait for server responses
                 new ResponseThread(readIn).start();
@@ -220,24 +196,21 @@ public class DataSocketService extends Service {
                 String line;
                 while ((line = mReader.readLine()) != null) {
                     sendResponseToUI(line);
-                    if (!mReader.ready()) dataSocket.setSoTimeout(0);
                 }
                 // if we got here than socket is disconnected
                 // let's try to connect again
                 isConnected = false;
-                restartConnection();
             } catch (Exception e) {
                 Intent intent = new Intent(Api.CONNECTION_TIME_OUT);
                 sendBroadcast(intent);
-                try {
-                    if (dataSocket != null)
-                        dataSocket.close();
-                } catch (IOException e1) {
-                    e1.printStackTrace();
-                } finally {
-                    isConnected = false;
-                    restartConnection();
-                }
+//                try {
+//                    if (dataSocket != null)
+//                        dataSocket.close();
+//                } catch (IOException e1) {
+//                    e1.printStackTrace();
+//                } finally {
+//                    isConnected = false;
+//                }
             }
         }
     }
@@ -265,16 +238,17 @@ public class DataSocketService extends Service {
     }
 
     private void sendResponseToUI(String response) throws IOException {
-        String command = Api.EXCEPTION;
+        String command;
         try {
             JSONObject jsonResponse = new JSONObject(response);
-            if (!jsonResponse.has("command")) {
+            String isCommand = jsonResponse.optString("command", null);
+            if (isCommand == null) {
                 command = jsonResponse.optString("originalCommand", Api.EXCEPTION);
+                // send the response to ui
+                Intent responseContainer = new Intent(command);
+                responseContainer.putExtra(command, response);
+                sendBroadcast(responseContainer);
             }
-            // send the response to ui
-            Intent responseContainer = new Intent(command);
-            responseContainer.putExtra(command, response);
-            sendBroadcast(responseContainer);
         } catch (JSONException e) {
             Log.e(this.getClass().getName(), "Finally " + e.getMessage());
             Intent intent = new Intent(Api.CONNECTION_FAILED);
@@ -288,21 +262,21 @@ public class DataSocketService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    readIn.close();
-                    writeOut.close();
-                    dataSocket.close();
-                    isConnected = false;
-                    Log.i(this.getClass().getSimpleName(), "onDestroy(): Socket closed");
-                } catch (Exception e) {
-                    e.printStackTrace();
-                } finally {
-                    dataSocket = null;
-                }
-            }
-        }).start();
+//        new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//                try {
+//                    readIn.close();
+//                    writeOut.close();
+//                    dataSocket.close();
+//                    isConnected = false;
+//                    Log.i(this.getClass().getSimpleName(), "onDestroy(): Socket closed");
+//                } catch (Exception e) {
+//                    e.printStackTrace();
+//                } finally {
+//                    dataSocket = null;
+//                }
+//            }
+//        }).start();
     }
 }

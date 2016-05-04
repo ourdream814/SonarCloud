@@ -21,7 +21,6 @@ import com.softrangers.sonarcloudmobile.utils.api.DataSocketService;
 import com.softrangers.sonarcloudmobile.utils.lock.PatternLockUtils;
 import com.softrangers.sonarcloudmobile.utils.SonarCloudApp;
 import com.softrangers.sonarcloudmobile.utils.api.Api;
-import com.softrangers.sonarcloudmobile.utils.api.AuthService;
 import com.softrangers.sonarcloudmobile.utils.api.ConnectionReceiver;
 import com.softrangers.sonarcloudmobile.utils.ui.BaseActivity;
 
@@ -330,26 +329,7 @@ public class LoginActivity extends BaseActivity implements ConnectionReceiver.On
 
     @Override
     public void onConnectTimeOut() {
-        Snackbar.make(mSignIn, "Connection time out, trying to reconnect", Snackbar.LENGTH_LONG).setAction("CANCEL",
-                new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-
-                    }
-                }).setActionTextColor(getResources()
-                .getColor(R.color.colorAlertAction))
-                .setCallback(new Snackbar.Callback() {
-                    @Override
-                    public void onDismissed(Snackbar snackbar, int event) {
-                        switch (event) {
-                            case DISMISS_EVENT_TIMEOUT:
-                            case DISMISS_EVENT_CONSECUTIVE:
-                            case DISMISS_EVENT_MANUAL:
-                                dataSocketService.restartConnection();
-                                break;
-                        }
-                    }
-                }).show();
+        Snackbar.make(mSignIn, "Connection time out.", Snackbar.LENGTH_LONG).show();
     }
 
     @Override

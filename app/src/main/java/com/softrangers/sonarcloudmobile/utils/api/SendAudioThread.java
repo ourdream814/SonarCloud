@@ -24,7 +24,6 @@ import javax.net.ssl.SSLSocketFactory;
 
 /**
  * Created by eduard on 29.04.16.
- *
  */
 public class SendAudioThread extends Thread {
 
@@ -37,7 +36,6 @@ public class SendAudioThread extends Thread {
     private JSONObject mRequest;
     private SSLSocketFactory mSSLSocketFactory;
     private Handler mHandler;
-    private boolean mIsFailed;
 
     public SendAudioThread(byte[] audioData, JSONObject request, Handler handler) {
         mAudioData = audioData;
@@ -49,11 +47,9 @@ public class SendAudioThread extends Thread {
             SSLContext sslContext = SSLContext.getInstance("TLS");
             sslContext.init(null, SonarCloudApp.getInstance().getTrustManagers(), secureRandom);
             mSSLSocketFactory = sslContext.getSocketFactory();
-            mIsFailed = false;
             mHandler.sendEmptyMessage(SENDING_STARTED);
         } catch (Exception e) {
             mHandler.sendEmptyMessage(SENDING_FAILED);
-            mIsFailed = true;
             e.printStackTrace();
         }
     }
@@ -62,36 +58,32 @@ public class SendAudioThread extends Thread {
     public void run() {
         SSLSocket sslSocket = null;
         try {
-            if (!mIsFailed) {
-                Socket socket = new Socket();
-                SocketAddress socketAddress = new InetSocketAddress(Api.M_URL, Api.AUDIO_PORT);
-                socket.connect(socketAddress, 7000);
-                sslSocket = (SSLSocket) mSSLSocketFactory.createSocket(socket, Api.M_URL, Api.AUDIO_PORT, true);
-                // Start socket handshake
-                if (sslSocket.isConnected()) {
-                    sslSocket.startHandshake();
-                    OutputStream outputStream = sslSocket.getOutputStream();
-                    InputStream inputStream = sslSocket.getInputStream();
-                    BufferedWriter writeOut = new BufferedWriter(new OutputStreamWriter(outputStream));
-                    BufferedReader readIn = new BufferedReader(new InputStreamReader(inputStream));
-                    writeOut.write(mRequest.toString());
-                    writeOut.newLine();
-                    writeOut.flush();
-                    String line = readIn.readLine();
-                    if (line != null) {
-                        JSONObject jsonResponse = new JSONObject(line);
-                        String message = jsonResponse.optString("message", Api.EXCEPTION);
-                        if (READY_FOR_DATA.equalsIgnoreCase(message)) {
-                            outputStream.write(mAudioData, 0, mAudioData.length);
-                            outputStream.flush();
-                        } else {
-                            mHandler.sendEmptyMessage(SENDING_FAILED);
-                            return;
-                        }
-                        mHandler.sendEmptyMessage(SENDING_SUCCEED);
+            Socket socket = new Socket();
+            SocketAddress socketAddress = new InetSocketAddress(Api.M_URL, Api.AUDIO_PORT);
+            socket.connect(socketAddress, 7000);
+            sslSocket = (SSLSocket) mSSLSocketFactory.createSocket(socket, Api.M_URL, Api.AUDIO_PORT, true);
+            // Start socket handshake
+            if (sslSocket.isConnected()) {
+                sslSocket.startHandshake();
+                OutputStream outputStream = sslSocket.getOutputStream();
+                InputStream inputStream = sslSocket.getInputStream();
+                BufferedWriter writeOut = new BufferedWriter(new OutputStreamWriter(outputStream));
+                BufferedReader readIn = new BufferedReader(new InputStreamReader(inputStream));
+                writeOut.write(mRequest.toString());
+                writeOut.newLine();
+                writeOut.flush();
+                String line = readIn.readLine();
+                if (line != null) {
+                    JSONObject jsonResponse = new JSONObject(line);
+                    String message = jsonResponse.optString("message", Api.EXCEPTION);
+                    if (READY_FOR_DATA.equalsIgnoreCase(message)) {
+                        outputStream.write(mAudioData, 0, mAudioData.length);
+                        outputStream.flush();
                     } else {
                         mHandler.sendEmptyMessage(SENDING_FAILED);
+                        return;
                     }
+                    mHandler.sendEmptyMessage(SENDING_SUCCEED);
                 } else {
                     mHandler.sendEmptyMessage(SENDING_FAILED);
                 }

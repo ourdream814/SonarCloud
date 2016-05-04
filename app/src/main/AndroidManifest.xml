@@ -37,10 +37,6 @@
             android:name=".utils.api.DataSocketService"
             android:exported="false"/>
 
-        <service
-            android:name=".utils.api.AuthService"
-            android:exported="false"/>
-
         <!-- Notifies when the socket is connected -->
         <receiver
             android:name=".utils.api.ConnectionReceiver"
