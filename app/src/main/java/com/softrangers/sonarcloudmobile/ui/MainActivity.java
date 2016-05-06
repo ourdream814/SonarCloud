@@ -76,6 +76,8 @@ public class MainActivity extends BaseActivity implements
     private static SettingsFragment settingsFragment;
     public static DataSocketService dataSocketService;
 
+    private static boolean isActive;
+
     // set selected items to send the record to them
     public static ArrayList<Receiver> selectedReceivers;
     public static Group selectedGroup;
@@ -107,6 +109,7 @@ public class MainActivity extends BaseActivity implements
 
         intentFilter = new IntentFilter();
         intentFilter.addAction(Api.Command.AUTHENTICATE);
+        intentFilter.addAction(Api.Command.IDENTIFIER);
         intentFilter.addAction(Api.EXCEPTION);
 
         selectedReceivers = new ArrayList<>();
@@ -144,7 +147,6 @@ public class MainActivity extends BaseActivity implements
     }
 
 
-
     // needed to bind DataSocketService to current class
     protected ServiceConnection mDataServiceConnection = new ServiceConnection() {
         @Override
@@ -160,6 +162,22 @@ public class MainActivity extends BaseActivity implements
         }
     };
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        isActive = true;
+        if (dataSocketService != null) {
+            if (!dataSocketService.isConnected) {
+                dataSocketService.restartConnection();
+            }
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        isActive = false;
+    }
 
     @Override
     public void onSaveInstanceState(Bundle outState, PersistableBundle outPersistentState) {
@@ -370,12 +388,31 @@ public class MainActivity extends BaseActivity implements
                     case Api.Command.AUTHENTICATE:
                         onResponseSucceed(jsonResponse);
                         break;
+                    case Api.Command.IDENTIFIER:
+                        onIdentifierReady(jsonResponse);
+                        break;
                 }
             } catch (Exception e) {
                 onErrorOccurred();
             }
         }
     };
+
+    private void onIdentifierReady(JSONObject response) {
+        try {
+            // Save identifier and secret to app preferences
+            SonarCloudApp.getInstance().saveIdentifier(response.getString(Api.IDENTIFIER));
+            SonarCloudApp.getInstance().saveUserSecret(response.getString(Api.SECRET));
+            Request.Builder builder = new Request.Builder();
+            builder.command(Api.Command.AUTHENTICATE);
+            builder.device(Api.Device.CLIENT).method(Api.Method.IDENTIFIER).identifier(SonarCloudApp.getInstance().getIdentifier())
+                    .secret(SonarCloudApp.getInstance().getSavedData()).seq(SonarCloudApp.SEQ_VALUE);
+            dataSocketService.sendRequest(builder.build().toJSON());
+            dismissLoading();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
     /**
      * Called when server has a successful response for us
@@ -384,7 +421,9 @@ public class MainActivity extends BaseActivity implements
      */
     public void onResponseSucceed(JSONObject response) {
         dismissLoading();
-        receiversFragment.getPAListFromServer();
+        if (isActive) {
+            receiversFragment.getPAListFromServer();
+        }
         SonarCloudApp.user = User.build(response);
         SonarCloudApp.getInstance().startKeepingConnection();
     }
@@ -398,17 +437,22 @@ public class MainActivity extends BaseActivity implements
     public void onCommandFailure(String message) {
         if (message.toLowerCase().contains("identifier and secret combination.")) {
             // try to authenticate to server if user is logged in
-            if (SonarCloudApp.getInstance().isLoggedIn()) {
-                Request.Builder builder = new Request.Builder();
-                builder.command(Api.Command.AUTHENTICATE);
-                builder.device(Api.Device.CLIENT).method(Api.Method.IDENTIFIER).identifier(SonarCloudApp.getInstance().getIdentifier())
-                        .secret(SonarCloudApp.getInstance().getSavedData()).seq(SonarCloudApp.SEQ_VALUE);
-                dataSocketService.sendRequest(builder.build().toJSON());
-            }
+            requestUserIdentifier();
         } else {
             dismissLoading();
             Snackbar.make(mToolbarTitle, message, Snackbar.LENGTH_SHORT).show();
         }
+    }
+
+    public void requestUserIdentifier() {
+        String identifier = SonarCloudApp.getInstance().getIdentifier();
+        // Start building a request to either create a new or renew existing identifier
+        Request.Builder requestBuilder = new Request.Builder();
+        requestBuilder.command(Api.Command.IDENTIFIER);
+        requestBuilder.seq(SonarCloudApp.SEQ_VALUE);
+        requestBuilder.action(Api.Action.RENEW);
+        requestBuilder.identifier(identifier);
+        dataSocketService.sendRequest(requestBuilder.build().toJSON());
     }
 
     /**
@@ -424,6 +468,9 @@ public class MainActivity extends BaseActivity implements
      */
     public void logout(View view) {
         Intent intent = new Intent(this, LoginActivity.class);
+        if (view == null) {
+            intent.setAction("actionReLogin");
+        }
         startActivityForResult(intent, LOGIN_REQUEST_CODE);
         SonarCloudApp.getInstance().clearUserSession(false);
         unregisterReceiver(mLoginReceiver);
@@ -595,6 +642,7 @@ public class MainActivity extends BaseActivity implements
 
     /**
      * Add observers to the list
+     *
      * @param observer which will be notified when add group activity sent the newly created group
      */
     @Override
@@ -604,6 +652,7 @@ public class MainActivity extends BaseActivity implements
 
     /**
      * Remove observers from the list
+     *
      * @param observer which you want to remove from the list
      */
     @Override

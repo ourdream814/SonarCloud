@@ -44,6 +44,7 @@ public class DataSocketService extends Service {
     public static BufferedWriter writeOut;
     public boolean isConnected;
     private ConnectionThread mConnectionThread;
+    private static boolean isRestarting;
 
     /**
      * Initiate all components needed to build a new SSLSocket object
@@ -103,6 +104,10 @@ public class DataSocketService extends Service {
             intent.setAction(Api.CONNECTION_FAILED);
             sendBroadcast(intent);
         }
+    }
+
+    public boolean isSocketConnected() {
+        return dataSocket != null && dataSocket.isConnected();
     }
 
     class ConnectionThread extends Thread {
@@ -194,16 +199,16 @@ public class DataSocketService extends Service {
                 // it will be paused till a new response will arrive, if the thread will exit the loop
                 // this means that socket was disconnected, try to connect again
                 String line;
-                while ((line = mReader.readLine()) != null) {
+                while ((line = mReader.readLine()) != null && !dataSocket.isClosed()) {
                     sendResponseToUI(line);
                 }
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
                 // if we got here than socket is disconnected
                 // let's try to connect again
                 isConnected = false;
                 restartConnection();
-            } catch (Exception e) {
-                Intent intent = new Intent(Api.CONNECTION_TIME_OUT);
-                sendBroadcast(intent);
             }
         }
     }
@@ -216,6 +221,7 @@ public class DataSocketService extends Service {
         @Override
         public void run() {
             try {
+                isRestarting = true;
                 // try to close current socket
                 if (dataSocket != null && dataSocket.isConnected()) {
                     dataSocket.close();
@@ -226,6 +232,8 @@ public class DataSocketService extends Service {
                 mConnectionThread.start();
             } catch (Exception e) {
                 e.printStackTrace();
+            } finally {
+                isRestarting = false;
             }
         }
     }
@@ -244,8 +252,8 @@ public class DataSocketService extends Service {
             }
         } catch (JSONException e) {
             Log.e(this.getClass().getName(), "Finally " + e.getMessage());
-            Intent intent = new Intent(Api.CONNECTION_FAILED);
-            sendBroadcast(intent);
+            if (!isRestarting)
+                restartConnection();
         }
     }
 }
