@@ -166,8 +166,11 @@ public class MainActivity extends BaseActivity implements
     protected void onResume() {
         super.onResume();
         isActive = true;
-        if (dataSocketService != null) {
-            if (!dataSocketService.isConnected) {
+        if (dataSocketService == null) {
+            Intent socketIntent = new Intent(this, DataSocketService.class);
+            bindService(socketIntent, mDataServiceConnection, Context.BIND_AUTO_CREATE);
+        } else {
+            if (!dataSocketService.isSocketConnected()) {
                 dataSocketService.restartConnection();
             }
         }
