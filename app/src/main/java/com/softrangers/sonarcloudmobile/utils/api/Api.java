@@ -102,5 +102,6 @@ public class Api {
         public static final String SEQ_FIELD = "seq";
         public static final String PLAY_IMMEDIATELY = "playImmediately";
         public static final String KEEP = "keep";
+        public static final String SCHEDULE = "schedule";
     }
 }

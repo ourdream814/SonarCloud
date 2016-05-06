@@ -103,7 +103,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         // get the intent and check action
         Intent intent = getIntent();
         if (intent == null) return;
-        serverFormat = new SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ssZZZZZ", Locale.getDefault());
+        serverFormat = new SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ssZ", Locale.getDefault());
         serverFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
         mAction = intent.getAction();
         switch (mAction) {
@@ -293,34 +293,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         showLoading();
         switch (mAction) {
             case ACTION_EDIT_SCHEDULE: {
-                if (schedule.getRepeatOption() == 0) {
-                    if (schedule.getTime() == null || schedule.getTime().equals("null")) {
-                        schedule.setTime(schedule.getServerFormatDate(new Date()));
-                    }
-                    mRequestBuilder.deleteAfter(1)
-                            .day(null)
-                            .hour(null)
-                            .minute(null)
-                            .month(null)
-                            .startDate(schedule.getStartDate())
-                            .time(schedule.getTime());
-                } else if (schedule.getRepeatOption() > 0) {
-                    mRequestBuilder.deleteAfter(0)
-                            .startDate(schedule.getStartDate())
-                            .day(schedule.getDay())
-                            .hour(schedule.getHour())
-                            .minute(schedule.getMinute())
-                            .month(schedule.getMonth())
-                            .time(null)
-                            .wday(schedule.getWday());
-                    if (schedule.getEndDate() != null && !schedule.getEndDate().equals("null")) {
-                        if (endDate != null) {
-                            mRequestBuilder.endDate(schedule.getEndDate());
-                        }
-                    }
-                }
-                JSONObject request = mRequestBuilder.build().toJSON();
-                dataSocketService.sendRequest(request);
+                dataSocketService.sendRequest(buildSchedule());
                 break;
             }
             case ACTION_ADD_SCHEDULE: {
@@ -328,6 +301,36 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                 break;
             }
         }
+    }
+
+    private JSONObject buildSchedule() {
+        if (schedule.getRepeatOption() == 0) {
+            if (schedule.getTime() == null || schedule.getTime().equals("null")) {
+                schedule.setTime(schedule.getServerFormatDate(new Date()));
+            }
+            mRequestBuilder.deleteAfter(1)
+                    .day(null)
+                    .hour(null)
+                    .minute(null)
+                    .month(null)
+                    .startDate(schedule.getStartDate())
+                    .time(schedule.getTime());
+        } else if (schedule.getRepeatOption() > 0) {
+            mRequestBuilder.deleteAfter(0)
+                    .startDate(schedule.getStartDate())
+                    .day(schedule.getDay())
+                    .hour(schedule.getHour())
+                    .minute(schedule.getMinute())
+                    .month(schedule.getMonth())
+                    .time(null)
+                    .wday(schedule.getWday());
+            if (schedule.getEndDate() != null && !schedule.getEndDate().equals("null")) {
+                if (endDate != null) {
+                    mRequestBuilder.endDate(schedule.getEndDate());
+                }
+            }
+        }
+        return mRequestBuilder.build().toJSON();
     }
 
     /**
@@ -409,7 +412,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                             @Override
                             public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
                                 // set the selected values in calendar instance
-                                calendar.set(Calendar.HOUR, hourOfDay);
+                                calendar.set(Calendar.HOUR_OF_DAY, hourOfDay);
                                 calendar.set(Calendar.MINUTE, minute);
                                 date.setTime(calendar.getTimeInMillis());
                                 String dateString = serverFormat.format(date);
@@ -521,34 +524,6 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         }
     }
 
-
-    /**
-     * Convert the {@link ScheduleActivity#schedule} into a JSON object for adding a new schedule
-     *
-     * @return a JSON object from schedule object
-     */
-    private JSONObject buildScheduleObject() {
-        JSONObject scheduleJSON = new JSONObject();
-        try {
-            scheduleJSON.put("startDate", schedule.getStartDate());
-            if (schedule.getRepeatOption() > 0) {
-                schedule.setTime(null);
-                scheduleJSON.put("minute", schedule.getMinute());
-                scheduleJSON.put("hour", schedule.getHour());
-                scheduleJSON.put("day", schedule.getDay());
-                scheduleJSON.put("month", schedule.getMonth());
-                scheduleJSON.put("wday", schedule.getWday());
-                scheduleJSON.put("deleteAfter", false);
-            } else {
-                scheduleJSON.put("time", schedule.getTime());
-                scheduleJSON.put("deleteAfter", true);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return scheduleJSON;
-    }
-
     /**
      * Start the sending process
      */
@@ -561,7 +536,7 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                     .channels(CHANNEL)
                     .format(Api.FORMAT)
                     .samplerate(SAMPLE_RATE)
-                    .schedule(buildScheduleObject());
+                    .schedule(buildSchedule());
             if (MainActivity.selectedGroup != null) {
                 requestBuilder.groupId(String.valueOf(MainActivity.selectedGroup.getGroupID()));
             } else if (MainActivity.selectedReceivers.size() > 0) {
