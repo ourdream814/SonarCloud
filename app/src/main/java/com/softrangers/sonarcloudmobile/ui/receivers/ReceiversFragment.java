@@ -398,7 +398,17 @@ public class ReceiversFragment extends BaseFragment implements RadioGroup.OnChec
                 boolean success = jsonResponse.optBoolean("success", false);
                 if (!success) {
                     String message = jsonResponse.optString("message", mActivity.getString(R.string.unknown_error));
-                    onCommandFailure(message);
+                    if (message.equalsIgnoreCase("you are not authenticated")) {
+                        // try to authenticate to server if user is logged in
+                        if (SonarCloudApp.getInstance().isLoggedIn()) {
+                            Request.Builder builder = new Request.Builder();
+                            builder.command(Api.Command.AUTHENTICATE);
+                            builder.device(Api.Device.CLIENT).method(Api.Method.IDENTIFIER).identifier(SonarCloudApp.getInstance().getIdentifier())
+                                    .secret(SonarCloudApp.getInstance().getSavedData()).seq(SonarCloudApp.SEQ_VALUE);
+                            MainActivity.dataSocketService.sendRequest(builder.build().toJSON());
+                        }
+                    } else
+                        onCommandFailure(message);
                     return;
                 }
                 switch (action) {

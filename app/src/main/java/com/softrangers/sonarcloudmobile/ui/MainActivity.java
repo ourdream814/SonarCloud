@@ -397,7 +397,14 @@ public class MainActivity extends BaseActivity implements
      */
     public void onCommandFailure(String message) {
         if (message.toLowerCase().contains("identifier and secret combination.")) {
-            logout(null);
+            // try to authenticate to server if user is logged in
+            if (SonarCloudApp.getInstance().isLoggedIn()) {
+                Request.Builder builder = new Request.Builder();
+                builder.command(Api.Command.AUTHENTICATE);
+                builder.device(Api.Device.CLIENT).method(Api.Method.IDENTIFIER).identifier(SonarCloudApp.getInstance().getIdentifier())
+                        .secret(SonarCloudApp.getInstance().getSavedData()).seq(SonarCloudApp.SEQ_VALUE);
+                dataSocketService.sendRequest(builder.build().toJSON());
+            }
         } else {
             dismissLoading();
             Snackbar.make(mToolbarTitle, message, Snackbar.LENGTH_SHORT).show();
