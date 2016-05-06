@@ -47,7 +47,7 @@ public class RepeatingCheck {
         Calendar calendar = Calendar.getInstance();
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZZZ", Locale.US);
         SimpleDateFormat secondFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
-        dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+        dateFormat.setTimeZone(TimeZone.getDefault());
         String date = schedule.getStartDate() == null || schedule.getStartDate().equals("null") ? dateFormat.format(new Date(calendar.getTimeInMillis())) : schedule.getStartDate();
         try {
             calendar.setTimeInMillis(dateFormat.parse(date).getTime());

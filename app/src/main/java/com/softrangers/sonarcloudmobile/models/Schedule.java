@@ -132,7 +132,7 @@ public class Schedule implements Parcelable, Cloneable {
 
     public String getServerFormatDate(Date date) {
         SimpleDateFormat serverFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZZZZZ", Locale.getDefault());
-        serverFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+        serverFormat.setTimeZone(TimeZone.getDefault());
         return serverFormat.format(date);
     }
 
@@ -443,7 +443,7 @@ public class Schedule implements Parcelable, Cloneable {
     public static ArrayList<Schedule> build(JSONObject response) {
         ArrayList<Schedule> schedules = new ArrayList<>();
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
-        dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+        dateFormat.setTimeZone(TimeZone.getDefault());
         try {
             JSONArray schedulesArray = response.getJSONArray("schedules");
             for (int i = 0; i < schedulesArray.length(); i++) {

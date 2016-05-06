@@ -103,8 +103,8 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
         // get the intent and check action
         Intent intent = getIntent();
         if (intent == null) return;
-        serverFormat = new SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ssZ", Locale.getDefault());
-        serverFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+        serverFormat = new SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ssZZZZZ", Locale.getDefault());
+        serverFormat.setTimeZone(TimeZone.getDefault());
         mAction = intent.getAction();
         switch (mAction) {
             // User made a new record and want to schedule playing
@@ -535,8 +535,10 @@ public class ScheduleActivity extends BaseActivity implements ScheduleEditAdapte
                     .bitrate(BITRATE)
                     .channels(CHANNEL)
                     .format(Api.FORMAT)
-                    .samplerate(SAMPLE_RATE)
-                    .schedule(buildSchedule());
+                    .samplerate(SAMPLE_RATE);
+            JSONObject scheduleJson = buildSchedule();
+            scheduleJson.remove("command");
+            scheduleJson.remove("seq");
             if (MainActivity.selectedGroup != null) {
                 requestBuilder.groupId(String.valueOf(MainActivity.selectedGroup.getGroupID()));
             } else if (MainActivity.selectedReceivers.size() > 0) {
